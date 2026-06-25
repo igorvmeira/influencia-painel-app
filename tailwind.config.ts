@@ -6,12 +6,10 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          purple: "#611A77",
-          purpleDeep: "#45125A",
-          purpleTint: "#F1E8F4",
-          amber: "#F3B63E",
-          amberDeep: "#7A5410",
-          amberTint: "#FBF0D9",
+          ink: "#141414",
+          yellow: "#F6E003",
+          yellowDeep: "#6B5E00",
+          yellowTint: "#FCF7C2",
         },
       },
       fontFamily: {
