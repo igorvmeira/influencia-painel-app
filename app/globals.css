@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #faf9f7;
+  --card: #ffffff;
+  --line: #ece9e4;
+  --text: #1f1b24;
+  --muted: #6b6670;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+* { -webkit-font-smoothing: antialiased; }

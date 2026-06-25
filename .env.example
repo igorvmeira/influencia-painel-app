@@ -1,0 +1,26 @@
+# ===== FIREBASE (servidor) — escolha UMA das duas opções =====
+
+# OPÇÃO A (recomendada, à prova de erro de chave):
+# Pegue o JSON da conta de serviço (Firebase > Configurações > Contas de serviço >
+# Gerar nova chave privada) e converta o arquivo inteiro para base64.
+# Cole o resultado numa linha só aqui:
+FIREBASE_SERVICE_ACCOUNT_BASE64=
+
+# OPÇÃO B (três variáveis separadas):
+# FIREBASE_PROJECT_ID=seu-projeto
+# FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@seu-projeto.iam.gserviceaccount.com
+# IMPORTANTE: no .env.local, a chave PRECISA estar entre aspas e com \n literais.
+# FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIE...\n-----END PRIVATE KEY-----\n"
+
+# ===== META MARKETING API =====
+META_ACCESS_TOKEN=
+META_API_VERSION=v21.0
+
+# ===== Segurança do Cron =====
+# String aleatória. A Vercel envia "Authorization: Bearer <CRON_SECRET>" no cron.
+CRON_SECRET=
+
+# ===== Firebase Web (opcional, só na fase 2 de login) =====
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=

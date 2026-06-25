@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // O painel lê e escreve pelo servidor (Firebase Admin), que ignora estas regras.
+    // Por padrão, nenhum acesso direto do cliente é permitido.
+    // Na fase 2 (login por gestor/adm), libere leitura por usuário autenticado aqui.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
