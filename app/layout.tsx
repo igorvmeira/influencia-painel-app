@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Painel · Influência 4.0",
+  title: "Painel · Influência",
   description: "Acompanhamento de tráfego pago por gestor e cliente.",
 };
 

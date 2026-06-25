@@ -57,7 +57,7 @@ export default function Dashboard({ data, fonte }: { data: Painel; fonte: "fires
         <div className="flex items-center gap-2.5">
           <NodeMark />
           <span className="text-lg font-medium text-white">
-            Influência <span style={{ color: YELLOW }}>4.0</span>
+            Influência
           </span>
         </div>
         <div className="flex items-center gap-2">
