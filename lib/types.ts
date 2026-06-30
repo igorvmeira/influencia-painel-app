@@ -7,6 +7,16 @@ export interface ContaMap {
   tipo: Tipo;
 }
 
+/** Métrica de uma conta em um único dia (granularidade do sync diário). */
+export interface MetricaDiaria {
+  accountId: string;
+  data: string; // YYYY-MM-DD
+  gasto: number;
+  leadsForm: number; // leads de formulário (split B2B)
+  convWhats: number; // conversas de WhatsApp (split B2C)
+  conversas?: number; // leadsForm + convWhats (redundante, gravado por conveniência)
+}
+
 export interface Totais {
   gasto: number;
   conversas: number;

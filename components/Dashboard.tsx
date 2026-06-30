@@ -5,7 +5,8 @@ import {
   CartesianGrid, Line, LineChart, ResponsiveContainer,
   Tooltip, XAxis, YAxis,
 } from "recharts";
-import { LinhaCliente, Painel } from "@/lib/types";
+import { ContaMap, LinhaCliente, MetricaDiaria } from "@/lib/types";
+import { montarPainel } from "@/lib/painel";
 import { brl, brlDec, num, pct } from "@/lib/format";
 
 const INK = "#141414";
@@ -53,15 +54,22 @@ function LeadCard({ label, valor, varV, menorMelhor = false, destaque = false, s
 
 const PERIODOS = ["7 dias", "15 dias", "30 dias"] as const;
 type Periodo = (typeof PERIODOS)[number];
+const DIAS_POR_PERIODO: Record<Periodo, number> = { "7 dias": 7, "15 dias": 15, "30 dias": 30 };
 
 type ColCliente = "cliente" | "tipo" | "gasto" | "conversas" | "cplSemanal";
 
-export default function Dashboard({ data, fonte }: { data: Painel; fonte: "firestore" | "mock" }) {
-  const t = data.totais;
-
-  // Seletor de período: a base de dados é um snapshot único (sem granularidade
-  // diária), então os botões controlam apenas a UI sem alterar a lógica de dados.
+export default function Dashboard(
+  { daily, contas, fonte }: { daily: MetricaDiaria[]; contas: ContaMap[]; fonte: "firestore" | "mock" }
+) {
+  // Seletor de período: agora filtra de verdade, recomputando o painel a partir
+  // dos registros diários para a janela selecionada.
   const [periodo, setPeriodo] = useState<Periodo>("15 dias");
+
+  const data = useMemo(
+    () => montarPainel(daily, contas, DIAS_POR_PERIODO[periodo]),
+    [daily, contas, periodo]
+  );
+  const t = data.totais;
 
   // Ranking de gestores por CPL (menor = melhor).
   const ranking = useMemo(

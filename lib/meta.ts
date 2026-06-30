@@ -1,4 +1,4 @@
-import { ContaMap } from "./types";
+import { ContaMap, MetricaDiaria } from "./types";
 
 const API = process.env.META_API_VERSION || "v21.0";
 const TOKEN = process.env.META_ACCESS_TOKEN || "";
@@ -50,6 +50,43 @@ export async function buscarInsights(
     leadsForm: somaActions(row?.actions, FORM_LEAD_ACTIONS),
     convWhats: somaActions(row?.actions, WHATS_ACTIONS),
   };
+}
+
+// Busca insights de uma conta quebrados POR DIA (time_increment=1) nos últimos
+// 90 dias, seguindo a paginação do "next" para trazer todos os dias.
+export async function buscarDiario(accountId: string): Promise<MetricaDiaria[]> {
+  const params = new URLSearchParams({
+    fields: "spend,actions",
+    date_preset: "last_90d",
+    time_increment: "1",
+    level: "account",
+    limit: "500",
+    access_token: TOKEN,
+  });
+  let url: string | undefined = `https://graph.facebook.com/${API}/${accountId}/insights?${params}`;
+  const out: MetricaDiaria[] = [];
+
+  while (url) {
+    const res: Response = await fetch(url, { cache: "no-store" });
+    if (!res.ok) {
+      throw new Error(`Meta API ${res.status} (diário) para ${accountId}: ${await res.text()}`);
+    }
+    const json = await res.json();
+    for (const r of (json?.data ?? []) as any[]) {
+      const leadsForm = somaActions(r.actions, FORM_LEAD_ACTIONS);
+      const convWhats = somaActions(r.actions, WHATS_ACTIONS);
+      out.push({
+        accountId,
+        data: r.date_start,
+        gasto: Number(r.spend || 0),
+        leadsForm,
+        convWhats,
+        conversas: leadsForm + convWhats,
+      });
+    }
+    url = json?.paging?.next;
+  }
+  return out;
 }
 
 export async function buscarTodas(
