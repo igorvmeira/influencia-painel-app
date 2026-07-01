@@ -6,8 +6,9 @@ import {
   Tooltip, XAxis, YAxis,
 } from "recharts";
 import { ContaMap, LinhaCliente, MetricaDiaria } from "@/lib/types";
-import { montarPainel } from "@/lib/painel";
+import { montarNichos, montarPainel } from "@/lib/painel";
 import { brl, brlDec, num, pct } from "@/lib/format";
+import NichosSection from "./NichosSection";
 
 const INK = "#141414";
 const CARD = "#1F1F1F";
@@ -78,6 +79,13 @@ export default function Dashboard(
   );
   const maxCpl = Math.max(1, ...ranking.map((g) => g.cpl));
   const subindo = data.gestores.filter((g) => g.cplVar > 0);
+
+  // Aba do ranking: por gestor ou por nicho.
+  const [aba, setAba] = useState<"gestores" | "nichos">("gestores");
+  const nichos = useMemo(
+    () => montarNichos(daily, contas, DIAS_POR_PERIODO[periodo]),
+    [daily, contas, periodo]
+  );
 
   const detalhes = data.detalhes ?? [];
   const [gestorSel, setGestorSel] = useState(detalhes[0]?.gestor ?? "");
@@ -168,40 +176,57 @@ export default function Dashboard(
         </div>
       )}
 
-      {/* Ranking de gestores por CPL */}
-      <p className="mb-3 text-[13px] uppercase tracking-wider" style={{ color: MUTED }}>
-        Gestores · ranking por CPL
-      </p>
-      <div className="mb-10 rounded-xl p-5" style={{ background: CARD }}>
-        <div className="flex flex-col gap-4">
-          {ranking.map((g, i) => {
-            const melhor = i === 0;
-            const largura = Math.max(6, (g.cpl / maxCpl) * 100);
-            return (
-              <div key={g.nome} className="flex items-center gap-4">
-                <div className="flex w-40 shrink-0 items-center gap-2">
-                  <span className="truncate text-sm" style={{ color: "#fff" }}>{g.nome}</span>
-                  {melhor && (
-                    <span
-                      className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase"
-                      style={{ background: YELLOW, color: INK }}
-                    >
-                      melhor
-                    </span>
-                  )}
-                </div>
-                <div className="h-2.5 flex-1 overflow-hidden rounded-full" style={{ background: "#2a2a2a" }}>
-                  <div className="h-full rounded-full" style={{ width: `${largura}%`, background: YELLOW }} />
-                </div>
-                <div className="flex w-28 shrink-0 items-center justify-end gap-2">
-                  <span className="text-sm font-medium tabular-nums" style={{ color: "#fff" }}>{brlDec(g.cpl)}</span>
-                  <Trend v={g.cplVar} menorMelhor />
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      {/* Toggle Gestores / Nichos — ranking por CPL */}
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        {(["gestores", "nichos"] as const).map((a) => (
+          <button
+            key={a}
+            onClick={() => setAba(a)}
+            className="rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors"
+            style={aba === a ? { background: YELLOW, color: INK } : { background: CARD, color: MUTED }}
+          >
+            {a === "gestores" ? "Gestores" : "Nichos"}
+          </button>
+        ))}
+        <span className="ml-1 text-[13px] uppercase tracking-wider" style={{ color: MUTED }}>· ranking por CPL</span>
       </div>
+
+      {aba === "gestores" ? (
+        <div className="mb-10 rounded-xl p-5" style={{ background: CARD }}>
+          <div className="flex flex-col gap-4">
+            {ranking.map((g, i) => {
+              const melhor = i === 0;
+              const largura = Math.max(6, (g.cpl / maxCpl) * 100);
+              return (
+                <div key={g.nome} className="flex items-center gap-4">
+                  <div className="flex w-40 shrink-0 items-center gap-2">
+                    <span className="truncate text-sm" style={{ color: "#fff" }}>{g.nome}</span>
+                    {melhor && (
+                      <span
+                        className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase"
+                        style={{ background: YELLOW, color: INK }}
+                      >
+                        melhor
+                      </span>
+                    )}
+                  </div>
+                  <div className="h-2.5 flex-1 overflow-hidden rounded-full" style={{ background: "#2a2a2a" }}>
+                    <div className="h-full rounded-full" style={{ width: `${largura}%`, background: YELLOW }} />
+                  </div>
+                  <div className="flex w-28 shrink-0 items-center justify-end gap-2">
+                    <span className="text-sm font-medium tabular-nums" style={{ color: "#fff" }}>{brlDec(g.cpl)}</span>
+                    <Trend v={g.cplVar} menorMelhor />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="mb-10">
+          <NichosSection nichos={nichos} />
+        </div>
+      )}
 
       {/* Detalhe por gestor */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">

@@ -1,27 +1,28 @@
 import { ContaMap, MetricaDiaria, Tipo } from "./types";
 
-// De-para de exemplo (mesmos gestores/clientes da onda 1).
-interface SeedConta { cliente: string; gestor: string; tipo: Tipo; baseGasto: number; baseCpl: number; tendencia: number }
+// De-para de exemplo (mesmos gestores/clientes da onda 1) + nicho variado.
+// PetWorld fica sem nicho de propósito, para exercitar o fallback "Sem nicho".
+interface SeedConta { cliente: string; gestor: string; tipo: Tipo; nicho?: string; baseGasto: number; baseCpl: number; tendencia: number }
 
 // tendencia > 0 = CPL piora (sobe) ao longo do tempo; < 0 = melhora (cai).
 const SEEDS: SeedConta[] = [
-  { cliente: "Loja Verde", gestor: "Ana Souza", tipo: "B2C", baseGasto: 560, baseCpl: 27, tendencia: -0.18 },
-  { cliente: "TechPrime", gestor: "Ana Souza", tipo: "B2B", baseGasto: 750, baseCpl: 116, tendencia: -0.12 },
-  { cliente: "Studio Bella", gestor: "Ana Souza", tipo: "B2C", baseGasto: 376, baseCpl: 23, tendencia: -0.20 },
-  { cliente: "Contábil Onuma", gestor: "Ana Souza", tipo: "B2B", baseGasto: 527, baseCpl: 111, tendencia: -0.08 },
-  { cliente: "FitLab", gestor: "Ana Souza", tipo: "B2C", baseGasto: 420, baseCpl: 23, tendencia: -0.15 },
-  { cliente: "Imob Costa", gestor: "Ana Souza", tipo: "B2B", baseGasto: 607, baseCpl: 103, tendencia: -0.10 },
+  { cliente: "Loja Verde", gestor: "Ana Souza", tipo: "B2C", nicho: "Restaurante", baseGasto: 560, baseCpl: 27, tendencia: -0.18 },
+  { cliente: "TechPrime", gestor: "Ana Souza", tipo: "B2B", nicho: "Provedor (ISP)", baseGasto: 750, baseCpl: 116, tendencia: -0.12 },
+  { cliente: "Studio Bella", gestor: "Ana Souza", tipo: "B2C", nicho: "Odonto/Saúde", baseGasto: 376, baseCpl: 23, tendencia: -0.20 },
+  { cliente: "Contábil Onuma", gestor: "Ana Souza", tipo: "B2B", nicho: "Educação", baseGasto: 527, baseCpl: 111, tendencia: -0.08 },
+  { cliente: "FitLab", gestor: "Ana Souza", tipo: "B2C", nicho: "Academia", baseGasto: 420, baseCpl: 23, tendencia: -0.15 },
+  { cliente: "Imob Costa", gestor: "Ana Souza", tipo: "B2B", nicho: "Imobiliária", baseGasto: 607, baseCpl: 103, tendencia: -0.10 },
 
-  { cliente: "AutoPeças BH", gestor: "Bruno Lima", tipo: "B2B", baseGasto: 853, baseCpl: 125, tendencia: 0.16 },
-  { cliente: "Doce Encanto", gestor: "Bruno Lima", tipo: "B2C", baseGasto: 480, baseCpl: 25, tendencia: 0.10 },
-  { cliente: "Clínica Vita", gestor: "Bruno Lima", tipo: "B2C", baseGasto: 593, baseCpl: 29, tendencia: 0.12 },
-  { cliente: "Jurídico Prado", gestor: "Bruno Lima", tipo: "B2B", baseGasto: 627, baseCpl: 118, tendencia: 0.14 },
+  { cliente: "AutoPeças BH", gestor: "Bruno Lima", tipo: "B2B", nicho: "Provedor (ISP)", baseGasto: 853, baseCpl: 125, tendencia: 0.16 },
+  { cliente: "Doce Encanto", gestor: "Bruno Lima", tipo: "B2C", nicho: "Restaurante", baseGasto: 480, baseCpl: 25, tendencia: 0.10 },
+  { cliente: "Clínica Vita", gestor: "Bruno Lima", tipo: "B2C", nicho: "Odonto/Saúde", baseGasto: 593, baseCpl: 29, tendencia: 0.12 },
+  { cliente: "Jurídico Prado", gestor: "Bruno Lima", tipo: "B2B", nicho: "Educação", baseGasto: 627, baseCpl: 118, tendencia: 0.14 },
   { cliente: "PetWorld", gestor: "Bruno Lima", tipo: "B2C", baseGasto: 407, baseCpl: 26, tendencia: 0.08 },
 
-  { cliente: "Moda Urbana", gestor: "Carla Dias", tipo: "B2C", baseGasto: 513, baseCpl: 25, tendencia: -0.06 },
-  { cliente: "Construtora Líder", gestor: "Carla Dias", tipo: "B2B", baseGasto: 707, baseCpl: 126, tendencia: -0.04 },
-  { cliente: "Sabor Caseiro", gestor: "Carla Dias", tipo: "B2C", baseGasto: 353, baseCpl: 24, tendencia: -0.05 },
-  { cliente: "Seguros Mais", gestor: "Carla Dias", tipo: "B2B", baseGasto: 547, baseCpl: 112, tendencia: -0.03 },
+  { cliente: "Moda Urbana", gestor: "Carla Dias", tipo: "B2C", nicho: "Restaurante", baseGasto: 513, baseCpl: 25, tendencia: -0.06 },
+  { cliente: "Construtora Líder", gestor: "Carla Dias", tipo: "B2B", nicho: "Imobiliária", baseGasto: 707, baseCpl: 126, tendencia: -0.04 },
+  { cliente: "Sabor Caseiro", gestor: "Carla Dias", tipo: "B2C", nicho: "Restaurante", baseGasto: 353, baseCpl: 24, tendencia: -0.05 },
+  { cliente: "Seguros Mais", gestor: "Carla Dias", tipo: "B2B", nicho: "Educação", baseGasto: 547, baseCpl: 112, tendencia: -0.03 },
 ];
 
 // Gera um id estável tipo "act_loja_verde" sem depender de regex de acentos.
@@ -38,6 +39,7 @@ export const mockContas: ContaMap[] = SEEDS.map((s) => ({
   cliente: s.cliente,
   gestor: s.gestor,
   tipo: s.tipo,
+  ...(s.nicho ? { nicho: s.nicho } : {}),
 }));
 
 // Ruído determinístico 0..1 (estável entre servidor e client).

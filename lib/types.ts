@@ -5,6 +5,7 @@ export interface ContaMap {
   cliente: string;
   gestor: string;
   tipo: Tipo;
+  nicho?: string; // segmento do cliente; ausente => "Sem nicho"
 }
 
 /** Métrica de uma conta em um único dia (granularidade do sync diário). */
@@ -65,4 +66,21 @@ export interface Painel {
   totais: Totais;
   gestores: LinhaGestor[];
   detalhes: Detalhe[];
+}
+
+export interface ClienteNicho {
+  cliente: string;
+  gasto: number;
+  conversas: number;
+  cpl: number;
+  desvioPct: number; // vs CPL médio do nicho; positivo = acima (pior)
+}
+
+export interface LinhaNicho {
+  nicho: string;
+  clientesCount: number;
+  gasto: number;
+  conversas: number;
+  cpl: number;
+  clientes: ClienteNicho[];
 }

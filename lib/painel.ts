@@ -1,6 +1,6 @@
 import {
-  ContaMap, Detalhe, LinhaCliente, LinhaGestor, MetricaDiaria,
-  Painel, PontoCpl, Tipo, Totais,
+  ClienteNicho, ContaMap, Detalhe, LinhaCliente, LinhaGestor, LinhaNicho,
+  MetricaDiaria, Painel, PontoCpl, Tipo, Totais,
 } from "./types";
 
 const DIA_MS = 86400000;
@@ -20,6 +20,32 @@ function acumular(s: Soma, m: MetricaDiaria) {
   s.conversas += conversasDe(m);
 }
 
+// Dia mais recente presente nos registros, em ms (cai para hoje se não houver dados).
+function ancoraDe(registros: MetricaDiaria[]): number {
+  let max = "";
+  for (const m of registros) if (m.data > max) max = m.data;
+  return max ? Date.parse(max + "T00:00:00Z") : Date.now();
+}
+
+// Soma por conta dos registros cujo diasAtras (da âncora) cai em [ini, fim].
+function somasPorJanela(
+  registros: MetricaDiaria[],
+  ancoraMs: number,
+  iniDias: number,
+  fimDias: number
+): Map<string, Soma> {
+  const out = new Map<string, Soma>();
+  for (const m of registros) {
+    const d = Math.round((ancoraMs - Date.parse(m.data + "T00:00:00Z")) / DIA_MS);
+    if (d >= iniDias && d <= fimDias) {
+      const s = out.get(m.accountId) ?? somaZero();
+      acumular(s, m);
+      out.set(m.accountId, s);
+    }
+  }
+  return out;
+}
+
 /**
  * Monta o Painel a partir dos registros diários e do de-para de contas, para uma
  * janela de `periodoDias` dias. As variações comparam contra o período anterior de
@@ -37,33 +63,15 @@ export function montarPainel(
   const registros = daily.filter((m) => mapaConta.has(m.accountId));
 
   // Âncora = dia mais recente que temos (cai para hoje se não houver dados).
-  const datas = registros.map((m) => m.data).sort();
-  const ancoraMs = datas.length
-    ? Date.parse(datas[datas.length - 1] + "T00:00:00Z")
-    : Date.now();
-
-  // diasAtras de cada registro em relação à âncora.
+  const ancoraMs = ancoraDe(registros);
   const diasAtras = (data: string) =>
     Math.round((ancoraMs - Date.parse(data + "T00:00:00Z")) / DIA_MS);
 
   const N = periodoDias;
-  const noIntervalo = (d: number, ini: number, fim: number) => d >= ini && d <= fim;
 
-  // Somas por conta para a janela atual e a anterior.
-  const atualPorConta = new Map<string, Soma>();
-  const antPorConta = new Map<string, Soma>();
-  for (const m of registros) {
-    const d = diasAtras(m.data);
-    if (noIntervalo(d, 0, N - 1)) {
-      const s = atualPorConta.get(m.accountId) ?? somaZero();
-      acumular(s, m);
-      atualPorConta.set(m.accountId, s);
-    } else if (noIntervalo(d, N, 2 * N - 1)) {
-      const s = antPorConta.get(m.accountId) ?? somaZero();
-      acumular(s, m);
-      antPorConta.set(m.accountId, s);
-    }
-  }
+  // Somas por conta para a janela atual e a anterior (mesmo tamanho).
+  const atualPorConta = somasPorJanela(registros, ancoraMs, 0, N - 1);
+  const antPorConta = somasPorJanela(registros, ancoraMs, N, 2 * N - 1);
   const somaConta = (mapa: Map<string, Soma>, id: string) => mapa.get(id) ?? somaZero();
 
   // Totais e agregação por gestor.
@@ -139,11 +147,63 @@ export function montarPainel(
 
   return {
     periodoLabel: `Últimos ${N} dias`,
-    atualizadoEm: datas.length ? datas[datas.length - 1] : new Date().toISOString(),
+    atualizadoEm: registros.length ? new Date(ancoraMs).toISOString().slice(0, 10) : new Date().toISOString(),
     totais,
     gestores,
     detalhes,
   };
+}
+
+/**
+ * Agrega as contas por nicho para a janela de `periodoDias`, reaproveitando a mesma
+ * soma por conta/período usada no painel. Contas sem nicho caem em "Sem nicho".
+ * Cada cliente recebe o desvio percentual do seu CPL vs a média do próprio nicho.
+ * Retorna os nichos ordenados por CPL (menor = melhor).
+ */
+export function montarNichos(
+  daily: MetricaDiaria[],
+  contas: ContaMap[],
+  periodoDias: number
+): LinhaNicho[] {
+  const mapaConta = new Map(contas.map((c) => [c.accountId, c]));
+  const registros = daily.filter((m) => mapaConta.has(m.accountId));
+  const ancoraMs = ancoraDe(registros);
+  const atualPorConta = somasPorJanela(registros, ancoraMs, 0, periodoDias - 1);
+
+  const grupos = new Map<string, { gasto: number; conversas: number; clientes: ClienteNicho[] }>();
+  for (const c of contas) {
+    const nicho = (c.nicho && c.nicho.trim()) || "Sem nicho";
+    const a = atualPorConta.get(c.accountId) ?? somaZero();
+    const g = grupos.get(nicho) ?? { gasto: 0, conversas: 0, clientes: [] };
+    g.gasto += a.gasto;
+    g.conversas += a.conversas;
+    g.clientes.push({
+      cliente: c.cliente,
+      gasto: a.gasto,
+      conversas: a.conversas,
+      cpl: cpl(a.gasto, a.conversas),
+      desvioPct: 0,
+    });
+    grupos.set(nicho, g);
+  }
+
+  return [...grupos.entries()].map(([nicho, g]) => {
+    const cplNicho = cpl(g.gasto, g.conversas);
+    const clientes = g.clientes
+      .map((cl) => ({
+        ...cl,
+        desvioPct: cplNicho > 0 ? Math.round(((cl.cpl - cplNicho) / cplNicho) * 100) : 0,
+      }))
+      .sort((x, y) => x.cpl - y.cpl);
+    return {
+      nicho,
+      clientesCount: g.clientes.length,
+      gasto: g.gasto,
+      conversas: g.conversas,
+      cpl: cplNicho,
+      clientes,
+    };
+  }).sort((a, b) => a.cpl - b.cpl);
 }
 
 // CPL agregado de um conjunto de contas dentro de uma faixa de dias (inclusive).
