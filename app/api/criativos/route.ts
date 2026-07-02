@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { buscarCriativos } from "@/lib/meta";
+import { getAuthAdmin } from "@/lib/firebaseAdmin";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -7,12 +8,18 @@ export const maxDuration = 60;
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const chaveUrl = url.searchParams.get("key");
-  const auth = req.headers.get("authorization");
-  const segredo = process.env.CRON_SECRET;
-  const autorizado = !segredo || auth === `Bearer ${segredo}` || chaveUrl === segredo;
-  if (!autorizado) {
-    return NextResponse.json({ erro: "não autorizado" }, { status: 401 });
+
+  // Exige um usuário autenticado: verifica o ID token do Firebase no servidor.
+  const authHeader = req.headers.get("authorization") || "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+  const adminAuth = getAuthAdmin();
+  if (!adminAuth) {
+    return NextResponse.json({ erro: "autenticação não configurada" }, { status: 500 });
+  }
+  try {
+    await adminAuth.verifyIdToken(token);
+  } catch {
+    return NextResponse.json({ erro: "não autenticado" }, { status: 401 });
   }
 
   const accountId = url.searchParams.get("accountId");

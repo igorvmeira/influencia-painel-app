@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ContaMap, Criativo } from "@/lib/types";
 import { brl, brlDec, num } from "@/lib/format";
+import { auth } from "@/lib/firebaseClient";
 
 const INK = "#141414";
 const CARD = "#1F1F1F";
@@ -20,7 +21,7 @@ const PERIODOS: { label: string; dias: number }[] = [
 ];
 
 export default function CriativosSection(
-  { contas, chave, diasInicial }: { contas: ContaMap[]; chave: string; diasInicial: number }
+  { contas, diasInicial }: { contas: ContaMap[]; diasInicial: number }
 ) {
   const opcoes = useMemo(
     () => [...contas].sort((a, b) => a.cliente.localeCompare(b.cliente)),
@@ -35,24 +36,27 @@ export default function CriativosSection(
 
   useEffect(() => {
     if (!accountId) return;
-    if (!chave) { setErro("Abra o painel com ?key=SUA_CHAVE para carregar criativos."); return; }
 
     let cancelado = false;
     setCarregando(true);
     setErro(null);
-    const url = `/api/criativos?key=${encodeURIComponent(chave)}&accountId=${encodeURIComponent(accountId)}&dias=${dias}`;
-    fetch(url)
-      .then(async (r) => {
-        const j = await r.json();
-        if (!r.ok || !j.ok) throw new Error(j?.erro || `Erro ${r.status}`);
-        return j.criativos as Criativo[];
-      })
+    const url = `/api/criativos?accountId=${encodeURIComponent(accountId)}&dias=${dias}`;
+
+    (async () => {
+      const usuario = auth?.currentUser;
+      if (!usuario) throw new Error("Sessão expirada. Faça login novamente.");
+      const token = await usuario.getIdToken();
+      const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      const j = await r.json();
+      if (!r.ok || !j.ok) throw new Error(j?.erro || `Erro ${r.status}`);
+      return j.criativos as Criativo[];
+    })()
       .then((lista) => { if (!cancelado) setCriativos(lista); })
       .catch((e) => { if (!cancelado) { setErro(e.message); setCriativos([]); } })
       .finally(() => { if (!cancelado) setCarregando(false); });
 
     return () => { cancelado = true; };
-  }, [accountId, dias, chave]);
+  }, [accountId, dias]);
 
   const ranqueados = useMemo(
     () => criativos.filter((c) => c.conversas >= PISO_CONVERSAS).sort((a, b) => a.cpl - b.cpl),

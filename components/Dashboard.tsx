@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { signOut } from "firebase/auth";
 import {
   CartesianGrid, Line, LineChart, ResponsiveContainer,
   Tooltip, XAxis, YAxis,
@@ -10,6 +12,7 @@ import { montarNichos, montarPainel } from "@/lib/painel";
 import { brl, brlDec, num, pct } from "@/lib/format";
 import NichosSection from "./NichosSection";
 import CriativosSection from "./CriativosSection";
+import { auth } from "@/lib/firebaseClient";
 
 const INK = "#141414";
 const CARD = "#1F1F1F";
@@ -61,8 +64,8 @@ const DIAS_POR_PERIODO: Record<Periodo, number> = { "7 dias": 7, "15 dias": 15, 
 type ColCliente = "cliente" | "tipo" | "gasto" | "conversas" | "cplSemanal";
 
 export default function Dashboard(
-  { daily, contas, fonte, chave = "" }:
-  { daily: MetricaDiaria[]; contas: ContaMap[]; fonte: "firestore" | "mock"; chave?: string }
+  { daily, contas, fonte }:
+  { daily: MetricaDiaria[]; contas: ContaMap[]; fonte: "firestore" | "mock" }
 ) {
   // Seletor de período: agora filtra de verdade, recomputando o painel a partir
   // dos registros diários para a janela selecionada.
@@ -117,6 +120,12 @@ export default function Dashboard(
 
   const seta = (col: ColCliente) => (ordCol === col ? (ordDir === "asc" ? " ↑" : " ↓") : "");
 
+  const router = useRouter();
+  async function sair() {
+    if (auth) await signOut(auth);
+    router.replace("/login");
+  }
+
   return (
     <div>
       {/* Topo: logo + seletor de período */}
@@ -125,22 +134,31 @@ export default function Dashboard(
           <NodeMark />
           <span className="text-lg font-semibold text-white">Influência</span>
         </div>
-        <div className="flex items-center gap-1 rounded-full p-1" style={{ background: CARD }}>
-          {PERIODOS.map((p) => {
-            const ativo = p === periodo;
-            return (
-              <button
-                key={p}
-                onClick={() => setPeriodo(p)}
-                className="rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors"
-                style={ativo
-                  ? { background: YELLOW, color: INK }
-                  : { background: "transparent", color: MUTED }}
-              >
-                {p}
-              </button>
-            );
-          })}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 rounded-full p-1" style={{ background: CARD }}>
+            {PERIODOS.map((p) => {
+              const ativo = p === periodo;
+              return (
+                <button
+                  key={p}
+                  onClick={() => setPeriodo(p)}
+                  className="rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors"
+                  style={ativo
+                    ? { background: YELLOW, color: INK }
+                    : { background: "transparent", color: MUTED }}
+                >
+                  {p}
+                </button>
+              );
+            })}
+          </div>
+          <button
+            onClick={sair}
+            className="rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors"
+            style={{ background: CARD, color: MUTED }}
+          >
+            Sair
+          </button>
         </div>
       </header>
 
@@ -195,7 +213,7 @@ export default function Dashboard(
 
       {aba === "criativos" ? (
         <div className="mb-10">
-          <CriativosSection contas={contas} chave={chave} diasInicial={DIAS_POR_PERIODO[periodo]} />
+          <CriativosSection contas={contas} diasInicial={DIAS_POR_PERIODO[periodo]} />
         </div>
       ) : aba === "gestores" ? (
         <div className="mb-10 rounded-xl p-5" style={{ background: CARD }}>

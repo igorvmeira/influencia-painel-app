@@ -1,5 +1,6 @@
 import { cert, getApps, initializeApp, App, ServiceAccount } from "firebase-admin/app";
 import { getFirestore, Firestore } from "firebase-admin/firestore";
+import { getAuth, Auth } from "firebase-admin/auth";
 
 let db: Firestore | null = null;
 
@@ -37,11 +38,23 @@ function carregarCredencial(): ServiceAccount | null {
   return null;
 }
 
-export function getDb(): Firestore | null {
-  if (db) return db;
+function getApp(): App | null {
   const credencial = carregarCredencial();
   if (!credencial) return null;
-  const app: App = getApps().length ? getApps()[0] : initializeApp({ credential: cert(credencial) });
+  return getApps().length ? getApps()[0] : initializeApp({ credential: cert(credencial) });
+}
+
+export function getDb(): Firestore | null {
+  if (db) return db;
+  const app = getApp();
+  if (!app) return null;
   db = getFirestore(app);
   return db;
+}
+
+// Auth admin, para verificar o ID token do Firebase enviado pelo front.
+export function getAuthAdmin(): Auth | null {
+  const app = getApp();
+  if (!app) return null;
+  return getAuth(app);
 }

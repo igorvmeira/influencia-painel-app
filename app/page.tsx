@@ -1,13 +1,14 @@
-import Dashboard from "@/components/Dashboard";
-import { getDadosDiarios } from "@/lib/data";
+import AuthGate from "@/components/AuthGate";
+import DashboardLoader from "@/components/DashboardLoader";
 
 export const dynamic = "force-dynamic";
 
-export default async function Page({ searchParams }: { searchParams: { key?: string } }) {
-  const { daily, contas, fonte } = await getDadosDiarios();
+export default function Page() {
   return (
     <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
-      <Dashboard daily={daily} contas={contas} fonte={fonte} chave={searchParams.key ?? ""} />
+      <AuthGate>
+        <DashboardLoader />
+      </AuthGate>
     </main>
   );
 }
