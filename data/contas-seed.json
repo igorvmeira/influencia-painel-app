@@ -1,0 +1,415 @@
+[
+  {
+    "accountId": "act_1389467714612017",
+    "cliente": "REDE OLT HOTÉIS",
+    "gestor": "PEDRO",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_612219675509973",
+    "cliente": "BL FIBRA",
+    "gestor": "WEDER",
+    "tipo": "B2B/B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_1313209170491744",
+    "cliente": "NETCOM",
+    "gestor": "DANIEL",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_1444062963724677",
+    "cliente": "YnovaNET [pós pago]",
+    "gestor": "PEDRO",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_154424816245025",
+    "cliente": "Playip",
+    "gestor": "PEDRO",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_4207788105944374",
+    "cliente": "Dra. Maria Fernanda CA 01",
+    "gestor": "ANDRÉ",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_382942743051251",
+    "cliente": "Influencia Anúncios",
+    "gestor": "LUCAS",
+    "tipo": "B2B",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_372654114513069",
+    "cliente": "AW Online",
+    "gestor": "MATHEUS",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_1084294475850359",
+    "cliente": "Itaol",
+    "gestor": "WEDER",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_1099212031030356",
+    "cliente": "Construminas",
+    "gestor": "PEDRO",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_3540374812862284",
+    "cliente": "REDE CONESUL",
+    "gestor": "VINICIUS",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_805774430778528",
+    "cliente": "GNA Telecom",
+    "gestor": "VINICIUS",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_828216221837818",
+    "cliente": "Norte line",
+    "gestor": "ANDRÉ",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_662142634881699",
+    "cliente": "Ludio Porto Alegre ADS",
+    "gestor": "LUCAS",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_856834882178627",
+    "cliente": "NETFACIL - ISP FORCE",
+    "gestor": "ISMAIL",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_787079525698543",
+    "cliente": "Restaurante Roda Mineira 1",
+    "gestor": "MATHEUS",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_609220030867311",
+    "cliente": "Nex Telecom",
+    "gestor": "LUCAS",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_232199732730201",
+    "cliente": "VTL Telecom",
+    "gestor": "WEDER",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_2775914335882809",
+    "cliente": "ARP 01",
+    "gestor": "ANDRÉ",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_952855809491449",
+    "cliente": "Motel Óasis",
+    "gestor": "VINICIUS",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_963483641445277",
+    "cliente": "Mio Telecom",
+    "gestor": "PEDRO",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_272135675231139",
+    "cliente": "Aura",
+    "gestor": "PEDRO",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_191616327202757",
+    "cliente": "BM 01 - Conta de Anuncios - 01",
+    "gestor": "VINICIUS",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_313868494444325",
+    "cliente": "MontAço",
+    "gestor": "DANIEL",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_208064045585758",
+    "cliente": "Multilink Fibra",
+    "gestor": "(sem gestor)",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_593066599501100",
+    "cliente": "Telcom Internet",
+    "gestor": "WEDER",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_1342356503063454",
+    "cliente": "CDL",
+    "gestor": "VINICIUS",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_1406903296909080",
+    "cliente": "JP Imobiliária",
+    "gestor": "VINICIUS",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_640604454939758",
+    "cliente": "iFalei",
+    "gestor": "ISMAIL",
+    "tipo": "B2B",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_7203891913008791",
+    "cliente": "Nu Paraiso - 02 - CARTÃO DE CRÉDITO",
+    "gestor": "VINICIUS",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_901220705012452",
+    "cliente": "Campezza Irrigação",
+    "gestor": "LUCAS",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_1040367470846107",
+    "cliente": "SN NET",
+    "gestor": "LUCAS",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_487888250698890",
+    "cliente": "norteline 02",
+    "gestor": "ANDRÉ",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_1258872095312487",
+    "cliente": "DUNET",
+    "gestor": "ANDRÉ",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_1321889532494546",
+    "cliente": "JS FIbra",
+    "gestor": "DANIEL",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_467779389026591",
+    "cliente": "SN NET I [BV TELECOM-09/2025]",
+    "gestor": "LUCAS",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_575138771730030",
+    "cliente": "tek.serviços",
+    "gestor": "DANIEL",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_1148378723627218",
+    "cliente": "INTERNITRO",
+    "gestor": "DANIEL",
+    "tipo": "B2B",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_1987779961633909",
+    "cliente": "Bora Fibra",
+    "gestor": "DANIEL",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_436154116204389",
+    "cliente": "VELOXNET + INFLUENCIA",
+    "gestor": "VINICIUS",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_1837483150389186",
+    "cliente": "BRASTURBO",
+    "gestor": "(sem gestor)",
+    "tipo": "",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_2060095867813465",
+    "cliente": "BAUMAN",
+    "gestor": "ANDRÉ",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_1014818350796748",
+    "cliente": "REDE VIA DUPLA",
+    "gestor": "PEDRO",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_1427561475356780",
+    "cliente": "PRO3 ACADEMIA",
+    "gestor": "ANDRÉ",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_1254298646370970",
+    "cliente": "E-UP",
+    "gestor": "DANIEL",
+    "tipo": "B2B",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_1687506165298657",
+    "cliente": "Amsterdam Hotel",
+    "gestor": "VINICIUS",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_602747946019033",
+    "cliente": "Brasturbo",
+    "gestor": "DANIEL",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_1802460987815168",
+    "cliente": "JEQUITINHONHA",
+    "gestor": "ANDRÉ",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_1159315306118897",
+    "cliente": "XMAX",
+    "gestor": "(sem gestor)",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_786098394310499",
+    "cliente": "SOS Telecom",
+    "gestor": "DANIEL",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_3638399999623928",
+    "cliente": "Link 10",
+    "gestor": "WEDER",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_1260395262058555",
+    "cliente": "Samuel Mendes",
+    "gestor": "ANDRÉ",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_1365081134865029",
+    "cliente": "Proserv",
+    "gestor": "ANDRÉ",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_1899656697583453",
+    "cliente": "CopyNorte Oficial",
+    "gestor": "PEDRO",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_2646643012379367",
+    "cliente": "BAUMAN",
+    "gestor": "ANDRÉ",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_1440128040893971",
+    "cliente": "OBBU Telecom",
+    "gestor": "PEDRO",
+    "tipo": "B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_1666070498074676",
+    "cliente": "Líder Telecom",
+    "gestor": "ISMAIL",
+    "tipo": "B2B",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_1960831434539683",
+    "cliente": "Hello Net",
+    "gestor": "VINICIUS",
+    "tipo": "B2B/B2C",
+    "nicho": ""
+  },
+  {
+    "accountId": "act_1432314361973993",
+    "cliente": "SPEEDNET",
+    "gestor": "DANIEL",
+    "tipo": "B2C",
+    "nicho": ""
+  }
+]
