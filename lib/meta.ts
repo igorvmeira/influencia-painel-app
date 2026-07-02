@@ -1,4 +1,4 @@
-import { ContaMap, MetricaDiaria } from "./types";
+import { ContaMap, Criativo, MetricaDiaria } from "./types";
 
 const API = process.env.META_API_VERSION || "v21.0";
 const TOKEN = process.env.META_ACCESS_TOKEN || "";
@@ -87,6 +87,69 @@ export async function buscarDiario(accountId: string): Promise<MetricaDiaria[]> 
     url = json?.paging?.next;
   }
   return out;
+}
+
+const ymd = (d: Date) => d.toISOString().slice(0, 10);
+
+// Busca AO VIVO os criativos/anúncios de uma conta (level=ad) nos últimos `dias`,
+// calculando gasto, conversas (form + WhatsApp) e CPL por anúncio. As miniaturas
+// vêm de /ads?fields=creative{thumbnail_url} (best-effort). Limita a ~100 anúncios.
+export async function buscarCriativos(accountId: string, dias: number): Promise<Criativo[]> {
+  const until = new Date();
+  const since = new Date();
+  since.setDate(since.getDate() - (dias - 1));
+  const timeRange = JSON.stringify({ since: ymd(since), until: ymd(until) });
+
+  // 1) Insights por anúncio.
+  const pIns = new URLSearchParams({
+    level: "ad",
+    fields: "ad_id,ad_name,spend,actions",
+    time_range: timeRange,
+    limit: "100",
+    access_token: TOKEN,
+  });
+  const urlIns = `https://graph.facebook.com/${API}/${accountId}/insights?${pIns}`;
+  const resIns = await fetch(urlIns, { cache: "no-store" });
+  if (!resIns.ok) {
+    throw new Error(`Meta API ${resIns.status} (criativos) para ${accountId}: ${await resIns.text()}`);
+  }
+  const jsonIns = await resIns.json();
+  const rows: any[] = jsonIns?.data ?? [];
+
+  // 2) Miniaturas por ad_id (best-effort; falha aqui não derruba o ranking).
+  const thumbs = new Map<string, string>();
+  try {
+    const pAds = new URLSearchParams({
+      fields: "creative{thumbnail_url}",
+      limit: "100",
+      access_token: TOKEN,
+    });
+    const urlAds = `https://graph.facebook.com/${API}/${accountId}/ads?${pAds}`;
+    const resAds = await fetch(urlAds, { cache: "no-store" });
+    if (resAds.ok) {
+      const jsonAds = await resAds.json();
+      for (const a of (jsonAds?.data ?? []) as any[]) {
+        const t = a?.creative?.thumbnail_url;
+        if (a?.id && t) thumbs.set(a.id, t);
+      }
+    }
+  } catch (e) {
+    console.error(e);
+  }
+
+  return rows.slice(0, 100).map((r) => {
+    const gasto = Number(r.spend || 0);
+    const conversas =
+      somaActions(r.actions, FORM_LEAD_ACTIONS) + somaActions(r.actions, WHATS_ACTIONS);
+    return {
+      adId: r.ad_id,
+      adName: r.ad_name || r.ad_id,
+      gasto,
+      conversas,
+      cpl: conversas > 0 ? gasto / conversas : 0,
+      thumbnailUrl: thumbs.get(r.ad_id) ?? null,
+    };
+  });
 }
 
 export async function buscarTodas(

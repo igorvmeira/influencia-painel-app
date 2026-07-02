@@ -84,3 +84,12 @@ export interface LinhaNicho {
   cpl: number;
   clientes: ClienteNicho[];
 }
+
+export interface Criativo {
+  adId: string;
+  adName: string;
+  gasto: number;
+  conversas: number; // lead de formulário + conversa de WhatsApp
+  cpl: number;
+  thumbnailUrl: string | null;
+}

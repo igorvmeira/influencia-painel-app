@@ -9,6 +9,7 @@ import { ContaMap, LinhaCliente, MetricaDiaria } from "@/lib/types";
 import { montarNichos, montarPainel } from "@/lib/painel";
 import { brl, brlDec, num, pct } from "@/lib/format";
 import NichosSection from "./NichosSection";
+import CriativosSection from "./CriativosSection";
 
 const INK = "#141414";
 const CARD = "#1F1F1F";
@@ -60,7 +61,8 @@ const DIAS_POR_PERIODO: Record<Periodo, number> = { "7 dias": 7, "15 dias": 15, 
 type ColCliente = "cliente" | "tipo" | "gasto" | "conversas" | "cplSemanal";
 
 export default function Dashboard(
-  { daily, contas, fonte }: { daily: MetricaDiaria[]; contas: ContaMap[]; fonte: "firestore" | "mock" }
+  { daily, contas, fonte, chave = "" }:
+  { daily: MetricaDiaria[]; contas: ContaMap[]; fonte: "firestore" | "mock"; chave?: string }
 ) {
   // Seletor de período: agora filtra de verdade, recomputando o painel a partir
   // dos registros diários para a janela selecionada.
@@ -80,8 +82,8 @@ export default function Dashboard(
   const maxCpl = Math.max(1, ...ranking.map((g) => g.cpl));
   const subindo = data.gestores.filter((g) => g.cplVar > 0);
 
-  // Aba do ranking: por gestor ou por nicho.
-  const [aba, setAba] = useState<"gestores" | "nichos">("gestores");
+  // Aba do ranking: por gestor, por nicho ou criativos (ao vivo).
+  const [aba, setAba] = useState<"gestores" | "nichos" | "criativos">("gestores");
   const nichos = useMemo(
     () => montarNichos(daily, contas, DIAS_POR_PERIODO[periodo]),
     [daily, contas, periodo]
@@ -176,22 +178,26 @@ export default function Dashboard(
         </div>
       )}
 
-      {/* Toggle Gestores / Nichos — ranking por CPL */}
+      {/* Toggle Gestores / Nichos / Criativos — ranking por CPL */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        {(["gestores", "nichos"] as const).map((a) => (
+        {(["gestores", "nichos", "criativos"] as const).map((a) => (
           <button
             key={a}
             onClick={() => setAba(a)}
             className="rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors"
             style={aba === a ? { background: YELLOW, color: INK } : { background: CARD, color: MUTED }}
           >
-            {a === "gestores" ? "Gestores" : "Nichos"}
+            {a === "gestores" ? "Gestores" : a === "nichos" ? "Nichos" : "Criativos"}
           </button>
         ))}
         <span className="ml-1 text-[13px] uppercase tracking-wider" style={{ color: MUTED }}>· ranking por CPL</span>
       </div>
 
-      {aba === "gestores" ? (
+      {aba === "criativos" ? (
+        <div className="mb-10">
+          <CriativosSection contas={contas} chave={chave} diasInicial={DIAS_POR_PERIODO[periodo]} />
+        </div>
+      ) : aba === "gestores" ? (
         <div className="mb-10 rounded-xl p-5" style={{ background: CARD }}>
           <div className="flex flex-col gap-4">
             {ranking.map((g, i) => {
