@@ -85,6 +85,13 @@ export default function Dashboard(
   const maxCpl = Math.max(1, ...ranking.map((g) => g.cpl));
   const subindo = data.gestores.filter((g) => g.cplVar > 0);
 
+  // Nº de clientes por gestor (a partir do de-para).
+  const clientesPorGestor = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const c of contas) m.set(c.gestor, (m.get(c.gestor) ?? 0) + 1);
+    return m;
+  }, [contas]);
+
   // Aba do ranking: por gestor, por nicho ou criativos (ao vivo).
   const [aba, setAba] = useState<"gestores" | "nichos" | "criativos">("gestores");
   const nichos = useMemo(
@@ -237,9 +244,14 @@ export default function Dashboard(
                   <div className="h-2.5 flex-1 overflow-hidden rounded-full" style={{ background: "#2a2a2a" }}>
                     <div className="h-full rounded-full" style={{ width: `${largura}%`, background: YELLOW }} />
                   </div>
-                  <div className="flex w-28 shrink-0 items-center justify-end gap-2">
-                    <span className="text-sm font-medium tabular-nums" style={{ color: "#fff" }}>{brlDec(g.cpl)}</span>
-                    <Trend v={g.cplVar} menorMelhor />
+                  <div className="flex w-52 shrink-0 flex-col items-end">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium tabular-nums" style={{ color: "#fff" }}>{brlDec(g.cpl)}</span>
+                      <Trend v={g.cplVar} menorMelhor />
+                    </div>
+                    <span className="text-[11px]" style={{ color: MUTED }}>
+                      {brl(g.gasto)} · {num(g.conversas)} conv · {clientesPorGestor.get(g.nome) ?? 0} clientes
+                    </span>
                   </div>
                 </div>
               );

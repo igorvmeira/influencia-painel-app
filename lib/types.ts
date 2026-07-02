@@ -92,4 +92,5 @@ export interface Criativo {
   conversas: number; // lead de formulário + conversa de WhatsApp
   cpl: number;
   thumbnailUrl: string | null;
+  cliente?: string; // preenchido no ranking por nicho (de qual cliente é o criativo)
 }

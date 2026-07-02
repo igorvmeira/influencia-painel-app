@@ -20,6 +20,9 @@ const PERIODOS: { label: string; dias: number }[] = [
   { label: "30 dias", dias: 30 },
 ];
 
+type Modo = "cliente" | "nicho";
+const nichoDe = (n?: string) => (n && n.trim()) || "Sem nicho";
+
 export default function CriativosSection(
   { contas, diasInicial }: { contas: ContaMap[]; diasInicial: number }
 ) {
@@ -27,20 +30,33 @@ export default function CriativosSection(
     () => [...contas].sort((a, b) => a.cliente.localeCompare(b.cliente)),
     [contas]
   );
+  const nichos = useMemo(
+    () => [...new Set(contas.map((c) => nichoDe(c.nicho)))].sort((a, b) => a.localeCompare(b)),
+    [contas]
+  );
 
+  const [modo, setModo] = useState<Modo>("cliente");
   const [accountId, setAccountId] = useState("");
+  const [nicho, setNicho] = useState("");
   const [dias, setDias] = useState(PERIODOS.some((p) => p.dias === diasInicial) ? diasInicial : 15);
   const [criativos, setCriativos] = useState<Criativo[]>([]);
+  const [erros, setErros] = useState<{ accountId: string }[]>([]);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
+  const alvo = modo === "cliente" ? accountId : nicho;
+
   useEffect(() => {
-    if (!accountId) return;
+    setErro(null);
+    setErros([]);
+    if (!alvo) { setCriativos([]); return; }
 
     let cancelado = false;
     setCarregando(true);
-    setErro(null);
-    const url = `/api/criativos?accountId=${encodeURIComponent(accountId)}&dias=${dias}`;
+    const q = modo === "cliente"
+      ? `accountId=${encodeURIComponent(accountId)}`
+      : `nicho=${encodeURIComponent(nicho)}`;
+    const url = `/api/criativos?${q}&dias=${dias}`;
 
     (async () => {
       const usuario = auth?.currentUser;
@@ -49,14 +65,14 @@ export default function CriativosSection(
       const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
       const j = await r.json();
       if (!r.ok || !j.ok) throw new Error(j?.erro || `Erro ${r.status}`);
-      return j.criativos as Criativo[];
+      return j as { criativos: Criativo[]; erros?: { accountId: string }[] };
     })()
-      .then((lista) => { if (!cancelado) setCriativos(lista); })
+      .then((j) => { if (!cancelado) { setCriativos(j.criativos); setErros(j.erros ?? []); } })
       .catch((e) => { if (!cancelado) { setErro(e.message); setCriativos([]); } })
       .finally(() => { if (!cancelado) setCarregando(false); });
 
     return () => { cancelado = true; };
-  }, [accountId, dias]);
+  }, [modo, accountId, nicho, dias, alvo]);
 
   const ranqueados = useMemo(
     () => criativos.filter((c) => c.conversas >= PISO_CONVERSAS).sort((a, b) => a.cpl - b.cpl),
@@ -68,22 +84,51 @@ export default function CriativosSection(
   );
 
   const nomeCliente = opcoes.find((c) => c.accountId === accountId)?.cliente;
+  const rotuloAlvo = modo === "cliente" ? nomeCliente : nicho;
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Seletores: cliente + período */}
+      {/* Modo: por cliente ou por nicho */}
+      <div className="flex items-center gap-1 self-start rounded-full p-1" style={{ background: CARD }}>
+        {(["cliente", "nicho"] as const).map((m) => (
+          <button
+            key={m}
+            onClick={() => setModo(m)}
+            className="rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors"
+            style={modo === m ? { background: YELLOW, color: INK } : { background: "transparent", color: MUTED }}
+          >
+            {m === "cliente" ? "Por cliente" : "Por nicho"}
+          </button>
+        ))}
+      </div>
+
+      {/* Seletores: cliente/nicho + período */}
       <div className="flex flex-wrap items-center gap-3">
-        <select
-          value={accountId}
-          onChange={(e) => setAccountId(e.target.value)}
-          className="min-w-[220px] rounded-lg px-3 py-2 text-sm outline-none"
-          style={{ background: INK, color: "#fff", border: `1px solid ${LINE}` }}
-        >
-          <option value="">Selecione um cliente…</option>
-          {opcoes.map((c) => (
-            <option key={c.accountId} value={c.accountId}>{c.cliente}</option>
-          ))}
-        </select>
+        {modo === "cliente" ? (
+          <select
+            value={accountId}
+            onChange={(e) => setAccountId(e.target.value)}
+            className="min-w-[220px] rounded-lg px-3 py-2 text-sm outline-none"
+            style={{ background: INK, color: "#fff", border: `1px solid ${LINE}` }}
+          >
+            <option value="">Selecione um cliente…</option>
+            {opcoes.map((c) => (
+              <option key={c.accountId} value={c.accountId}>{c.cliente}</option>
+            ))}
+          </select>
+        ) : (
+          <select
+            value={nicho}
+            onChange={(e) => setNicho(e.target.value)}
+            className="min-w-[220px] rounded-lg px-3 py-2 text-sm outline-none"
+            style={{ background: INK, color: "#fff", border: `1px solid ${LINE}` }}
+          >
+            <option value="">Selecione um nicho…</option>
+            {nichos.map((n) => (
+              <option key={n} value={n}>{n}</option>
+            ))}
+          </select>
+        )}
 
         <div className="flex items-center gap-1 rounded-full p-1" style={{ background: CARD }}>
           {PERIODOS.map((p) => {
@@ -105,9 +150,11 @@ export default function CriativosSection(
       </div>
 
       {/* Estados */}
-      {!accountId ? (
+      {!alvo ? (
         <div className="rounded-xl px-4 py-6 text-center text-[13px]" style={{ background: CARD, color: MUTED }}>
-          Selecione um cliente para ver o ranking de criativos.
+          {modo === "cliente"
+            ? "Selecione um cliente para ver o ranking de criativos."
+            : "Selecione um nicho para ranquear os criativos de todos os clientes dele."}
         </div>
       ) : erro ? (
         <div className="rounded-xl px-4 py-3 text-[13px]" style={{ background: "#2a1414", color: "#FF6B5E" }}>
@@ -115,14 +162,22 @@ export default function CriativosSection(
         </div>
       ) : carregando ? (
         <div className="rounded-xl px-4 py-6 text-center text-[13px]" style={{ background: CARD, color: MUTED }}>
-          Buscando criativos de {nomeCliente} na Meta…
+          {modo === "cliente"
+            ? `Buscando criativos de ${rotuloAlvo} na Meta…`
+            : `Buscando criativos do nicho ${rotuloAlvo} (várias contas) na Meta…`}
         </div>
       ) : criativos.length === 0 ? (
         <div className="rounded-xl px-4 py-6 text-center text-[13px]" style={{ background: CARD, color: MUTED }}>
-          Nenhum anúncio retornado para {nomeCliente} nesse período.
+          Nenhum anúncio retornado para {rotuloAlvo} nesse período.
         </div>
       ) : (
         <>
+          {erros.length > 0 && (
+            <div className="rounded-xl px-4 py-2.5 text-[12px]" style={{ background: "#2a2607", color: YELLOW }}>
+              {erros.length} conta(s) do nicho falharam e foram ignoradas.
+            </div>
+          )}
+
           {/* Ranking (>= piso de conversas) */}
           <div className="rounded-xl p-4" style={{ background: CARD }}>
             <p className="mb-3 px-1 text-[13px] uppercase tracking-wider" style={{ color: MUTED }}>
@@ -135,7 +190,7 @@ export default function CriativosSection(
             ) : (
               <div className="flex flex-col gap-2">
                 {ranqueados.map((c, i) => (
-                  <LinhaCriativo key={c.adId} c={c} pos={i + 1} melhor={i === 0} />
+                  <LinhaCriativo key={`${c.adId}-${i}`} c={c} pos={i + 1} melhor={i === 0} />
                 ))}
               </div>
             )}
@@ -148,8 +203,8 @@ export default function CriativosSection(
                 Volume insuficiente · menos de {PISO_CONVERSAS} conversas
               </p>
               <div className="flex flex-col gap-2">
-                {insuficientes.map((c) => (
-                  <LinhaCriativo key={c.adId} c={c} />
+                {insuficientes.map((c, i) => (
+                  <LinhaCriativo key={`${c.adId}-${i}`} c={c} />
                 ))}
               </div>
             </div>
@@ -171,6 +226,9 @@ function LinhaCriativo({ c, pos, melhor }: { c: Criativo; pos?: number; melhor?:
       </div>
       <Miniatura url={c.thumbnailUrl} />
       <div className="min-w-0 flex-1">
+        {c.cliente && (
+          <p className="truncate text-[11px] font-medium" style={{ color: YELLOW }}>{c.cliente}</p>
+        )}
         <p className="truncate text-sm text-white" title={c.adName}>{c.adName}</p>
         <p className="text-[11px]" style={{ color: MUTED }}>{num(c.conversas)} conversas · {brl(c.gasto)}</p>
       </div>

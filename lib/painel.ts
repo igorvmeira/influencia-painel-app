@@ -206,6 +206,23 @@ export function montarNichos(
   }).sort((a, b) => a.cpl - b.cpl);
 }
 
+// Gasto total por conta na janela dos últimos `periodoDias` dias.
+// Usado para escolher as contas de maior gasto ao ranquear criativos por nicho.
+export function gastoPorContaNoPeriodo(
+  daily: MetricaDiaria[],
+  periodoDias: number
+): Map<string, number> {
+  const ancoraMs = ancoraDe(daily);
+  const out = new Map<string, number>();
+  for (const m of daily) {
+    const d = Math.round((ancoraMs - Date.parse(m.data + "T00:00:00Z")) / DIA_MS);
+    if (d >= 0 && d <= periodoDias - 1) {
+      out.set(m.accountId, (out.get(m.accountId) ?? 0) + m.gasto);
+    }
+  }
+  return out;
+}
+
 // CPL agregado de um conjunto de contas dentro de uma faixa de dias (inclusive).
 function janelaCpl(
   registros: MetricaDiaria[],
