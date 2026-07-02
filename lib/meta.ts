@@ -53,11 +53,14 @@ export async function buscarInsights(
 }
 
 // Busca insights de uma conta quebrados POR DIA (time_increment=1) nos últimos
-// 90 dias, seguindo a paginação do "next" para trazer todos os dias.
-export async function buscarDiario(accountId: string): Promise<MetricaDiaria[]> {
+// `dias` dias, seguindo a paginação do "next" para trazer todos os dias.
+export async function buscarDiario(accountId: string, dias = 30): Promise<MetricaDiaria[]> {
+  const until = new Date();
+  const since = new Date();
+  since.setDate(since.getDate() - (dias - 1));
   const params = new URLSearchParams({
     fields: "spend,actions",
-    date_preset: "last_90d",
+    time_range: JSON.stringify({ since: ymd(since), until: ymd(until) }),
     time_increment: "1",
     level: "account",
     limit: "500",
