@@ -22,6 +22,9 @@ const MUTED = "#9A968F";
 const GREEN = "#4ECB8F";
 const RED = "#FF6B5E";
 
+// Limiar do alerta de CPL alto, em R$. Fácil de ajustar aqui no topo.
+const CPL_ALERTA = 15;
+
 function corVar(v: number, menorMelhor = false) {
   if (v === 0) return MUTED;
   const bom = menorMelhor ? v < 0 : v > 0;
@@ -84,6 +87,8 @@ export default function Dashboard(
   );
   const maxCpl = Math.max(1, ...ranking.map((g) => g.cpl));
   const subindo = data.gestores.filter((g) => g.cplVar > 0);
+  // Gestores com CPL absoluto acima do limiar (em R$).
+  const cplAlto = data.gestores.filter((g) => g.cpl >= CPL_ALERTA);
 
   // Nº de clientes por gestor (a partir do de-para).
   const clientesPorGestor = useMemo(() => {
@@ -199,6 +204,22 @@ export default function Dashboard(
           </span>
           <span style={{ color: "#d9cf6b" }}>
             {subindo.map((g) => `${g.nome} (${pct(g.cplVar)})`).join(" · ")}
+          </span>
+        </div>
+      )}
+
+      {/* Faixa de alerta — CPL alto (acima do limiar em R$) */}
+      {cplAlto.length > 0 && (
+        <div
+          className="mb-8 flex flex-wrap items-center gap-2 rounded-xl px-4 py-3 text-[13px]"
+          style={{ background: "#2a0707", color: RED }}
+        >
+          <span style={{ fontSize: 11 }}>▲</span>
+          <span className="font-medium">
+            {cplAlto.length} {cplAlto.length === 1 ? "gestor com" : "gestores com"} CPL acima de {brlDec(CPL_ALERTA)}:
+          </span>
+          <span style={{ color: "#e59a92" }}>
+            {cplAlto.map((g) => `${g.nome} (${brlDec(g.cpl)})`).join(" · ")}
           </span>
         </div>
       )}
