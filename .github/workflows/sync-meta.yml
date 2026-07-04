@@ -1,0 +1,50 @@
+name: sync-meta
+
+on:
+  schedule:
+    # Todos os dias às 09:00 UTC
+    - cron: "0 9 * * *"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Rodar sync-meta incremental
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+
+          BASE="https://influencia-painel-app.vercel.app/api/sync-meta"
+          LIMITE=10
+          MAX_ITER=50
+          OFFSET=0
+
+          for i in $(seq 1 "$MAX_ITER"); do
+            echo "== Iteração $i (offset=$OFFSET) =="
+
+            RESP=$(curl -sS "${BASE}?key=${CRON_SECRET}&offset=${OFFSET}&limite=${LIMITE}")
+
+            PROCESSADAS=$(echo "$RESP" | jq -r '.processadas // 0')
+            REGISTROS=$(echo "$RESP" | jq -r '.registros // 0')
+            PROXIMO=$(echo "$RESP" | jq -r '.proximoOffset')
+            OK=$(echo "$RESP" | jq -r '.ok // false')
+
+            if [ "$OK" != "true" ]; then
+              echo "Resposta sem ok=true; abortando."
+              # Reimprime a resposta sem a chave (que só vai na URL, não no corpo).
+              echo "$RESP" | jq '.'
+              exit 1
+            fi
+
+            echo "Contas processadas nesta chamada: ${PROCESSADAS} (registros gravados: ${REGISTROS})"
+
+            if [ "$PROXIMO" = "null" ] || [ -z "$PROXIMO" ]; then
+              echo "proximoOffset=null — sincronização concluída."
+              break
+            fi
+
+            OFFSET="$PROXIMO"
+            sleep 2
+          done
