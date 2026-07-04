@@ -208,8 +208,8 @@ export default function Dashboard(
     limite: pertoLimite.length,
   };
 
-  // Filtro da central de alertas. null = central fechada (tela principal limpa).
-  const [centralFiltro, setCentralFiltro] = useState<TipoAlerta | "todos" | null>(null);
+  // Filtro da aba de alertas (qual tipo mostrar). "todos" = sem filtro.
+  const [centralFiltro, setCentralFiltro] = useState<TipoAlerta | "todos">("todos");
 
   // Nº de clientes por gestor (a partir do de-para).
   const clientesPorGestor = useMemo(() => {
@@ -218,8 +218,13 @@ export default function Dashboard(
     return m;
   }, [contas]);
 
-  // Aba do ranking: por gestor, por nicho ou criativos (ao vivo).
-  const [aba, setAba] = useState<"gestores" | "nichos" | "criativos">("gestores");
+  // Aba ativa: rankings (gestores/nichos/criativos) ou a central de alertas.
+  const [aba, setAba] = useState<"gestores" | "nichos" | "criativos" | "alertas">("gestores");
+  // Abre a aba de alertas já filtrada pelo tipo do chip clicado.
+  function abrirAlertas(tipo: TipoAlerta | "todos") {
+    setCentralFiltro(tipo);
+    setAba("alertas");
+  }
   const nichos = useMemo(
     () => montarNichos(daily, contas, DIAS_POR_PERIODO[periodo]),
     [daily, contas, periodo]
@@ -313,7 +318,7 @@ export default function Dashboard(
         <LeadCard label="Split B2B / B2C" valor={`${num(t.b2b)} / ${num(t.b2c)}`} sub="formulário / WhatsApp" />
       </div>
 
-      {/* Alertas: linha compacta de chips. Clicar abre a central já filtrada. */}
+      {/* Alertas: linha compacta de chips. Clicar abre a aba Alertas já filtrada. */}
       {alertas.length > 0 && (
         <div className="mb-8 flex flex-wrap items-center gap-2">
           <span className="mr-1 text-[11px] uppercase tracking-wider" style={{ color: MUTED }}>Alertas</span>
@@ -323,47 +328,65 @@ export default function Dashboard(
               rotulo={TIPO_ROTULO[tp]}
               cor={TIPO_COR[tp]}
               contagem={contagem[tp]}
-              ativo={centralFiltro === tp}
-              onClick={() => setCentralFiltro((f) => (f === tp ? null : tp))}
+              ativo={aba === "alertas" && centralFiltro === tp}
+              onClick={() => abrirAlertas(tp)}
             />
           ))}
           <button
-            onClick={() => setCentralFiltro((f) => (f === null ? "todos" : null))}
+            onClick={() => abrirAlertas("todos")}
             className="ml-1 text-[12px] font-medium underline-offset-2 hover:underline"
             style={{ color: MUTED }}
           >
-            {centralFiltro === null ? "ver todos" : "fechar"}
+            ver todos
           </button>
         </div>
       )}
 
-      {/* Central de alertas — aparece ao clicar num chip; agrupada por severidade */}
-      {centralFiltro !== null && alertas.length > 0 && (
-        <CentralAlertas
-          alertas={alertas}
-          filtro={centralFiltro}
-          setFiltro={setCentralFiltro}
-          contagem={contagem}
-          limitesPorConta={limitesPorConta}
-        />
-      )}
-
-      {/* Toggle Gestores / Nichos / Criativos — ranking por CPL */}
+      {/* Toggle de abas: rankings (por CPL) + central de alertas */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        {(["gestores", "nichos", "criativos"] as const).map((a) => (
-          <button
-            key={a}
-            onClick={() => setAba(a)}
-            className="rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors"
-            style={aba === a ? { background: YELLOW, color: INK } : { background: CARD, color: MUTED }}
-          >
-            {a === "gestores" ? "Gestores" : a === "nichos" ? "Nichos" : "Criativos"}
-          </button>
-        ))}
-        <span className="ml-1 text-[13px] uppercase tracking-wider" style={{ color: MUTED }}>· ranking por CPL</span>
+        {(["gestores", "nichos", "criativos", "alertas"] as const).map((a) => {
+          const rotulo = a === "gestores" ? "Gestores"
+            : a === "nichos" ? "Nichos"
+            : a === "criativos" ? "Criativos" : "Alertas";
+          return (
+            <button
+              key={a}
+              onClick={() => setAba(a)}
+              className="inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors"
+              style={aba === a ? { background: YELLOW, color: INK } : { background: CARD, color: MUTED }}
+            >
+              {rotulo}
+              {a === "alertas" && alertas.length > 0 && (
+                <span
+                  className="rounded-full px-1.5 text-[11px] font-semibold tabular-nums"
+                  style={aba === a ? { background: "rgba(0,0,0,0.18)", color: INK } : { background: "#2a2a2a", color: MUTED }}
+                >
+                  {alertas.length}
+                </span>
+              )}
+            </button>
+          );
+        })}
+        {aba !== "alertas" && (
+          <span className="ml-1 text-[13px] uppercase tracking-wider" style={{ color: MUTED }}>· ranking por CPL</span>
+        )}
       </div>
 
-      {aba === "criativos" ? (
+      {aba === "alertas" ? (
+        alertas.length > 0 ? (
+          <CentralAlertas
+            alertas={alertas}
+            filtro={centralFiltro}
+            setFiltro={setCentralFiltro}
+            contagem={contagem}
+            limitesPorConta={limitesPorConta}
+          />
+        ) : (
+          <div className="mb-10 rounded-xl p-8 text-center text-[13px]" style={{ background: CARD, color: MUTED }}>
+            Nenhum alerta no período selecionado.
+          </div>
+        )
+      ) : aba === "criativos" ? (
         <div className="mb-10">
           <CriativosSection contas={contas} diasInicial={DIAS_POR_PERIODO[periodo]} />
         </div>
@@ -573,7 +596,7 @@ function ordenarAlertas(itens: AlertaCard[]): AlertaCard[] {
 function CentralAlertas({ alertas, filtro, setFiltro, contagem, limitesPorConta }: {
   alertas: AlertaCard[];
   filtro: TipoAlerta | "todos";
-  setFiltro: (f: TipoAlerta | "todos" | null) => void;
+  setFiltro: (f: TipoAlerta | "todos") => void;
   contagem: Record<TipoAlerta, number>;
   limitesPorConta: Map<string, LimiteConta>;
 }) {
@@ -595,9 +618,6 @@ function CentralAlertas({ alertas, filtro, setFiltro, contagem, limitesPorConta 
               onClick={() => setFiltro(tp)}
             />
           ))}
-          <button onClick={() => setFiltro(null)} className="ml-1 text-[12px] hover:text-white" style={{ color: MUTED }}>
-            Fechar
-          </button>
         </div>
       </div>
 
