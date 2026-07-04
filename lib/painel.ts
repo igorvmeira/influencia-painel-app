@@ -121,6 +121,7 @@ export function montarPainel(
     const clientes: LinhaCliente[] = contasGestor.map((c) => {
       const a = somaConta(atualPorConta, c.accountId);
       return {
+        accountId: c.accountId,
         cliente: c.cliente,
         tipo: c.tipo as Tipo,
         gasto: a.gasto,

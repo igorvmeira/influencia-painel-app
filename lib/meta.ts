@@ -25,6 +25,36 @@ function somaActions(actions: MetaAction[] | undefined, tipos: string[]): number
     .reduce((acc, a) => acc + Number(a.value || 0), 0);
 }
 
+export interface LimiteMeta {
+  spendCap: number;    // em R$ (convertido de centavos)
+  amountSpent: number; // em R$ (convertido de centavos)
+  isPrepay: boolean;
+  currency: string | null;
+}
+
+// Consulta o nó da conta para o teto de gasto (spend_cap) e o gasto acumulado
+// (amount_spent). A Marketing API devolve ambos em CENTAVOS → dividimos por 100.
+// spend_cap = "0" significa "sem teto".
+export async function buscarLimiteConta(accountId: string): Promise<LimiteMeta> {
+  const params = new URLSearchParams({
+    fields: "spend_cap,amount_spent,is_prepay_account,currency",
+    access_token: TOKEN,
+  });
+  const url = `https://graph.facebook.com/${API}/${accountId}?${params}`;
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Meta API ${res.status} (limite) para ${accountId}: ${body}`);
+  }
+  const j = await res.json();
+  return {
+    spendCap: Number(j?.spend_cap || 0) / 100,
+    amountSpent: Number(j?.amount_spent || 0) / 100,
+    isPrepay: Boolean(j?.is_prepay_account),
+    currency: j?.currency ?? null,
+  };
+}
+
 export async function buscarInsights(
   accountId: string,
   since: string,

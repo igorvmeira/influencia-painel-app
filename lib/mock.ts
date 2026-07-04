@@ -1,4 +1,4 @@
-import { ContaMap, MetricaDiaria, Tipo } from "./types";
+import { ContaMap, LimiteConta, MetricaDiaria, Tipo } from "./types";
 
 // De-para de exemplo (mesmos gestores/clientes da onda 1) + nicho variado.
 // PetWorld fica sem nicho de propósito, para exercitar o fallback "Sem nicho".
@@ -41,6 +41,15 @@ export const mockContas: ContaMap[] = SEEDS.map((s) => ({
   tipo: s.tipo,
   ...(s.nicho ? { nicho: s.nicho } : {}),
 }));
+
+// Tetos de gasto de exemplo (valores já em R$) para exercitar o alerta de limite:
+// 1 crítico (>=90%), 1 atenção (>=80%), 1 ok (<80%) e 1 sem teto (spendCap=0).
+export const mockLimites: LimiteConta[] = [
+  { accountId: slug("Construtora Líder"), spendCap: 5000, amountSpent: 4750, isPrepay: false }, // 95% → CRÍTICO
+  { accountId: slug("Clínica Vita"),      spendCap: 3000, amountSpent: 2550, isPrepay: true  }, // 85% → ATENÇÃO
+  { accountId: slug("TechPrime"),         spendCap: 8000, amountSpent: 5200, isPrepay: false }, // 65% → ok (não alerta)
+  { accountId: slug("Loja Verde"),        spendCap: 0,    amountSpent: 1200, isPrepay: false }, // sem teto → ignorar
+];
 
 // Ruído determinístico 0..1 (estável entre servidor e client).
 function noise(seed: number): number {

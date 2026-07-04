@@ -7,7 +7,7 @@ import {
   CartesianGrid, Line, LineChart, ResponsiveContainer,
   Tooltip, XAxis, YAxis,
 } from "recharts";
-import { ContaMap, LinhaCliente, MetricaDiaria } from "@/lib/types";
+import { ContaMap, LimiteConta, LinhaCliente, MetricaDiaria } from "@/lib/types";
 import { montarNichos, montarPainel } from "@/lib/painel";
 import { brl, brlDec, num, pct } from "@/lib/format";
 import NichosSection from "./NichosSection";
@@ -24,6 +24,47 @@ const RED = "#FF6B5E";
 
 // Limiar do alerta de CPL alto, em R$. Fácil de ajustar aqui no topo.
 const CPL_ALERTA = 15;
+
+// Alerta de limite de gasto: percentual usado (amount_spent / spend_cap) a partir
+// do qual a conta entra em ATENÇÃO (âmbar) ou CRÍTICO (vermelho). Fácil de ajustar.
+const LIMITE_ATENCAO = 0.8; // >= 80% usado
+const LIMITE_CRITICO = 0.9; // >= 90% usado
+
+const AMBAR = "#F2B441";
+
+// Uma conta perto do teto de gasto, já com o percentual usado e o restante em R$.
+interface AlertaLimite {
+  accountId: string;
+  cliente: string;
+  spendCap: number;
+  amountSpent: number;
+  usoPct: number;   // 0..1+
+  restante: number; // R$ que faltam até o teto (nunca negativo)
+  critico: boolean;
+}
+
+// Deriva a lista de contas perto do limite a partir do de-para + dos limites.
+// Só entram contas com teto (spend_cap > 0) e uso >= LIMITE_ATENCAO.
+function contasPertoDoLimite(contas: ContaMap[], limites: LimiteConta[]): AlertaLimite[] {
+  const mapaLim = new Map(limites.map((l) => [l.accountId, l]));
+  const out: AlertaLimite[] = [];
+  for (const c of contas) {
+    const l = mapaLim.get(c.accountId);
+    if (!l || l.spendCap <= 0) continue; // sem teto → ignora
+    const usoPct = l.amountSpent / l.spendCap;
+    if (usoPct < LIMITE_ATENCAO) continue;
+    out.push({
+      accountId: c.accountId,
+      cliente: c.cliente,
+      spendCap: l.spendCap,
+      amountSpent: l.amountSpent,
+      usoPct,
+      restante: Math.max(0, l.spendCap - l.amountSpent),
+      critico: usoPct >= LIMITE_CRITICO,
+    });
+  }
+  return out.sort((a, b) => b.usoPct - a.usoPct);
+}
 
 // Formata o horário do último sync no fuso de Brasília (pt-BR).
 // Ex.: "04/07/2026 às 06:12". Sem registro → "Sincronização pendente".
@@ -81,8 +122,8 @@ const DIAS_POR_PERIODO: Record<Periodo, number> = { "7 dias": 7, "15 dias": 15, 
 type ColCliente = "cliente" | "tipo" | "gasto" | "conversas" | "cplSemanal";
 
 export default function Dashboard(
-  { daily, contas, fonte, ultimaSync }:
-  { daily: MetricaDiaria[]; contas: ContaMap[]; fonte: "firestore" | "mock"; ultimaSync: string | null }
+  { daily, contas, fonte, ultimaSync, limites }:
+  { daily: MetricaDiaria[]; contas: ContaMap[]; fonte: "firestore" | "mock"; ultimaSync: string | null; limites: LimiteConta[] }
 ) {
   // Seletor de período: agora filtra de verdade, recomputando o painel a partir
   // dos registros diários para a janela selecionada.
@@ -103,6 +144,11 @@ export default function Dashboard(
   const subindo = data.gestores.filter((g) => g.cplVar > 0);
   // Gestores com CPL absoluto acima do limiar (em R$).
   const cplAlto = data.gestores.filter((g) => g.cpl >= CPL_ALERTA);
+
+  // Contas perto do teto de gasto (para a faixa de alerta e as barrinhas de uso).
+  const pertoLimite = useMemo(() => contasPertoDoLimite(contas, limites), [contas, limites]);
+  const limitesPorConta = useMemo(() => new Map(limites.map((l) => [l.accountId, l])), [limites]);
+  const algumCritico = pertoLimite.some((a) => a.critico);
 
   // Nº de clientes por gestor (a partir do de-para).
   const clientesPorGestor = useMemo(() => {
@@ -234,6 +280,31 @@ export default function Dashboard(
           </span>
           <span style={{ color: "#e59a92" }}>
             {cplAlto.map((g) => `${g.nome} (${brlDec(g.cpl)})`).join(" · ")}
+          </span>
+        </div>
+      )}
+
+      {/* Faixa de alerta — contas perto do teto de gasto (spend_cap) */}
+      {pertoLimite.length > 0 && (
+        <div
+          className="mb-8 flex flex-wrap items-center gap-2 rounded-xl px-4 py-3 text-[13px]"
+          style={
+            algumCritico
+              ? { background: "#2a0707", color: RED }
+              : { background: "#2a2205", color: AMBAR }
+          }
+        >
+          <span style={{ fontSize: 11 }}>▲</span>
+          <span className="font-medium">
+            {pertoLimite.length}{" "}
+            {pertoLimite.length === 1 ? "conta perto" : "contas perto"} do limite de gasto:
+          </span>
+          <span className="flex flex-wrap gap-x-2 gap-y-1">
+            {pertoLimite.map((a) => (
+              <span key={a.accountId} style={{ color: a.critico ? "#f0a29a" : "#e8cf8a" }}>
+                {a.cliente} ({Math.round(a.usoPct * 100)}% · resta {brlDec(a.restante)})
+              </span>
+            ))}
           </span>
         </div>
       )}
@@ -383,17 +454,20 @@ export default function Dashboard(
                   <Th right onClick={() => ordenar("gasto")}>Gasto{seta("gasto")}</Th>
                   <Th right onClick={() => ordenar("conversas")}>Conv.{seta("conversas")}</Th>
                   <Th right onClick={() => ordenar("cplSemanal")}>CPL{seta("cplSemanal")}</Th>
+                  <th className="px-4 py-3 font-medium" style={{ borderBottom: `1px solid ${LINE}` }}>Limite</th>
                 </tr>
               </thead>
               <tbody>
                 {clientes.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-6 text-center" style={{ color: MUTED }}>
+                    <td colSpan={6} className="px-4 py-6 text-center" style={{ color: MUTED }}>
                       Nenhum cliente encontrado.
                     </td>
                   </tr>
                 ) : (
-                  clientes.map((c) => <LinhaClienteRow key={c.cliente} c={c} />)
+                  clientes.map((c) => (
+                    <LinhaClienteRow key={c.cliente} c={c} limite={limitesPorConta.get(c.accountId)} />
+                  ))
                 )}
               </tbody>
             </table>
@@ -424,7 +498,7 @@ function Th({ children, right, onClick }: { children: React.ReactNode; right?: b
   );
 }
 
-function LinhaClienteRow({ c }: { c: LinhaCliente }) {
+function LinhaClienteRow({ c, limite }: { c: LinhaCliente; limite?: LimiteConta }) {
   return (
     <tr>
       <td className="px-4 py-3" style={{ borderBottom: `1px solid ${LINE}`, color: "#fff" }}>{c.cliente}</td>
@@ -441,7 +515,28 @@ function LinhaClienteRow({ c }: { c: LinhaCliente }) {
       <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: "#fff" }}>{brl(c.gasto)}</td>
       <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: "#fff" }}>{num(c.conversas)}</td>
       <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: "#fff" }}>{brlDec(c.cplSemanal)}</td>
+      <td className="px-4 py-3" style={{ borderBottom: `1px solid ${LINE}` }}>
+        <BarraLimite limite={limite} />
+      </td>
     </tr>
+  );
+}
+
+// Barrinha de uso do teto (usado vs spend_cap). Só aparece para contas com teto.
+function BarraLimite({ limite }: { limite?: LimiteConta }) {
+  if (!limite || limite.spendCap <= 0) {
+    return <span className="text-[12px]" style={{ color: MUTED }}>—</span>;
+  }
+  const usoPct = limite.amountSpent / limite.spendCap;
+  const larg = Math.min(100, Math.max(0, usoPct * 100));
+  const cor = usoPct >= LIMITE_CRITICO ? RED : usoPct >= LIMITE_ATENCAO ? AMBAR : GREEN;
+  return (
+    <div className="flex items-center gap-2" title={`${brlDec(limite.amountSpent)} de ${brlDec(limite.spendCap)}`}>
+      <div className="h-1.5 w-20 overflow-hidden rounded-full" style={{ background: LINE }}>
+        <div className="h-full rounded-full" style={{ width: `${larg}%`, background: cor }} />
+      </div>
+      <span className="text-[12px] tabular-nums" style={{ color: cor }}>{Math.round(usoPct * 100)}%</span>
+    </div>
   );
 }
 

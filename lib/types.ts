@@ -46,11 +46,21 @@ export interface PontoCpl {
 }
 
 export interface LinhaCliente {
+  accountId: string;
   cliente: string;
   tipo: Tipo;
   gasto: number;
   conversas: number;
   cplSemanal: number;
+}
+
+/** Teto de gasto e consumo de uma conta (valores já em reais). */
+export interface LimiteConta {
+  accountId: string;
+  spendCap: number;    // teto de gasto em R$ (0 = sem teto → ignorar no alerta)
+  amountSpent: number; // gasto acumulado em R$
+  isPrepay: boolean;   // conta pré-paga
+  atualizadoEm?: string;
 }
 
 export interface Detalhe {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/firebaseAdmin";
-import { buscarDiario } from "@/lib/meta";
+import { buscarDiario, buscarLimiteConta } from "@/lib/meta";
 import { ContaMap } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +43,7 @@ export async function GET(req: Request) {
   const bloco = contas.slice(offset, offset + limite);
 
   const col = db.collection("metricasDiarias");
+  const colLimites = db.collection("limitesConta");
 
   // Processa cada conta do bloco e grava logo que termina, para nunca perder
   // o progresso já feito. Em paralelo para caber no tempo limite.
@@ -55,6 +56,25 @@ export async function GET(req: Request) {
       }
       await batch.commit();
     }
+
+    // Teto de gasto (spend_cap) e gasto acumulado (amount_spent) da conta, para o
+    // alerta de limite. É secundário: se falhar, não perde o sync diário acima.
+    try {
+      const lim = await buscarLimiteConta(c.accountId);
+      await colLimites.doc(c.accountId).set(
+        {
+          accountId: c.accountId,
+          spendCap: lim.spendCap,
+          amountSpent: lim.amountSpent,
+          isPrepay: lim.isPrepay,
+          atualizadoEm: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    } catch {
+      // ignora: o teto é secundário em relação às métricas diárias
+    }
+
     return registros.length;
   }
 
