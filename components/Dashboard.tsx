@@ -36,6 +36,7 @@ const AMBAR = "#F2B441";
 interface AlertaLimite {
   accountId: string;
   cliente: string;
+  gestor: string;
   spendCap: number;
   amountSpent: number;
   usoPct: number;   // 0..1+
@@ -56,6 +57,7 @@ function contasPertoDoLimite(contas: ContaMap[], limites: LimiteConta[]): Alerta
     out.push({
       accountId: c.accountId,
       cliente: c.cliente,
+      gestor: c.gestor,
       spendCap: l.spendCap,
       amountSpent: l.amountSpent,
       usoPct,
@@ -64,6 +66,37 @@ function contasPertoDoLimite(contas: ContaMap[], limites: LimiteConta[]): Alerta
     });
   }
   return out.sort((a, b) => b.usoPct - a.usoPct);
+}
+
+// ---- Central de alertas: modelo unificado dos três tipos de alerta ----
+type TipoAlerta = "cplSubindo" | "cplAlto" | "limite";
+type Severidade = "critico" | "atencao";
+
+const TIPO_ROTULO: Record<TipoAlerta, string> = {
+  cplSubindo: "CPL subindo",
+  cplAlto: "CPL alto",
+  limite: "Perto do limite",
+};
+// Cores por tipo (pedido): amarelo=subindo, vermelho=CPL alto, âmbar=limite.
+const TIPO_COR: Record<TipoAlerta, string> = {
+  cplSubindo: YELLOW,
+  cplAlto: RED,
+  limite: AMBAR,
+};
+// Ordem de exibição dos tipos dentro de cada severidade.
+const TIPO_ORDEM: TipoAlerta[] = ["cplAlto", "limite", "cplSubindo"];
+
+interface AlertaCard {
+  id: string;
+  tipo: TipoAlerta;
+  severidade: Severidade;
+  nome: string;        // destaque (gestor p/ CPL, cliente p/ limite)
+  gestor?: string;     // secundário (só limite; no CPL o próprio nome já é o gestor)
+  accountId?: string;  // limite → para a barrinha de uso
+  usoPct?: number;     // limite → %
+  restante?: number;   // limite → R$
+  cpl?: number;        // CPL → R$
+  cplVar?: number;     // CPL → variação %
 }
 
 // Formata o horário do último sync no fuso de Brasília (pt-BR).
@@ -145,10 +178,38 @@ export default function Dashboard(
   // Gestores com CPL absoluto acima do limiar (em R$).
   const cplAlto = data.gestores.filter((g) => g.cpl >= CPL_ALERTA);
 
-  // Contas perto do teto de gasto (para a faixa de alerta e as barrinhas de uso).
+  // Contas perto do teto de gasto (para os alertas e as barrinhas de uso).
   const pertoLimite = useMemo(() => contasPertoDoLimite(contas, limites), [contas, limites]);
   const limitesPorConta = useMemo(() => new Map(limites.map((l) => [l.accountId, l])), [limites]);
-  const algumCritico = pertoLimite.some((a) => a.critico);
+
+  // Lista unificada de alertas para a central. Respeita o período: subindo/cplAlto
+  // derivam de data.gestores, que é recomputado por período; o limite é vitalício
+  // da conta (spend_cap não tem recorte de período).
+  const alertas = useMemo<AlertaCard[]>(() => {
+    const arr: AlertaCard[] = [];
+    for (const g of cplAlto) {
+      arr.push({ id: `cplAlto-${g.nome}`, tipo: "cplAlto", severidade: "critico", nome: g.nome, cpl: g.cpl, cplVar: g.cplVar });
+    }
+    for (const g of subindo) {
+      arr.push({ id: `subindo-${g.nome}`, tipo: "cplSubindo", severidade: "atencao", nome: g.nome, cpl: g.cpl, cplVar: g.cplVar });
+    }
+    for (const a of pertoLimite) {
+      arr.push({
+        id: `limite-${a.accountId}`, tipo: "limite", severidade: a.critico ? "critico" : "atencao",
+        nome: a.cliente, gestor: a.gestor, accountId: a.accountId, usoPct: a.usoPct, restante: a.restante,
+      });
+    }
+    return arr;
+  }, [cplAlto, subindo, pertoLimite]);
+
+  const contagem: Record<TipoAlerta, number> = {
+    cplSubindo: subindo.length,
+    cplAlto: cplAlto.length,
+    limite: pertoLimite.length,
+  };
+
+  // Filtro da central de alertas. null = central fechada (tela principal limpa).
+  const [centralFiltro, setCentralFiltro] = useState<TipoAlerta | "todos" | null>(null);
 
   // Nº de clientes por gestor (a partir do de-para).
   const clientesPorGestor = useMemo(() => {
@@ -252,61 +313,39 @@ export default function Dashboard(
         <LeadCard label="Split B2B / B2C" valor={`${num(t.b2b)} / ${num(t.b2c)}`} sub="formulário / WhatsApp" />
       </div>
 
-      {/* Faixa de alerta */}
-      {subindo.length > 0 && (
-        <div
-          className="mb-8 flex flex-wrap items-center gap-2 rounded-xl px-4 py-3 text-[13px]"
-          style={{ background: "#2a2607", color: YELLOW }}
-        >
-          <span style={{ fontSize: 11 }}>▲</span>
-          <span className="font-medium">
-            {subindo.length} {subindo.length === 1 ? "gestor com" : "gestores com"} CPL subindo:
-          </span>
-          <span style={{ color: "#d9cf6b" }}>
-            {subindo.map((g) => `${g.nome} (${pct(g.cplVar)})`).join(" · ")}
-          </span>
+      {/* Alertas: linha compacta de chips. Clicar abre a central já filtrada. */}
+      {alertas.length > 0 && (
+        <div className="mb-8 flex flex-wrap items-center gap-2">
+          <span className="mr-1 text-[11px] uppercase tracking-wider" style={{ color: MUTED }}>Alertas</span>
+          {TIPO_ORDEM.filter((tp) => contagem[tp] > 0).map((tp) => (
+            <ChipAlerta
+              key={tp}
+              rotulo={TIPO_ROTULO[tp]}
+              cor={TIPO_COR[tp]}
+              contagem={contagem[tp]}
+              ativo={centralFiltro === tp}
+              onClick={() => setCentralFiltro((f) => (f === tp ? null : tp))}
+            />
+          ))}
+          <button
+            onClick={() => setCentralFiltro((f) => (f === null ? "todos" : null))}
+            className="ml-1 text-[12px] font-medium underline-offset-2 hover:underline"
+            style={{ color: MUTED }}
+          >
+            {centralFiltro === null ? "ver todos" : "fechar"}
+          </button>
         </div>
       )}
 
-      {/* Faixa de alerta — CPL alto (acima do limiar em R$) */}
-      {cplAlto.length > 0 && (
-        <div
-          className="mb-8 flex flex-wrap items-center gap-2 rounded-xl px-4 py-3 text-[13px]"
-          style={{ background: "#2a0707", color: RED }}
-        >
-          <span style={{ fontSize: 11 }}>▲</span>
-          <span className="font-medium">
-            {cplAlto.length} {cplAlto.length === 1 ? "gestor com" : "gestores com"} CPL acima de {brlDec(CPL_ALERTA)}:
-          </span>
-          <span style={{ color: "#e59a92" }}>
-            {cplAlto.map((g) => `${g.nome} (${brlDec(g.cpl)})`).join(" · ")}
-          </span>
-        </div>
-      )}
-
-      {/* Faixa de alerta — contas perto do teto de gasto (spend_cap) */}
-      {pertoLimite.length > 0 && (
-        <div
-          className="mb-8 flex flex-wrap items-center gap-2 rounded-xl px-4 py-3 text-[13px]"
-          style={
-            algumCritico
-              ? { background: "#2a0707", color: RED }
-              : { background: "#2a2205", color: AMBAR }
-          }
-        >
-          <span style={{ fontSize: 11 }}>▲</span>
-          <span className="font-medium">
-            {pertoLimite.length}{" "}
-            {pertoLimite.length === 1 ? "conta perto" : "contas perto"} do limite de gasto:
-          </span>
-          <span className="flex flex-wrap gap-x-2 gap-y-1">
-            {pertoLimite.map((a) => (
-              <span key={a.accountId} style={{ color: a.critico ? "#f0a29a" : "#e8cf8a" }}>
-                {a.cliente} ({Math.round(a.usoPct * 100)}% · resta {brlDec(a.restante)})
-              </span>
-            ))}
-          </span>
-        </div>
+      {/* Central de alertas — aparece ao clicar num chip; agrupada por severidade */}
+      {centralFiltro !== null && alertas.length > 0 && (
+        <CentralAlertas
+          alertas={alertas}
+          filtro={centralFiltro}
+          setFiltro={setCentralFiltro}
+          contagem={contagem}
+          limitesPorConta={limitesPorConta}
+        />
       )}
 
       {/* Toggle Gestores / Nichos / Criativos — ranking por CPL */}
@@ -482,6 +521,157 @@ export default function Dashboard(
       >
         {rotuloSync(ultimaSync)}
       </footer>
+    </div>
+  );
+}
+
+// Chip compacto de alerta (rótulo + contagem) na tela principal.
+function ChipAlerta({ rotulo, cor, contagem, ativo, onClick }: {
+  rotulo: string; cor: string; contagem: number; ativo: boolean; onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors"
+      style={{ background: ativo ? cor : CARD, color: ativo ? INK : "#fff", border: `1px solid ${ativo ? cor : LINE}` }}
+    >
+      <span className="h-2 w-2 rounded-full" style={{ background: ativo ? INK : cor }} />
+      {rotulo}
+      <span
+        className="rounded-full px-1.5 text-[11px] font-semibold tabular-nums"
+        style={{ background: ativo ? "rgba(0,0,0,0.18)" : "#2a2a2a", color: ativo ? INK : cor }}
+      >
+        {contagem}
+      </span>
+    </button>
+  );
+}
+
+// Pílula de filtro por tipo dentro da central.
+function FiltroPill({ rotulo, ativo, onClick }: { rotulo: string; ativo: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="rounded-full px-3 py-1 text-[12px] font-medium transition-colors"
+      style={ativo ? { background: YELLOW, color: INK } : { background: "#2a2a2a", color: MUTED }}
+    >
+      {rotulo}
+    </button>
+  );
+}
+
+// Ordena os alertas de um grupo: por ordem de tipo e, dentro do tipo, do mais grave.
+function ordenarAlertas(itens: AlertaCard[]): AlertaCard[] {
+  return [...itens].sort((a, b) => {
+    const ta = TIPO_ORDEM.indexOf(a.tipo), tb = TIPO_ORDEM.indexOf(b.tipo);
+    if (ta !== tb) return ta - tb;
+    return (b.usoPct ?? b.cpl ?? 0) - (a.usoPct ?? a.cpl ?? 0);
+  });
+}
+
+// Central de alertas: lista tudo com espaço, agrupada por severidade e por tipo.
+function CentralAlertas({ alertas, filtro, setFiltro, contagem, limitesPorConta }: {
+  alertas: AlertaCard[];
+  filtro: TipoAlerta | "todos";
+  setFiltro: (f: TipoAlerta | "todos" | null) => void;
+  contagem: Record<TipoAlerta, number>;
+  limitesPorConta: Map<string, LimiteConta>;
+}) {
+  const lista = filtro === "todos" ? alertas : alertas.filter((a) => a.tipo === filtro);
+  const criticos = ordenarAlertas(lista.filter((a) => a.severidade === "critico"));
+  const atencao = ordenarAlertas(lista.filter((a) => a.severidade === "atencao"));
+
+  return (
+    <section className="mb-10 rounded-xl p-5" style={{ background: CARD }}>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-[13px] uppercase tracking-wider" style={{ color: MUTED }}>Central de alertas</p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <FiltroPill rotulo="Todos" ativo={filtro === "todos"} onClick={() => setFiltro("todos")} />
+          {TIPO_ORDEM.filter((tp) => contagem[tp] > 0).map((tp) => (
+            <FiltroPill
+              key={tp}
+              rotulo={`${TIPO_ROTULO[tp]} (${contagem[tp]})`}
+              ativo={filtro === tp}
+              onClick={() => setFiltro(tp)}
+            />
+          ))}
+          <button onClick={() => setFiltro(null)} className="ml-1 text-[12px] hover:text-white" style={{ color: MUTED }}>
+            Fechar
+          </button>
+        </div>
+      </div>
+
+      {lista.length === 0 ? (
+        <p className="py-6 text-center text-[13px]" style={{ color: MUTED }}>Nenhum alerta neste filtro.</p>
+      ) : (
+        <div className="flex flex-col gap-6">
+          {criticos.length > 0 && (
+            <GrupoSeveridade titulo="Crítico" cor={RED} itens={criticos} limitesPorConta={limitesPorConta} />
+          )}
+          {atencao.length > 0 && (
+            <GrupoSeveridade titulo="Atenção" cor={AMBAR} itens={atencao} limitesPorConta={limitesPorConta} />
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function GrupoSeveridade({ titulo, cor, itens, limitesPorConta }: {
+  titulo: string; cor: string; itens: AlertaCard[]; limitesPorConta: Map<string, LimiteConta>;
+}) {
+  return (
+    <div>
+      <div className="mb-2 flex items-center gap-2">
+        <span className="h-2.5 w-2.5 rounded-full" style={{ background: cor }} />
+        <h3 className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: cor }}>{titulo}</h3>
+        <span className="text-[11px] tabular-nums" style={{ color: MUTED }}>{itens.length}</span>
+      </div>
+      <div className="flex flex-col gap-2">
+        {itens.map((a) => (
+          <AlertaCardRow key={a.id} a={a} limite={a.accountId ? limitesPorConta.get(a.accountId) : undefined} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Uma linha/card de alerta. Limite → cliente + gestor + barra + %/R$ restante.
+// CPL → gestor + CPL (R$) + variação.
+function AlertaCardRow({ a, limite }: { a: AlertaCard; limite?: LimiteConta }) {
+  const ehLimite = a.tipo === "limite";
+  return (
+    <div className="flex items-center gap-4 rounded-lg px-4 py-3" style={{ background: INK }}>
+      <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: TIPO_COR[a.tipo] }} />
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="truncate text-sm font-medium text-white">{a.nome}</span>
+          <span
+            className="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase"
+            style={{ background: "#2a2a2a", color: TIPO_COR[a.tipo] }}
+          >
+            {TIPO_ROTULO[a.tipo]}
+          </span>
+        </div>
+        <p className="mt-0.5 text-[11px]" style={{ color: MUTED }}>
+          {ehLimite ? `Gestor: ${a.gestor}` : "Gestor"}
+        </p>
+      </div>
+      <div className="flex w-64 shrink-0 items-center justify-end gap-3">
+        {ehLimite ? (
+          <>
+            <BarraLimite limite={limite} />
+            <span className="w-24 text-right text-[12px] tabular-nums" style={{ color: MUTED }}>
+              resta {brlDec(a.restante ?? 0)}
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="text-sm font-medium tabular-nums text-white">{brlDec(a.cpl ?? 0)}</span>
+            <Trend v={a.cplVar ?? 0} menorMelhor />
+          </>
+        )}
+      </div>
     </div>
   );
 }
