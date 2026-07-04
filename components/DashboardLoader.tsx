@@ -5,7 +5,7 @@ import { auth } from "@/lib/firebaseClient";
 import Dashboard from "./Dashboard";
 import { ContaMap, MetricaDiaria } from "@/lib/types";
 
-interface Dados { daily: MetricaDiaria[]; contas: ContaMap[]; fonte: "firestore" | "mock" }
+interface Dados { daily: MetricaDiaria[]; contas: ContaMap[]; fonte: "firestore" | "mock"; ultimaSync: string | null }
 
 // Carrega os dados do painel no client, já autenticado (via /api/painel com ID token).
 // Assim os dados nunca vão para o HTML de quem não está logado.
@@ -43,5 +43,5 @@ export default function DashboardLoader() {
       </div>
     );
   }
-  return <Dashboard daily={dados.daily} contas={dados.contas} fonte={dados.fonte} />;
+  return <Dashboard daily={dados.daily} contas={dados.contas} fonte={dados.fonte} ultimaSync={dados.ultimaSync} />;
 }

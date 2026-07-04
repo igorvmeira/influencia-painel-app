@@ -25,6 +25,20 @@ const RED = "#FF6B5E";
 // Limiar do alerta de CPL alto, em R$. Fácil de ajustar aqui no topo.
 const CPL_ALERTA = 15;
 
+// Formata o horário do último sync no fuso de Brasília (pt-BR).
+// Ex.: "04/07/2026 às 06:12". Sem registro → "Sincronização pendente".
+function rotuloSync(iso: string | null): string {
+  if (!iso) return "Sincronização pendente";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "Sincronização pendente";
+  const p = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  }).formatToParts(d).reduce<Record<string, string>>((a, x) => ((a[x.type] = x.value), a), {});
+  return `Última sincronização: ${p.day}/${p.month}/${p.year} às ${p.hour}:${p.minute}`;
+}
+
 function corVar(v: number, menorMelhor = false) {
   if (v === 0) return MUTED;
   const bom = menorMelhor ? v < 0 : v > 0;
@@ -67,8 +81,8 @@ const DIAS_POR_PERIODO: Record<Periodo, number> = { "7 dias": 7, "15 dias": 15, 
 type ColCliente = "cliente" | "tipo" | "gasto" | "conversas" | "cplSemanal";
 
 export default function Dashboard(
-  { daily, contas, fonte }:
-  { daily: MetricaDiaria[]; contas: ContaMap[]; fonte: "firestore" | "mock" }
+  { daily, contas, fonte, ultimaSync }:
+  { daily: MetricaDiaria[]; contas: ContaMap[]; fonte: "firestore" | "mock"; ultimaSync: string | null }
 ) {
   // Seletor de período: agora filtra de verdade, recomputando o painel a partir
   // dos registros diários para a janela selecionada.
@@ -386,6 +400,14 @@ export default function Dashboard(
           </div>
         </>
       )}
+
+      {/* Rodapé discreto — horário do último sync (fuso de Brasília) */}
+      <footer
+        className="mt-10 border-t pt-4 text-center text-[11px] tracking-wide"
+        style={{ borderColor: LINE, color: MUTED }}
+      >
+        {rotuloSync(ultimaSync)}
+      </footer>
     </div>
   );
 }

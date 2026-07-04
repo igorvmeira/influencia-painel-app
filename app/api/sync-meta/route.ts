@@ -71,6 +71,12 @@ export async function GET(req: Request) {
   const fim = offset + limite;
   const proximoOffset = fim < total ? fim : null;
 
+  // Registra o horário desta sincronização para o rodapé do painel.
+  // Grava a cada chamada (inclusive nas incrementais), então o valor exibido
+  // reflete a atividade de sync mais recente.
+  const atualizadoEm = new Date().toISOString();
+  await db.collection("sistema").doc("sync").set({ atualizadoEm }, { merge: true });
+
   return NextResponse.json({
     ok: true,
     janelaDias: JANELA_DIAS,
@@ -82,6 +88,6 @@ export async function GET(req: Request) {
     registros,
     proximoOffset,
     erros,
-    atualizadoEm: new Date().toISOString(),
+    atualizadoEm,
   });
 }
