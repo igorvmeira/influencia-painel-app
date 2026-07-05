@@ -1,8 +1,8 @@
 // TODO REMOVER — rota TEMPORÁRIA de descoberta (somente leitura).
-// Lista as contas de anúncio que o token da BM enxerga hoje no Meta e compara
-// com o de-para do Firestore (coleção "contas"): mostra NOVAS (no Meta, fora do
-// de-para) e SUMIDAS (no de-para, fora do Meta). Não escreve, não apaga e NÃO
-// adiciona conta nenhuma. Remover após o uso.
+// Lê a BM INTEIRA pelo Business ID (owned_ad_accounts + client_ad_accounts),
+// mostra quais contas o System User ainda NÃO enxerga (temAcessoDoToken=false) e
+// compara com o de-para do Firestore (coleção "contas"). Não escreve, não apaga,
+// não atribui nada. Remover após o uso.
 
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/firebaseAdmin";
@@ -12,9 +12,10 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-// Mesmas envs que o sync/página de contas já usam (não cria env nova).
+// Mesmas envs do Meta já usadas pelo sync + o Business ID da BM.
 const API = process.env.META_API_VERSION || "v21.0";
 const TOKEN = process.env.META_ACCESS_TOKEN || "";
+const BUSINESS_ID = process.env.META_BUSINESS_ID || "";
 
 interface AdAccount {
   id: string;          // "act_123..."
@@ -23,7 +24,6 @@ interface AdAccount {
   account_status: number;
 }
 
-// Rótulo legível para o account_status numérico do Meta.
 const STATUS_ROTULO: Record<number, string> = {
   1: "ACTIVE",
   2: "DISABLED",
@@ -37,24 +37,17 @@ const STATUS_ROTULO: Record<number, string> = {
   202: "ANY_CLOSED",
 };
 
-// Normaliza qualquer forma ("act_123" ou "123") para o id numérico puro.
+// Normaliza "act_123"/"123" para o id numérico puro (o de-para usa "act_...").
 const bare = (s: string) => String(s || "").replace(/^act_/, "");
+const idDe = (m: AdAccount) => m.id || `act_${m.account_id}`;
 
-// Busca todas as contas visíveis ao token (próprias e de clientes atribuídas ao
-// token da BM), seguindo a paginação do "next".
-async function buscarContasMeta(): Promise<AdAccount[]> {
+// Segue a paginação do "next" e devolve todas as páginas de um edge.
+async function paginar(urlInicial: string): Promise<AdAccount[]> {
   const out: AdAccount[] = [];
-  const params = new URLSearchParams({
-    fields: "id,account_id,name,account_status",
-    limit: "200",
-    access_token: TOKEN,
-  });
-  let url: string | undefined = `https://graph.facebook.com/${API}/me/adaccounts?${params}`;
+  let url: string | undefined = urlInicial;
   while (url) {
     const res: Response = await fetch(url, { cache: "no-store" });
-    if (!res.ok) {
-      throw new Error(`Meta API ${res.status}: ${await res.text()}`);
-    }
+    if (!res.ok) throw new Error(`Meta API ${res.status}: ${await res.text()}`);
     const json = await res.json();
     out.push(...((json?.data ?? []) as AdAccount[]));
     url = json?.paging?.next;
@@ -62,8 +55,26 @@ async function buscarContasMeta(): Promise<AdAccount[]> {
   return out;
 }
 
+function urlEdge(edge: string): string {
+  const p = new URLSearchParams({
+    fields: "id,account_id,name,account_status",
+    limit: "200",
+    access_token: TOKEN,
+  });
+  return `https://graph.facebook.com/${API}/${BUSINESS_ID}/${edge}?${p}`;
+}
+
+function urlMe(): string {
+  const p = new URLSearchParams({
+    fields: "id,account_id,name,account_status",
+    limit: "200",
+    access_token: TOKEN,
+  });
+  return `https://graph.facebook.com/${API}/me/adaccounts?${p}`;
+}
+
 export async function GET(req: Request) {
-  // Mesma proteção do sync (reusa CRON_SECRET; não cria env nova).
+  // Proteção: mesmo segredo do sync (CRON_SECRET; não cria env de segredo).
   const url = new URL(req.url);
   const chaveUrl = url.searchParams.get("key");
   const auth = req.headers.get("authorization");
@@ -77,50 +88,103 @@ export async function GET(req: Request) {
     return NextResponse.json({ erro: "META_ACCESS_TOKEN não configurado" }, { status: 500 });
   }
 
+  // Business ID é obrigatório para ler a BM inteira. Se faltar, oriento (não invento).
+  if (!BUSINESS_ID) {
+    return NextResponse.json(
+      {
+        ok: false,
+        erro: "META_BUSINESS_ID não configurado",
+        comoResolver:
+          "Crie a env META_BUSINESS_ID (não é segredo) na Vercel com o ID do seu Business Manager. " +
+          "Onde achar: Meta Business Suite → Configurações do negócio → Informações do negócio → 'ID do negócio'.",
+      },
+      { status: 400 }
+    );
+  }
+
   const db = getDb();
   if (!db) return NextResponse.json({ erro: "Firebase não configurado" }, { status: 500 });
 
-  // 1) Contas no Meta.
-  let metaContas: AdAccount[];
+  // 1) O que o token enxerga hoje (me/adaccounts) — para o temAcessoDoToken.
+  let tokenContas: AdAccount[] = [];
+  let avisoToken: string | null = null;
   try {
-    metaContas = await buscarContasMeta();
+    tokenContas = await paginar(urlMe());
   } catch (e) {
-    return NextResponse.json({ ok: false, erro: "falha ao consultar o Meta", detalhe: String(e) }, { status: 502 });
+    avisoToken = String(e);
+  }
+  const tokenBare = new Set(tokenContas.map((m) => bare(idDe(m))));
+
+  // 2) BM inteira: owned + client. Erros de permissão são capturados, não quebram.
+  const errosPermissao: { edge: string; erro: string }[] = [];
+  let owned: AdAccount[] = [];
+  let cliente: AdAccount[] = [];
+  try {
+    owned = await paginar(urlEdge("owned_ad_accounts"));
+  } catch (e) {
+    errosPermissao.push({ edge: "owned_ad_accounts", erro: String(e) });
+  }
+  try {
+    cliente = await paginar(urlEdge("client_ad_accounts"));
+  } catch (e) {
+    errosPermissao.push({ edge: "client_ad_accounts", erro: String(e) });
   }
 
-  // 2) De-para no Firestore (somente leitura).
+  // Combina a BM por id (própria tem prioridade se aparecer nos dois).
+  const bmMap = new Map<string, { conta: AdAccount; origem: "propria" | "cliente" }>();
+  for (const m of owned) bmMap.set(bare(idDe(m)), { conta: m, origem: "propria" });
+  for (const m of cliente) if (!bmMap.has(bare(idDe(m)))) bmMap.set(bare(idDe(m)), { conta: m, origem: "cliente" });
+
+  const contasBM = [...bmMap.values()].map(({ conta, origem }) => ({
+    accountId: idDe(conta),
+    nome: conta.name ?? null,
+    status: conta.account_status ?? null,
+    statusRotulo: STATUS_ROTULO[conta.account_status] ?? null,
+    origem,
+    temAcessoDoToken: tokenBare.has(bare(idDe(conta))),
+  }));
+
+  // 3) De-para no Firestore (somente leitura).
   const snap = await db.collection("contas").get();
   const dePara: ContaMap[] = snap.docs.map((d) => d.data() as ContaMap);
+  const deParaBare = new Set(dePara.map((c) => bare(c.accountId)));
 
-  const metaPorId = new Map(metaContas.map((m) => [bare(m.id || `act_${m.account_id}`), m]));
-  const deParaPorId = new Map(dePara.map((c) => [bare(c.accountId), c]));
-
-  // 3) NOVAS: no Meta, fora do de-para.
-  const novas = metaContas
-    .filter((m) => !deParaPorId.has(bare(m.id || `act_${m.account_id}`)))
-    .map((m) => ({
-      accountId: m.id || `act_${m.account_id}`,
-      nome: m.name ?? null,
-      status: m.account_status ?? null,
-      statusRotulo: STATUS_ROTULO[m.account_status] ?? null,
-    }));
-
-  // 4) SUMIDAS: no de-para, fora do Meta.
+  // 4) Listas.
+  const novas = contasBM.filter((c) => !deParaBare.has(bare(c.accountId)));
+  const semAcessoDoToken = contasBM.filter((c) => !c.temAcessoDoToken);
   const sumidas = dePara
-    .filter((c) => !metaPorId.has(bare(c.accountId)))
-    .map((c) => ({
-      accountId: c.accountId,
-      cliente: c.cliente ?? null,
-      gestor: c.gestor ?? null,
-    }));
+    .filter((c) => !bmMap.has(bare(c.accountId)))
+    .map((c) => ({ accountId: c.accountId, cliente: c.cliente ?? null, gestor: c.gestor ?? null }));
+
+  const bmIncompleta = errosPermissao.length > 0;
 
   return NextResponse.json({
     ok: true,
     apenasLeitura: true,
-    totalNoMeta: metaContas.length,
-    totalNoDePara: dePara.length,
+    businessId: BUSINESS_ID,
+    totais: {
+      totalNaBM: bmMap.size,
+      totalQueTokenVe: tokenContas.length,
+      totalNoDePara: snap.size,
+      totalSemAcessoDoToken: semAcessoDoToken.length,
+    },
+    // Contas na BM que o System User AINDA NÃO enxerga — são as que travam o sync
+    // até serem atribuídas ao System User (feito manualmente por você no Meta).
+    semAcessoDoToken,
     novas,
     sumidas,
+    contasBM,
+    ...(bmIncompleta
+      ? {
+          bmIncompleta: true,
+          avisoPermissao:
+            "Não consegui ler todos os edges da BM. O token do System User precisa da permissão " +
+            "'business_management' (e o System User precisa ter acesso a este Business Manager). " +
+            "Enquanto isso, os totais/listas da BM podem estar incompletos.",
+          errosPermissao,
+        }
+      : {}),
+    ...(avisoToken ? { avisoToken } : {}),
     consultadoEm: new Date().toISOString(),
   });
 }
