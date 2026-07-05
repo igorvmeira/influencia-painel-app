@@ -12,6 +12,7 @@ import { montarNichos, montarPainel } from "@/lib/painel";
 import { brl, brlDec, num, pct } from "@/lib/format";
 import NichosSection from "./NichosSection";
 import CriativosSection from "./CriativosSection";
+import IAChat from "./IAChat";
 import { auth } from "@/lib/firebaseClient";
 
 const INK = "#141414";
@@ -544,6 +545,9 @@ export default function Dashboard(
       >
         {rotuloSync(ultimaSync)}
       </footer>
+
+      {/* Assistente de IA — só aparece se NEXT_PUBLIC_IA_ATIVA = "true" */}
+      <IAChat periodoDias={DIAS_POR_PERIODO[periodo]} />
     </div>
   );
 }
