@@ -3,14 +3,16 @@
 import { useMemo, useState } from "react";
 import { LinhaNicho } from "@/lib/types";
 import { brl, brlDec, num, pct } from "@/lib/format";
+import { TEMA } from "@/lib/brand";
 
-const INK = "#141414";
-const CARD = "#1F1F1F";
-const YELLOW = "#F6E003";
-const LINE = "#2A2A2A";
-const MUTED = "#9A968F";
-const GREEN = "#4ECB8F";
-const RED = "#FF6B5E";
+// Cores lidas dos design tokens (fonte única em lib/brand.ts).
+const INK = TEMA.fundo;
+const CARD = TEMA.card;
+const YELLOW = TEMA.destaque;
+const LINE = TEMA.borda;
+const MUTED = TEMA.muted;
+const GREEN = TEMA.positivo;
+const RED = TEMA.negativo;
 
 export default function NichosSection({ nichos }: { nichos: LinhaNicho[] }) {
   const nomes = nichos.map((n) => n.nicho);

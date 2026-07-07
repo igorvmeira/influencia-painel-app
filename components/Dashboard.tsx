@@ -10,18 +10,22 @@ import {
 import { ContaMap, LimiteConta, LinhaCliente, MetricaDiaria } from "@/lib/types";
 import { montarNichos, montarPainel } from "@/lib/painel";
 import { brl, brlDec, num, pct } from "@/lib/format";
+import { montarKpis, moedaCard, numCard } from "@/lib/kpis";
+import { TEMA } from "@/lib/brand";
 import NichosSection from "./NichosSection";
 import CriativosSection from "./CriativosSection";
+import Sparkline from "./Sparkline";
 import IAChat from "./IAChat";
 import { auth } from "@/lib/firebaseClient";
 
-const INK = "#141414";
-const CARD = "#1F1F1F";
-const YELLOW = "#F6E003";
-const LINE = "#2A2A2A";
-const MUTED = "#9A968F";
-const GREEN = "#4ECB8F";
-const RED = "#FF6B5E";
+// Cores lidas dos design tokens (fonte única em lib/brand.ts).
+const INK = TEMA.fundo;
+const CARD = TEMA.card;
+const YELLOW = TEMA.destaque;
+const LINE = TEMA.borda;
+const MUTED = TEMA.muted;
+const GREEN = TEMA.positivo;
+const RED = TEMA.negativo;
 
 // Limiar do alerta de CPL alto, em R$. Fácil de ajustar aqui no topo.
 const CPL_ALERTA = 15;
@@ -31,7 +35,7 @@ const CPL_ALERTA = 15;
 const LIMITE_ATENCAO = 0.8; // >= 80% usado
 const LIMITE_CRITICO = 0.9; // >= 90% usado
 
-const AMBAR = "#F2B441";
+const AMBAR = TEMA.atencao;
 
 // Uma conta perto do teto de gasto, já com o percentual usado e o restante em R$.
 interface AlertaLimite {
@@ -132,18 +136,43 @@ function Trend({ v, menorMelhor = false }: { v: number; menorMelhor?: boolean })
   );
 }
 
-function LeadCard({ label, valor, varV, menorMelhor = false, destaque = false, sub }: {
-  label: string; valor: string; varV?: number; menorMelhor?: boolean; destaque?: boolean; sub?: string;
+// Badge de variação para os KPIs. delta null → "—" (sem base suficiente).
+function DeltaBadge({ delta, menorMelhor = false }: { delta: number | null; menorMelhor?: boolean }) {
+  if (delta === null) return <span className="text-xs font-medium" style={{ color: MUTED }} title="sem período anterior comparável">—</span>;
+  const cor = corVar(delta, menorMelhor);
+  const seta = delta > 0 ? "▲" : delta < 0 ? "▼" : "•";
+  return (
+    <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: cor }}>
+      <span style={{ fontSize: 9 }}>{seta}</span>
+      {pct(delta)}
+    </span>
+  );
+}
+
+// Card de KPI: rótulo + subtítulo, número grande tabular, delta semântico e sparkline.
+function KpiCard({ label, sub, valor, title, delta, menorMelhor = false, destaque = false, serie }: {
+  label: string; sub?: string; valor: string; title: string;
+  delta: number | null; menorMelhor?: boolean; destaque?: boolean; serie: number[];
 }) {
   return (
-    <div className="rounded-xl p-5" style={{ background: CARD }}>
-      <p className="text-[13px]" style={{ color: MUTED }}>{label}</p>
-      <p className="mt-2 text-3xl font-semibold tracking-tight" style={{ color: destaque ? YELLOW : "#fff" }}>
+    <div className="p-5" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard }}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[13px] font-medium text-white">{label}</p>
+          {sub && <p className="text-[11px]" style={{ color: MUTED }}>{sub}</p>}
+        </div>
+        <Sparkline dados={serie} cor={TEMA.sparkline} />
+      </div>
+      <p
+        title={title}
+        className="mt-3 text-3xl font-medium tracking-tight"
+        style={{ color: destaque ? YELLOW : "#fff", fontVariantNumeric: "tabular-nums" }}
+      >
         {valor}
       </p>
       <div className="mt-2 flex items-center gap-2">
-        {typeof varV === "number" && <Trend v={varV} menorMelhor={menorMelhor} />}
-        <span className="text-[11px]" style={{ color: MUTED }}>{sub ?? "vs período anterior"}</span>
+        <DeltaBadge delta={delta} menorMelhor={menorMelhor} />
+        <span className="text-[11px]" style={{ color: MUTED }}>vs período anterior</span>
       </div>
     </div>
   );
@@ -167,7 +196,12 @@ export default function Dashboard(
     () => montarPainel(daily, contas, DIAS_POR_PERIODO[periodo]),
     [daily, contas, periodo]
   );
-  const t = data.totais;
+
+  // KPIs do topo (formatação/deltas/sparklines) — respeita o período selecionado.
+  const kpis = useMemo(
+    () => montarKpis(daily, contas, DIAS_POR_PERIODO[periodo]),
+    [daily, contas, periodo]
+  );
 
   // Ranking de gestores por CPL (menor = melhor).
   const ranking = useMemo(
@@ -313,10 +347,38 @@ export default function Dashboard(
         <span className="text-[11px]" style={{ color: MUTED }}>{data.periodoLabel}</span>
       </div>
       <div className="mb-6 grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
-        <LeadCard label="Investido" valor={brl(t.gasto)} varV={t.gastoVar} />
-        <LeadCard label="Conversas" valor={num(t.conversas)} varV={t.conversasVar} />
-        <LeadCard label="CPL geral" valor={brlDec(t.cpl)} varV={t.cplVar} menorMelhor destaque />
-        <LeadCard label="Split B2B / B2C" valor={`${num(t.b2b)} / ${num(t.b2c)}`} sub="formulário / WhatsApp" />
+        <KpiCard
+          label="Gasto"
+          valor={moedaCard(kpis.gasto.valor)}
+          title={brl(kpis.gasto.valor)}
+          delta={kpis.gasto.delta}
+          serie={kpis.gasto.serie}
+        />
+        <KpiCard
+          label="Leads"
+          sub="formulário"
+          valor={numCard(kpis.leads.valor)}
+          title={`${num(kpis.leads.valor)} leads de formulário`}
+          delta={kpis.leads.delta}
+          serie={kpis.leads.serie}
+        />
+        <KpiCard
+          label="CPL médio"
+          valor={brlDec(kpis.cpl.valor)}
+          title={`${brlDec(kpis.cpl.valor)} · base: ${num(kpis.cpl.base)} resultados no período (leads + conversas)`}
+          delta={kpis.cpl.delta}
+          menorMelhor
+          destaque
+          serie={kpis.cpl.serie}
+        />
+        <KpiCard
+          label="Conversas"
+          sub="WhatsApp"
+          valor={numCard(kpis.conversas.valor)}
+          title={`${num(kpis.conversas.valor)} conversas de WhatsApp`}
+          delta={kpis.conversas.delta}
+          serie={kpis.conversas.serie}
+        />
       </div>
 
       {/* Alertas: linha compacta de chips. Clicar abre a aba Alertas já filtrada. */}
@@ -410,8 +472,9 @@ export default function Dashboard(
                       </span>
                     )}
                   </div>
-                  <div className="h-2.5 flex-1 overflow-hidden rounded-full" style={{ background: "#2a2a2a" }}>
-                    <div className="h-full rounded-full" style={{ width: `${largura}%`, background: YELLOW }} />
+                  <div className="h-2.5 flex-1 overflow-hidden rounded-full" style={{ background: LINE }}>
+                    {/* Amarelo só no melhor gestor (destaque); demais em tom neutro. */}
+                    <div className="h-full rounded-full" style={{ width: `${largura}%`, background: melhor ? YELLOW : "#3A3A3A" }} />
                   </div>
                   <div className="flex w-52 shrink-0 flex-col items-end">
                     <div className="flex items-center gap-2">
@@ -714,7 +777,8 @@ function Th({ children, right, onClick }: { children: React.ReactNode; right?: b
 
 function LinhaClienteRow({ c, limite }: { c: LinhaCliente; limite?: LimiteConta }) {
   return (
-    <tr>
+    // hover:bg = TEMA.hover (#232323) — literal exigido pelo Tailwind.
+    <tr className="transition-colors hover:bg-[#232323]">
       <td className="px-4 py-3" style={{ borderBottom: `1px solid ${LINE}`, color: "#fff" }}>{c.cliente}</td>
       <td className="px-4 py-3" style={{ borderBottom: `1px solid ${LINE}` }}>
         <span

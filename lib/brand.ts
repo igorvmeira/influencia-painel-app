@@ -12,3 +12,19 @@ export const MARCA = {
     amarelo: "#F6E003",
   },
 } as const;
+
+// Design tokens do dashboard — fonte única das decisões visuais. Todo o painel
+// (cards, tabelas, KPIs) lê daqui; é o que um futuro starter herda.
+export const TEMA = {
+  fundo: "#141414",     // fundo da página
+  card: "#1C1C1C",      // superfície de card
+  hover: "#232323",     // hover de linha/superfície (use como classe: hover:bg-[#232323])
+  borda: "#2A2A2A",     // borda 1px
+  destaque: "#F6E003",  // amarelo — SÓ ação/destaque (nunca decorativo)
+  positivo: "#4ECB8F",  // verde — semântica de performance boa
+  negativo: "#FF6B5E",  // vermelho — semântica de performance ruim
+  atencao: "#F2B441",   // âmbar — alerta de limite
+  muted: "#9A968F",     // texto secundário
+  sparkline: "#4A4A48", // linha discreta das mini-séries (neutra)
+  raioCard: "0.75rem",  // raio de borda dos cards (~12px)
+} as const;

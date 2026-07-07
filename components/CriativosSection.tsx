@@ -4,12 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import { ContaMap, Criativo } from "@/lib/types";
 import { brl, brlDec, num } from "@/lib/format";
 import { auth } from "@/lib/firebaseClient";
+import { TEMA } from "@/lib/brand";
 
-const INK = "#141414";
-const CARD = "#1F1F1F";
-const YELLOW = "#F6E003";
-const LINE = "#2A2A2A";
-const MUTED = "#9A968F";
+// Cores lidas dos design tokens (fonte única em lib/brand.ts).
+const INK = TEMA.fundo;
+const CARD = TEMA.card;
+const YELLOW = TEMA.destaque;
+const LINE = TEMA.borda;
+const MUTED = TEMA.muted;
 
 // Piso de conversas para um criativo entrar no ranking. Fácil de ajustar.
 const PISO_CONVERSAS = 5;

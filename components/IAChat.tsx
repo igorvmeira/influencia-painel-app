@@ -2,17 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import { auth } from "@/lib/firebaseClient";
-import { MARCA } from "@/lib/brand";
+import { MARCA, TEMA } from "@/lib/brand";
 
 // A UI só aparece se NEXT_PUBLIC_IA_ATIVA = "true". Sem isso, nada é renderizado
 // (o wrapper retorna null antes de qualquer hook do painel interno).
 const ATIVA = process.env.NEXT_PUBLIC_IA_ATIVA === "true";
 
-const INK = "#141414";
-const CARD = "#1F1F1F";
-const YELLOW = "#F6E003";
-const LINE = "#2A2A2A";
-const MUTED = "#9A968F";
+// Cores lidas dos design tokens (fonte única em lib/brand.ts).
+const INK = TEMA.fundo;
+const CARD = TEMA.card;
+const YELLOW = TEMA.destaque;
+const LINE = TEMA.borda;
+const MUTED = TEMA.muted;
 
 interface Msg { role: "user" | "assistant"; content: string }
 
