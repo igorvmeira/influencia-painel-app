@@ -10,10 +10,11 @@ import {
 import { ContaMap, LimiteConta, LinhaCliente, MetricaDiaria } from "@/lib/types";
 import { montarNichos, montarPainel } from "@/lib/painel";
 import { brl, brlDec, num, pct } from "@/lib/format";
-import { montarKpis, moedaCard, numCard } from "@/lib/kpis";
+import { montarKpis, moedaCard, numCard, serieGrafico } from "@/lib/kpis";
 import { TEMA } from "@/lib/brand";
 import NichosSection from "./NichosSection";
 import CriativosSection from "./CriativosSection";
+import HeroChart from "./HeroChart";
 import Sparkline from "./Sparkline";
 import IAChat from "./IAChat";
 import { auth } from "@/lib/firebaseClient";
@@ -203,6 +204,12 @@ export default function Dashboard(
     [daily, contas, periodo]
   );
 
+  // Série diária para o gráfico-herói (mesma janela dos KPIs).
+  const serieDoGrafico = useMemo(
+    () => serieGrafico(daily, contas, DIAS_POR_PERIODO[periodo]),
+    [daily, contas, periodo]
+  );
+
   // Ranking de gestores por CPL (menor = melhor).
   const ranking = useMemo(
     () => [...data.gestores].sort((a, b) => a.cpl - b.cpl),
@@ -212,6 +219,8 @@ export default function Dashboard(
   const subindo = data.gestores.filter((g) => g.cplVar > 0);
   // Gestores com CPL absoluto acima do limiar (em R$).
   const cplAlto = data.gestores.filter((g) => g.cpl >= CPL_ALERTA);
+  // Pior gestor por CPL (para o card vermelho da faixa "Precisa de atenção").
+  const piorCpl = cplAlto.length ? cplAlto.reduce((a, b) => (b.cpl > a.cpl ? b : a)) : null;
 
   // Contas perto do teto de gasto (para os alertas e as barrinhas de uso).
   const pertoLimite = useMemo(() => contasPertoDoLimite(contas, limites), [contas, limites]);
@@ -380,6 +389,61 @@ export default function Dashboard(
           serie={kpis.conversas.serie}
         />
       </div>
+
+      {/* Precisa de atenção — reusa as MESMAS regras da central (cplAlto + pertoLimite). */}
+      <p className="mb-3 text-[13px] uppercase tracking-wider" style={{ color: MUTED }}>Precisa de atenção</p>
+      <div className="mb-6 grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
+        {cplAlto.length === 0 && pertoLimite.length === 0 ? (
+          <div className="flex items-center gap-2 p-4" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard }}>
+            <span style={{ color: GREEN }}>✓</span>
+            <span className="text-[13px]" style={{ color: MUTED }}>Tudo sob controle — nenhum alerta no período.</span>
+          </div>
+        ) : (
+          <>
+            {cplAlto.length > 0 && (
+              <button
+                onClick={() => abrirAlertas("cplAlto")}
+                className="p-4 text-left transition-colors hover:bg-[#232323]"
+                style={{ background: CARD, border: `1px solid ${RED}`, borderRadius: TEMA.raioCard }}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full" style={{ background: RED }} />
+                  <span className="text-sm font-medium text-white">CPL estourado</span>
+                </div>
+                <p className="mt-1 text-sm" style={{ color: RED }}>
+                  {cplAlto.length} {cplAlto.length === 1 ? "gestor" : "gestores"} com CPL acima de {brlDec(CPL_ALERTA)}
+                </p>
+                {piorCpl && (
+                  <p className="mt-0.5 text-[12px] tabular-nums" style={{ color: MUTED }}>
+                    Pior: {piorCpl.nome} · {brlDec(piorCpl.cpl)}
+                  </p>
+                )}
+              </button>
+            )}
+            {pertoLimite.length > 0 && (
+              <button
+                onClick={() => abrirAlertas("limite")}
+                className="p-4 text-left transition-colors hover:bg-[#232323]"
+                style={{ background: CARD, border: `1px solid ${AMBAR}`, borderRadius: TEMA.raioCard }}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full" style={{ background: AMBAR }} />
+                  <span className="text-sm font-medium text-white">Perto do limite de gasto</span>
+                </div>
+                <p className="mt-1 text-sm" style={{ color: AMBAR }}>
+                  {pertoLimite.length} {pertoLimite.length === 1 ? "conta" : "contas"} perto do teto
+                </p>
+                <p className="mt-0.5 text-[12px] tabular-nums" style={{ color: MUTED }}>
+                  Mais crítica: {pertoLimite[0].cliente} · {Math.round(pertoLimite[0].usoPct * 100)}% · estado atual (não depende do período)
+                </p>
+              </button>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Gráfico-herói: tendência diária do período. */}
+      <HeroChart pontos={serieDoGrafico} periodoLabel={data.periodoLabel} />
 
       {/* Alertas: linha compacta de chips. Clicar abre a aba Alertas já filtrada. */}
       {alertas.length > 0 && (

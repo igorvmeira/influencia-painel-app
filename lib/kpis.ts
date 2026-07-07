@@ -87,6 +87,52 @@ export function montarKpis(daily: MetricaDiaria[], contas: ContaMap[], periodoDi
   };
 }
 
+// Ponto diário do gráfico-herói. Valores null = dia sem registro (lacuna honesta).
+export interface PontoGrafico {
+  data: string;              // rótulo "dd/mm"
+  gasto: number | null;      // R$ (barras)
+  leadsForm: number | null;  // formulário
+  convWhats: number | null;  // WhatsApp
+  total: number | null;      // leadsForm + convWhats (linha destaque)
+  cpl: number | null;        // gasto / total
+  temDados: boolean;
+}
+
+// Série diária do período (mais antigo → mais recente), somando todas as contas por
+// dia. Usa a MESMA janela/âncora dos KPIs, então os totais batem. Dias sem registro
+// entram como null (o gráfico mostra buraco; connectNulls=false).
+export function serieGrafico(daily: MetricaDiaria[], contas: ContaMap[], periodoDias: number): PontoGrafico[] {
+  const N = periodoDias;
+  const contasSet = new Set(contas.map((c) => c.accountId));
+  const reg = daily.filter((m) => contasSet.has(m.accountId));
+  const ancoraMs = ancoraDe(reg);
+  const offset = (data: string) => Math.round((ancoraMs - Date.parse(data + "T00:00:00Z")) / DIA_MS);
+
+  const porDia = new Map<number, { g: number; l: number; w: number }>();
+  for (const m of reg) {
+    const d = offset(m.data);
+    if (d < 0 || d > N - 1) continue; // só a janela atual
+    const a = porDia.get(d) ?? { g: 0, l: 0, w: 0 };
+    a.g += m.gasto; a.l += m.leadsForm; a.w += m.convWhats;
+    porDia.set(d, a);
+  }
+
+  const out: PontoGrafico[] = [];
+  for (let k = 0; k < N; k++) {
+    const d = N - 1 - k; // do mais antigo ao mais recente
+    const dt = new Date(ancoraMs - d * DIA_MS);
+    const rot = `${String(dt.getUTCDate()).padStart(2, "0")}/${String(dt.getUTCMonth() + 1).padStart(2, "0")}`;
+    const a = porDia.get(d);
+    if (!a) {
+      out.push({ data: rot, gasto: null, leadsForm: null, convWhats: null, total: null, cpl: null, temDados: false });
+      continue;
+    }
+    const total = a.l + a.w;
+    out.push({ data: rot, gasto: a.g, leadsForm: a.l, convWhats: a.w, total, cpl: total > 0 ? a.g / total : null, temDados: true });
+  }
+  return out;
+}
+
 // ---- Formatação para os cards (compacto no card, valor completo no tooltip) ----
 const fmtMoedaCompacta = new Intl.NumberFormat("pt-BR", {
   style: "currency", currency: "BRL", notation: "compact", maximumFractionDigits: 1,
