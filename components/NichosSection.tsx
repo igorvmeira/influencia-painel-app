@@ -40,25 +40,30 @@ export default function NichosSection({ nichos }: { nichos: LinhaNicho[] }) {
       <div className="rounded-xl p-5" style={{ background: CARD }}>
         <div className="flex flex-col gap-4">
           {nichos.map((n, i) => {
+            // Nichos vêm ordenados por CPL crescente: primeiro = melhor, último = pior.
             const melhor = i === 0;
+            const pior = nichos.length > 1 && i === nichos.length - 1;
             const largura = Math.max(6, (n.cpl / maxCpl) * 100);
+            const corBarra = pior ? RED : melhor ? YELLOW : "#3A3A3A";
             return (
-              <div key={n.nicho} className="flex items-center gap-4">
-                <div className="flex w-44 shrink-0 items-center gap-2">
+              <div key={n.nicho} className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <div className="flex w-32 shrink-0 items-center gap-2 sm:w-44">
                   <span className="truncate text-sm text-white">{n.nicho}</span>
                   {melhor && (
-                    <span
-                      className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase"
-                      style={{ background: YELLOW, color: INK }}
-                    >
+                    <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase" style={{ background: YELLOW, color: INK }}>
                       melhor
                     </span>
                   )}
+                  {pior && (
+                    <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase" style={{ background: RED, color: INK }}>
+                      pior
+                    </span>
+                  )}
                 </div>
-                <div className="h-2.5 flex-1 overflow-hidden rounded-full" style={{ background: "#2a2a2a" }}>
-                  <div className="h-full rounded-full" style={{ width: `${largura}%`, background: YELLOW }} />
+                <div className="order-last h-2.5 w-full overflow-hidden rounded-full sm:order-none sm:w-auto sm:flex-1" style={{ background: LINE }}>
+                  <div className="h-full rounded-full" style={{ width: `${largura}%`, background: corBarra }} />
                 </div>
-                <div className="flex w-44 shrink-0 flex-col items-end">
+                <div className="ml-auto flex shrink-0 flex-col items-end sm:ml-0 sm:w-44">
                   <span className="text-sm font-medium tabular-nums text-white">{brlDec(n.cpl)}</span>
                   <span className="text-[11px]" style={{ color: MUTED }}>
                     {n.clientesCount} {n.clientesCount === 1 ? "cliente" : "clientes"} · {brl(n.gasto)}

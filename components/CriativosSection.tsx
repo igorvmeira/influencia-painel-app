@@ -223,19 +223,19 @@ function LinhaCriativo({ c, pos, melhor }: { c: Criativo; pos?: number; melhor?:
       className="flex items-center gap-3 rounded-lg p-2.5"
       style={melhor ? { background: "rgba(246,224,3,0.10)", border: `1px solid ${YELLOW}` } : { background: INK }}
     >
-      <div className="w-6 shrink-0 text-center text-sm font-semibold tabular-nums" style={{ color: pos ? (melhor ? YELLOW : "#fff") : MUTED }}>
+      <div className="w-6 shrink-0 text-center text-sm font-medium tabular-nums" style={{ color: pos ? (melhor ? YELLOW : "#fff") : MUTED }}>
         {pos ?? "—"}
       </div>
       <Miniatura url={c.thumbnailUrl} />
       <div className="min-w-0 flex-1">
         {c.cliente && (
-          <p className="truncate text-[11px] font-medium" style={{ color: YELLOW }}>{c.cliente}</p>
+          <p className="truncate text-[11px] font-medium" style={{ color: MUTED }}>{c.cliente}</p>
         )}
         <p className="truncate text-sm text-white" title={c.adName}>{c.adName}</p>
-        <p className="text-[11px]" style={{ color: MUTED }}>{num(c.conversas)} conversas · {brl(c.gasto)}</p>
+        <p className="text-[11px] tabular-nums" style={{ color: MUTED }}>{num(c.conversas)} conversas · {brl(c.gasto)}</p>
       </div>
       <div className="shrink-0 text-right">
-        <p className="text-sm font-semibold tabular-nums" style={{ color: melhor ? YELLOW : "#fff" }}>
+        <p className="text-sm font-medium tabular-nums" style={{ color: melhor ? YELLOW : "#fff" }}>
           {c.conversas > 0 ? brlDec(c.cpl) : "—"}
         </p>
         <p className="text-[11px]" style={{ color: MUTED }}>CPL</p>
@@ -246,7 +246,7 @@ function LinhaCriativo({ c, pos, melhor }: { c: Criativo; pos?: number; melhor?:
 
 function Miniatura({ url }: { url: string | null }) {
   if (!url) {
-    return <div className="h-12 w-12 shrink-0 rounded-md" style={{ background: "#2a2a2a" }} />;
+    return <div className="h-12 w-12 shrink-0 rounded-md" style={{ background: LINE }} />;
   }
   return (
     // eslint-disable-next-line @next/next/no-img-element

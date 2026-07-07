@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebaseClient";
 import Dashboard from "./Dashboard";
+import DashboardSkeleton from "./DashboardSkeleton";
 import { ContaMap, LimiteConta, MetricaDiaria } from "@/lib/types";
 
 interface Dados { daily: MetricaDiaria[]; contas: ContaMap[]; fonte: "firestore" | "mock"; ultimaSync: string | null; limites: LimiteConta[] }
@@ -37,11 +38,7 @@ export default function DashboardLoader() {
     );
   }
   if (!dados) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center text-sm" style={{ color: "#9A968F" }}>
-        Carregando painel…
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
   return <Dashboard daily={dados.daily} contas={dados.contas} fonte={dados.fonte} ultimaSync={dados.ultimaSync} limites={dados.limites} />;
 }
