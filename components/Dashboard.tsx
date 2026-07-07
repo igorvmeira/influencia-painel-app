@@ -152,6 +152,19 @@ function DeltaBadge({ delta, menorMelhor = false }: { delta: number | null; meno
   );
 }
 
+// Etiqueta discreta para contas pausadas.
+function SeloPausado() {
+  return (
+    <span
+      className="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase"
+      style={{ background: LINE, color: MUTED }}
+      title="Conta pausada — fora de rankings, médias e alertas"
+    >
+      Pausado
+    </span>
+  );
+}
+
 // Avatar discreto com as iniciais do gestor (tokens da marca).
 function Iniciais({ nome }: { nome: string }) {
   const ini = nome.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("");
@@ -209,21 +222,27 @@ export default function Dashboard(
   // dos registros diários para a janela selecionada.
   const [periodo, setPeriodo] = useState<Periodo>("15 dias");
 
+  // Regra única: conta pausada fica FORA de toda a operação (rankings, médias,
+  // nichos, criativos, KPIs, gráfico e alertas). As pausadas só alimentam o
+  // contador/selo de transparência abaixo.
+  const contasAtivas = useMemo(() => contas.filter((c) => !c.pausado), [contas]);
+  const pausadas = useMemo(() => contas.filter((c) => c.pausado), [contas]);
+
   const data = useMemo(
-    () => montarPainel(daily, contas, DIAS_POR_PERIODO[periodo]),
-    [daily, contas, periodo]
+    () => montarPainel(daily, contasAtivas, DIAS_POR_PERIODO[periodo]),
+    [daily, contasAtivas, periodo]
   );
 
   // KPIs do topo (formatação/deltas/sparklines) — respeita o período selecionado.
   const kpis = useMemo(
-    () => montarKpis(daily, contas, DIAS_POR_PERIODO[periodo]),
-    [daily, contas, periodo]
+    () => montarKpis(daily, contasAtivas, DIAS_POR_PERIODO[periodo]),
+    [daily, contasAtivas, periodo]
   );
 
   // Série diária para o gráfico-herói (mesma janela dos KPIs).
   const serieDoGrafico = useMemo(
-    () => serieGrafico(daily, contas, DIAS_POR_PERIODO[periodo]),
-    [daily, contas, periodo]
+    () => serieGrafico(daily, contasAtivas, DIAS_POR_PERIODO[periodo]),
+    [daily, contasAtivas, periodo]
   );
 
   // Ranking de gestores por CPL (menor = melhor).
@@ -239,7 +258,8 @@ export default function Dashboard(
   const piorCpl = cplAlto.length ? cplAlto.reduce((a, b) => (b.cpl > a.cpl ? b : a)) : null;
 
   // Contas perto do teto de gasto (para os alertas e as barrinhas de uso).
-  const pertoLimite = useMemo(() => contasPertoDoLimite(contas, limites), [contas, limites]);
+  // Só contas ativas — uma pausada não está gastando, não pode disparar alerta.
+  const pertoLimite = useMemo(() => contasPertoDoLimite(contasAtivas, limites), [contasAtivas, limites]);
   const limitesPorConta = useMemo(() => new Map(limites.map((l) => [l.accountId, l])), [limites]);
 
   // Lista unificada de alertas para a central. Respeita o período: subindo/cplAlto
@@ -271,12 +291,12 @@ export default function Dashboard(
   // Filtro da aba de alertas (qual tipo mostrar). "todos" = sem filtro.
   const [centralFiltro, setCentralFiltro] = useState<TipoAlerta | "todos">("todos");
 
-  // Nº de clientes por gestor (a partir do de-para).
+  // Nº de clientes por gestor (só contas ativas — pausadas não contam no ranking).
   const clientesPorGestor = useMemo(() => {
     const m = new Map<string, number>();
-    for (const c of contas) m.set(c.gestor, (m.get(c.gestor) ?? 0) + 1);
+    for (const c of contasAtivas) m.set(c.gestor, (m.get(c.gestor) ?? 0) + 1);
     return m;
-  }, [contas]);
+  }, [contasAtivas]);
 
   // Aba ativa: rankings (gestores/nichos/criativos) ou a central de alertas.
   const [aba, setAba] = useState<"gestores" | "nichos" | "criativos" | "alertas">("gestores");
@@ -286,8 +306,8 @@ export default function Dashboard(
     setAba("alertas");
   }
   const nichos = useMemo(
-    () => montarNichos(daily, contas, DIAS_POR_PERIODO[periodo]),
-    [daily, contas, periodo]
+    () => montarNichos(daily, contasAtivas, DIAS_POR_PERIODO[periodo]),
+    [daily, contasAtivas, periodo]
   );
 
   const detalhes = data.detalhes ?? [];
@@ -512,7 +532,7 @@ export default function Dashboard(
         )
       ) : aba === "criativos" ? (
         <div className="mb-10">
-          <CriativosSection contas={contas} diasInicial={DIAS_POR_PERIODO[periodo]} />
+          <CriativosSection contas={contasAtivas} diasInicial={DIAS_POR_PERIODO[periodo]} />
         </div>
       ) : aba === "gestores" ? (
         <div className="mb-10 rounded-xl p-5" style={{ background: CARD }}>
@@ -562,6 +582,26 @@ export default function Dashboard(
       ) : (
         <div className="mb-10">
           <NichosSection nichos={nichos} />
+        </div>
+      )}
+
+      {/* Contas pausadas — transparência: existem, mas ficam fora da operação. */}
+      {pausadas.length > 0 && (
+        <div className="mb-10 p-5" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard }}>
+          <p className="mb-3 text-[13px] uppercase tracking-wider" style={{ color: MUTED }}>
+            Contas pausadas ({pausadas.length}) · fora dos rankings, médias e alertas
+          </p>
+          <div className="flex flex-col gap-2">
+            {pausadas.map((c) => (
+              <div key={c.accountId} className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="truncate text-sm text-white">{c.cliente}</span>
+                  <SeloPausado />
+                </div>
+                <span className="text-[11px] tabular-nums" style={{ color: MUTED }}>{c.accountId}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

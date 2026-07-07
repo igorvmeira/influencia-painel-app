@@ -16,6 +16,7 @@ interface ContaFonte {
   gestor: string;
   tipo: string;
   nicho?: string;
+  pausado?: boolean;
 }
 
 // Campos gravados no de-para (merge — não apaga outros campos existentes).
@@ -26,6 +27,7 @@ function payloadDe(c: ContaFonte) {
     gestor: c.gestor ?? "",
     tipo: c.tipo ?? "",
     nicho: c.nicho ?? "",
+    pausado: !!c.pausado, // sem o campo na fonte => false
     ativo: true,
   };
 }
@@ -37,6 +39,7 @@ function camposQueMudam(existente: Record<string, unknown>, c: ContaFonte): stri
   for (const k of ["cliente", "gestor", "tipo", "nicho"] as const) {
     if ((existente[k] ?? "") !== alvo[k]) campos.push(k);
   }
+  if (!!existente.pausado !== alvo.pausado) campos.push("pausado");
   if (existente.ativo !== true) campos.push("ativo");
   return campos;
 }

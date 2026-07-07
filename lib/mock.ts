@@ -2,7 +2,7 @@ import { ContaMap, LimiteConta, MetricaDiaria, Tipo } from "./types";
 
 // De-para de exemplo (mesmos gestores/clientes da onda 1) + nicho variado.
 // PetWorld fica sem nicho de propósito, para exercitar o fallback "Sem nicho".
-interface SeedConta { cliente: string; gestor: string; tipo: Tipo; nicho?: string; baseGasto: number; baseCpl: number; tendencia: number }
+interface SeedConta { cliente: string; gestor: string; tipo: Tipo; nicho?: string; baseGasto: number; baseCpl: number; tendencia: number; pausado?: boolean }
 
 // tendencia > 0 = CPL piora (sobe) ao longo do tempo; < 0 = melhora (cai).
 const SEEDS: SeedConta[] = [
@@ -17,7 +17,7 @@ const SEEDS: SeedConta[] = [
   { cliente: "Doce Encanto", gestor: "Bruno Lima", tipo: "B2C", nicho: "Restaurante", baseGasto: 480, baseCpl: 25, tendencia: 0.10 },
   { cliente: "Clínica Vita", gestor: "Bruno Lima", tipo: "B2C", nicho: "Odonto/Saúde", baseGasto: 593, baseCpl: 29, tendencia: 0.12 },
   { cliente: "Jurídico Prado", gestor: "Bruno Lima", tipo: "B2B", nicho: "Educação", baseGasto: 627, baseCpl: 118, tendencia: 0.14 },
-  { cliente: "PetWorld", gestor: "Bruno Lima", tipo: "B2C", baseGasto: 407, baseCpl: 26, tendencia: 0.08 },
+  { cliente: "PetWorld", gestor: "Bruno Lima", tipo: "B2C", baseGasto: 407, baseCpl: 26, tendencia: 0.08, pausado: true }, // teste: conta pausada (só dev)
 
   { cliente: "Moda Urbana", gestor: "Carla Dias", tipo: "B2C", nicho: "Restaurante", baseGasto: 513, baseCpl: 25, tendencia: -0.06 },
   { cliente: "Construtora Líder", gestor: "Carla Dias", tipo: "B2B", nicho: "Imobiliária", baseGasto: 707, baseCpl: 126, tendencia: -0.04 },
@@ -40,6 +40,7 @@ export const mockContas: ContaMap[] = SEEDS.map((s) => ({
   gestor: s.gestor,
   tipo: s.tipo,
   ...(s.nicho ? { nicho: s.nicho } : {}),
+  ...(s.pausado ? { pausado: true } : {}),
 }));
 
 // Tetos de gasto de exemplo (valores já em R$) para exercitar o alerta de limite:

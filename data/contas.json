@@ -1,1 +1,682 @@
-[]
+[
+  {
+    "accountId": "act_1389467714612017",
+    "cliente": "Hotel Oscar",
+    "gestor": "LUCAS",
+    "tipo": "B2C",
+    "nicho": "AGÊNCIA DE MARKETING",
+    "pausado": false
+  },
+  {
+    "accountId": "act_612219675509973",
+    "cliente": "BL FIBRA",
+    "gestor": "WEDER",
+    "tipo": "B2B/B2C",
+    "nicho": "Provedor",
+    "pausado": false
+  },
+  {
+    "accountId": "act_25425826590367592",
+    "cliente": "Ricardo Alckmin",
+    "gestor": "LUCAS",
+    "tipo": "B2B",
+    "nicho": "AGÊNCIA DE MARKETING",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1313209170491744",
+    "cliente": "NETCOM  (PROVEDOR)",
+    "gestor": "DANIEL",
+    "tipo": "B2C",
+    "nicho": "PROVEDOR",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1444062963724677",
+    "cliente": "YNOVA NET (PROVEDOR)",
+    "gestor": "JOÃO PEDRO",
+    "tipo": "B2C",
+    "nicho": "Provedor",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1425370447642306",
+    "cliente": "IETE NOIVAS",
+    "gestor": "PAUSADO",
+    "tipo": "B2C",
+    "nicho": "Aluguel de roupas",
+    "pausado": true
+  },
+  {
+    "accountId": "act_154424816245025",
+    "cliente": "PLAYIP (PROVEDOR)",
+    "gestor": "JOÃO PEDRO",
+    "tipo": "B2C",
+    "nicho": "Provedor",
+    "pausado": false
+  },
+  {
+    "accountId": "act_4207788105944374",
+    "cliente": "DRA. MARIA FERNANDA",
+    "gestor": "ANDRÉ",
+    "tipo": "B2C",
+    "nicho": "Dentista",
+    "pausado": false
+  },
+  {
+    "accountId": "act_382942743051251",
+    "cliente": "INFLUENCIA",
+    "gestor": "LUCAS",
+    "tipo": "B2B",
+    "nicho": "AGÊNCIA DE MARKETING",
+    "pausado": false
+  },
+  {
+    "accountId": "act_372654114513069",
+    "cliente": "AW ONLINE",
+    "gestor": "MATHEUS",
+    "tipo": "B2C",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
+    "accountId": "act_3086074951611911",
+    "cliente": "DEXTEL",
+    "gestor": "PAUSADO",
+    "tipo": "B2C",
+    "nicho": "Provedor",
+    "pausado": true
+  },
+  {
+    "accountId": "act_574288147121143",
+    "cliente": "ALTERNATIVA (PUBLICIDADE)",
+    "gestor": "PAUSADO",
+    "tipo": "B2B",
+    "nicho": "Propaganda",
+    "pausado": true
+  },
+  {
+    "accountId": "act_984903389080313",
+    "cliente": "ILHA CONECT (PROVEDOR)",
+    "gestor": "PAUSADO",
+    "tipo": "B2C",
+    "nicho": "Provedor (ISP)",
+    "pausado": true
+  },
+  {
+    "accountId": "act_1084294475850359",
+    "cliente": "ITAOL",
+    "gestor": "PAUSADO",
+    "tipo": "B2C",
+    "nicho": "Provedor (ISP)",
+    "pausado": true
+  },
+  {
+    "accountId": "act_1099212031030356",
+    "cliente": "CONSTRUMINAS FERRO E AÇO",
+    "gestor": "JOÃO PEDRO",
+    "tipo": "B2C",
+    "nicho": "Ferragens",
+    "pausado": false
+  },
+  {
+    "accountId": "act_3540374812862284",
+    "cliente": "GRUPO CONESUL",
+    "gestor": "VINÍCIUS",
+    "tipo": "B2C",
+    "nicho": "Provedor",
+    "pausado": false
+  },
+  {
+    "accountId": "act_805774430778528",
+    "cliente": "NEXA TELECOM",
+    "gestor": "VINÍCIUS",
+    "tipo": "B2C",
+    "nicho": "Provedor",
+    "pausado": false
+  },
+  {
+    "accountId": "act_828216221837818",
+    "cliente": "NORTELINE",
+    "gestor": "ANDRÉ",
+    "tipo": "B2C",
+    "nicho": "Provedor",
+    "pausado": false
+  },
+  {
+    "accountId": "act_662142634881699",
+    "cliente": "NEXT",
+    "gestor": "LUCAS",
+    "tipo": "B2B",
+    "nicho": "Consultoria",
+    "pausado": false
+  },
+  {
+    "accountId": "act_856834882178627",
+    "cliente": "NETFACIL",
+    "gestor": "ISMAIL",
+    "tipo": "B2C",
+    "nicho": "Provedor",
+    "pausado": false
+  },
+  {
+    "accountId": "act_787079525698543",
+    "cliente": "RODA MINEIRA",
+    "gestor": "MATHEUS",
+    "tipo": "B2C",
+    "nicho": "Restaurante",
+    "pausado": false
+  },
+  {
+    "accountId": "act_609220030867311",
+    "cliente": "NEX TELECOM",
+    "gestor": "VINÍCIUS",
+    "tipo": "B2C",
+    "nicho": "Provedor",
+    "pausado": false
+  },
+  {
+    "accountId": "act_232199732730201",
+    "cliente": "VTL TELECOM",
+    "gestor": "JOÃO PEDRO",
+    "tipo": "B2C",
+    "nicho": "Provedor",
+    "pausado": false
+  },
+  {
+    "accountId": "act_2775914335882809",
+    "cliente": "ARP TELECOM",
+    "gestor": "ANDRÉ",
+    "tipo": "B2C",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
+    "accountId": "act_952855809491449",
+    "cliente": "MOTEL OASIS",
+    "gestor": "VINÍCIUS",
+    "tipo": "B2C",
+    "nicho": "Motelaria",
+    "pausado": false
+  },
+  {
+    "accountId": "act_963483641445277",
+    "cliente": "MIO TELECOM (PROVEDOR)",
+    "gestor": "JOÃO PEDRO",
+    "tipo": "B2C",
+    "nicho": "Provedor",
+    "pausado": false
+  },
+  {
+    "accountId": "act_272135675231139",
+    "cliente": "AURA (LOUNGE BAR)",
+    "gestor": "JOÃO PEDRO",
+    "tipo": "B2C",
+    "nicho": "Lounge Bar",
+    "pausado": false
+  },
+  {
+    "accountId": "act_191616327202757",
+    "cliente": "CONSTRUMINAS FERRO E AÇO",
+    "gestor": "JOÃO PEDRO",
+    "tipo": "B2C",
+    "nicho": "Ferragens",
+    "pausado": false
+  },
+  {
+    "accountId": "act_201426789569969",
+    "cliente": "DIQUALI - BOC (ODONTOLOGIA)",
+    "gestor": "PAUSADO",
+    "tipo": "",
+    "nicho": "Odonto/Saúde",
+    "pausado": true
+  },
+  {
+    "accountId": "act_313868494444325",
+    "cliente": "MONTAÇO (FERRAGENS)",
+    "gestor": "DANIEL",
+    "tipo": "B2C",
+    "nicho": "FERRAGENS",
+    "pausado": false
+  },
+  {
+    "accountId": "act_208064045585758",
+    "cliente": "MULTILINK (PROVEDOR)",
+    "gestor": "PAUSADO",
+    "tipo": "B2C",
+    "nicho": "Provedor (ISP)",
+    "pausado": true
+  },
+  {
+    "accountId": "act_593066599501100",
+    "cliente": "TELCOM",
+    "gestor": "LUCAS",
+    "tipo": "B2C",
+    "nicho": "AGÊNCIA DE MARKETING",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1342356503063454",
+    "cliente": "CDL",
+    "gestor": "VINÍCIUS",
+    "tipo": "B2C",
+    "nicho": "Associação",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1406903296909080",
+    "cliente": "JP CONSTRUTORA",
+    "gestor": "VINÍCIUS",
+    "tipo": "B2C",
+    "nicho": "CONSTRUTORA",
+    "pausado": true
+  },
+  {
+    "accountId": "act_640604454939758",
+    "cliente": "IFALEI - ZIEVO",
+    "gestor": "ISMAIL",
+    "tipo": "B2B",
+    "nicho": "Telefonia/Consultoria B2B",
+    "pausado": false
+  },
+  {
+    "accountId": "act_7203891913008791",
+    "cliente": "NU PARAISO",
+    "gestor": "VINÍCIUS",
+    "tipo": "B2C",
+    "nicho": "Motel",
+    "pausado": false
+  },
+  {
+    "accountId": "act_901220705012452",
+    "cliente": "CAMPEZZA",
+    "gestor": "LUCAS",
+    "tipo": "B2C",
+    "nicho": "Equipamentos",
+    "pausado": false
+  },
+  {
+    "accountId": "act_464778022765105",
+    "cliente": "TURANO (CONSTRUTORA)",
+    "gestor": "PAUSADO",
+    "tipo": "B2C",
+    "nicho": "Construtora",
+    "pausado": true
+  },
+  {
+    "accountId": "act_1040367470846107",
+    "cliente": "INFLUENCIA",
+    "gestor": "LUCAS",
+    "tipo": "B2C",
+    "nicho": "AGÊNCIA DE MARKETING",
+    "pausado": false
+  },
+  {
+    "accountId": "act_487888250698890",
+    "cliente": "NORTELINE",
+    "gestor": "ANDRÉ",
+    "tipo": "B2C",
+    "nicho": "Provedor",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1258872095312487",
+    "cliente": "DUFIBRA",
+    "gestor": "LUCAS",
+    "tipo": "B2C",
+    "nicho": "Provedor",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1628400517945718",
+    "cliente": "DR FRANCISCO",
+    "gestor": "PAUSADO",
+    "tipo": "",
+    "nicho": "Odonto/Saúde",
+    "pausado": true
+  },
+  {
+    "accountId": "act_1321889532494546",
+    "cliente": "DU FIBRA",
+    "gestor": "ANDRÉ",
+    "tipo": "B2C",
+    "nicho": "Provedor",
+    "pausado": false
+  },
+  {
+    "accountId": "act_467779389026591",
+    "cliente": "BV TELECOM (PROVEDOR)",
+    "gestor": "LUCAS",
+    "tipo": "B2C",
+    "nicho": "PROVEDOR",
+    "pausado": true
+  },
+  {
+    "accountId": "act_575138771730030",
+    "cliente": "TEK TELECOM (PROVEDOR)",
+    "gestor": "DANIEL",
+    "tipo": "B2C",
+    "nicho": "PROVEDOR",
+    "pausado": false
+  },
+  {
+    "accountId": "act_2484886715043431",
+    "cliente": "DUBAI SUITES (HOTELARIA)",
+    "gestor": "PAUSADO",
+    "tipo": "",
+    "nicho": "Hotel",
+    "pausado": true
+  },
+  {
+    "accountId": "act_1148378723627218",
+    "cliente": "INTERNITRO",
+    "gestor": "LUCAS",
+    "tipo": "B2B",
+    "nicho": "CPL aumentando",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1987779961633909",
+    "cliente": "BL FIBRA",
+    "gestor": "WEDER",
+    "tipo": "B2C",
+    "nicho": "Provedor",
+    "pausado": false
+  },
+  {
+    "accountId": "act_436154116204389",
+    "cliente": "VELOX",
+    "gestor": "LUCAS",
+    "tipo": "B2C",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
+    "accountId": "act_9516009518443928",
+    "cliente": "VIEIRA E BRANT",
+    "gestor": "PAUSADO",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": true
+  },
+  {
+    "accountId": "act_1837483150389186",
+    "cliente": "BRASTURBO (PROVEDOR)",
+    "gestor": "DANIEL",
+    "tipo": "B2C",
+    "nicho": "PROVEDOR",
+    "pausado": false
+  },
+  {
+    "accountId": "act_2060095867813465",
+    "cliente": "INFLUENCIA",
+    "gestor": "LUCAS",
+    "tipo": "B2C",
+    "nicho": "AGÊNCIA DE MARKETING",
+    "pausado": false
+  },
+  {
+    "accountId": "act_570867842438179",
+    "cliente": "INFLUENCIA",
+    "gestor": "LUCAS",
+    "tipo": "",
+    "nicho": "AGÊNCIA DE MARKETING",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1014818350796748",
+    "cliente": "VIA DUPLA",
+    "gestor": "JOÃO PEDRO",
+    "tipo": "B2C",
+    "nicho": "Provedor",
+    "pausado": false
+  },
+  {
+    "accountId": "act_664259909734837",
+    "cliente": "DIQUALI - B. MINAS (ODONTOLOGIA)",
+    "gestor": "PAUSADO",
+    "tipo": "",
+    "nicho": "Odonto/Saúde",
+    "pausado": true
+  },
+  {
+    "accountId": "act_1427561475356780",
+    "cliente": "PRO3 ACADEMIA",
+    "gestor": "ANDRÉ",
+    "tipo": "B2C",
+    "nicho": "Academia SP",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1254298646370970",
+    "cliente": "E-UP (B2B ATENDEM PROVEDOR)",
+    "gestor": "DANIEL",
+    "tipo": "B2B",
+    "nicho": "B2B",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1687506165298657",
+    "cliente": "AMSTERDAM",
+    "gestor": "VINÍCIUS",
+    "tipo": "B2C",
+    "nicho": "Hotel",
+    "pausado": false
+  },
+  {
+    "accountId": "act_602747946019033",
+    "cliente": "BRASTURBO (PROVEDOR)",
+    "gestor": "DANIEL",
+    "tipo": "B2C",
+    "nicho": "PROVEDOR",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1381711309605032",
+    "cliente": "STARNET (PROVEDOR)",
+    "gestor": "PAUSADO",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": true
+  },
+  {
+    "accountId": "act_1264456648257931",
+    "cliente": "CONEXÃO NET (PROVEDOR)",
+    "gestor": "VINÍCIUS",
+    "tipo": "B2C",
+    "nicho": "Provedor",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1802460987815168",
+    "cliente": "CAFÉ JEQUITINHONHA",
+    "gestor": "ANDRÉ",
+    "tipo": "B2B/B2C",
+    "nicho": "Venda de produtos",
+    "pausado": false
+  },
+  {
+    "accountId": "act_2531966620504959",
+    "cliente": "ÚNICA NETWORK (PROVEDOR)",
+    "gestor": "PAUSADO",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": true
+  },
+  {
+    "accountId": "act_1159315306118897",
+    "cliente": "XMAX",
+    "gestor": "PAUSADO",
+    "tipo": "B2C",
+    "nicho": "Provedor (ISP)",
+    "pausado": true
+  },
+  {
+    "accountId": "act_786098394310499",
+    "cliente": "SOS TELECOM (PROVEDOR)",
+    "gestor": "DANIEL",
+    "tipo": "B2C",
+    "nicho": "PROVEDOR",
+    "pausado": false
+  },
+  {
+    "accountId": "act_23977671391934007",
+    "cliente": "SHOPPING DO  9",
+    "gestor": "PAUSADO",
+    "tipo": "",
+    "nicho": "Outros",
+    "pausado": true
+  },
+  {
+    "accountId": "act_1495895208494616",
+    "cliente": "FIBRACOM (PROVEDOR)",
+    "gestor": "PAUSADO",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": true
+  },
+  {
+    "accountId": "act_1986526208850223",
+    "cliente": "ADA",
+    "gestor": "ISMAIL",
+    "tipo": "",
+    "nicho": "Locação de Máquinas",
+    "pausado": false
+  },
+  {
+    "accountId": "act_3638399999623928",
+    "cliente": "LINK 10",
+    "gestor": "WEDER",
+    "tipo": "B2C",
+    "nicho": "Provedor",
+    "pausado": true
+  },
+  {
+    "accountId": "act_1260395262058555",
+    "cliente": "Dr. Samuel",
+    "gestor": "ANDRÉ",
+    "tipo": "B2C",
+    "nicho": "ODONTO/Saúde",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1806079820282103",
+    "cliente": "YNOVA NET (PROVEDOR)",
+    "gestor": "PAUSADO",
+    "tipo": "",
+    "nicho": "Provedor",
+    "pausado": true
+  },
+  {
+    "accountId": "act_1164653018911640",
+    "cliente": "MB INTERNET",
+    "gestor": "PAUSADO",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": true
+  },
+  {
+    "accountId": "act_1145473760827134",
+    "cliente": "TAC NET",
+    "gestor": "ANDRÉ",
+    "tipo": "B2C",
+    "nicho": "Provedor",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1365081134865029",
+    "cliente": "Proserv",
+    "gestor": "PAUSADO",
+    "tipo": "B2C",
+    "nicho": "Provedor",
+    "pausado": true
+  },
+  {
+    "accountId": "act_2039747960174765",
+    "cliente": "INOVARE (CORRETORA)",
+    "gestor": "PAUSADO",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": true
+  },
+  {
+    "accountId": "act_1393102138999847",
+    "cliente": "Mega Feirão",
+    "gestor": "PAUSADO",
+    "tipo": "",
+    "nicho": "Outros",
+    "pausado": true
+  },
+  {
+    "accountId": "act_903952362216751",
+    "cliente": "Wizard",
+    "gestor": "PAUSADO",
+    "tipo": "",
+    "nicho": "Educação",
+    "pausado": true
+  },
+  {
+    "accountId": "act_1416963989917448",
+    "cliente": "ELTEC",
+    "gestor": "WEDER",
+    "tipo": "B2C",
+    "nicho": "Provedor",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1899656697583453",
+    "cliente": "COPYNORTE",
+    "gestor": "JOÃO PEDRO",
+    "tipo": "B2C",
+    "nicho": "Locação de Equipamentos",
+    "pausado": false
+  },
+  {
+    "accountId": "act_2646643012379367",
+    "cliente": "INFLUENCIA",
+    "gestor": "LUCAS",
+    "tipo": "B2C",
+    "nicho": "AGÊNCIA DE MARKETING",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1440128040893971",
+    "cliente": "OBBU",
+    "gestor": "LUCAS",
+    "tipo": "B2C",
+    "nicho": "PROVEDOR",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1666070498074676",
+    "cliente": "Líder",
+    "gestor": "ANDRÉ",
+    "tipo": "B2B",
+    "nicho": "Provedor",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1960831434539683",
+    "cliente": "HELLO NET",
+    "gestor": "LUCAS",
+    "tipo": "B2B/B2C",
+    "nicho": "CPL aumentando",
+    "pausado": false
+  },
+  {
+    "accountId": "act_867337326356334",
+    "cliente": "EHC",
+    "gestor": "PAUSADO",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": true
+  },
+  {
+    "accountId": "act_1432314361973993",
+    "cliente": "SPEEDNET (PROVEDOR)",
+    "gestor": "DANIEL",
+    "tipo": "B2C",
+    "nicho": "PROVEDOR",
+    "pausado": false
+  }
+]

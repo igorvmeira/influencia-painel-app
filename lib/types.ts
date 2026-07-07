@@ -5,7 +5,8 @@ export interface ContaMap {
   cliente: string;
   gestor: string;
   tipo: Tipo;
-  nicho?: string; // segmento do cliente; ausente => "Sem nicho"
+  nicho?: string;    // segmento do cliente; ausente => "Sem nicho"
+  pausado?: boolean; // true => fora da operação (não entra em rankings/médias/alertas)
 }
 
 /** Métrica de uma conta em um único dia (granularidade do sync diário). */
