@@ -4,7 +4,7 @@
     "cliente": "Hotel Oscar",
     "gestor": "LUCAS",
     "tipo": "B2C",
-    "nicho": "AGÊNCIA DE MARKETING",
+    "nicho": "Hotel",
     "pausado": false
   },
   {
@@ -12,7 +12,7 @@
     "cliente": "BL FIBRA",
     "gestor": "WEDER",
     "tipo": "B2B/B2C",
-    "nicho": "Provedor",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -20,7 +20,7 @@
     "cliente": "Ricardo Alckmin",
     "gestor": "LUCAS",
     "tipo": "B2B",
-    "nicho": "AGÊNCIA DE MARKETING",
+    "nicho": "Propaganda",
     "pausado": false
   },
   {
@@ -28,7 +28,7 @@
     "cliente": "NETCOM  (PROVEDOR)",
     "gestor": "DANIEL",
     "tipo": "B2C",
-    "nicho": "PROVEDOR",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -36,7 +36,7 @@
     "cliente": "YNOVA NET (PROVEDOR)",
     "gestor": "JOÃO PEDRO",
     "tipo": "B2C",
-    "nicho": "Provedor",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -52,7 +52,7 @@
     "cliente": "PLAYIP (PROVEDOR)",
     "gestor": "JOÃO PEDRO",
     "tipo": "B2C",
-    "nicho": "Provedor",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -68,7 +68,7 @@
     "cliente": "INFLUENCIA",
     "gestor": "LUCAS",
     "tipo": "B2B",
-    "nicho": "AGÊNCIA DE MARKETING",
+    "nicho": "Agência (própria)",
     "pausado": false
   },
   {
@@ -84,7 +84,7 @@
     "cliente": "DEXTEL",
     "gestor": "PAUSADO",
     "tipo": "B2C",
-    "nicho": "Provedor",
+    "nicho": "Provedor (ISP)",
     "pausado": true
   },
   {
@@ -124,7 +124,7 @@
     "cliente": "GRUPO CONESUL",
     "gestor": "VINÍCIUS",
     "tipo": "B2C",
-    "nicho": "Provedor",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -132,7 +132,7 @@
     "cliente": "NEXA TELECOM",
     "gestor": "VINÍCIUS",
     "tipo": "B2C",
-    "nicho": "Provedor",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -140,7 +140,7 @@
     "cliente": "NORTELINE",
     "gestor": "ANDRÉ",
     "tipo": "B2C",
-    "nicho": "Provedor",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -156,7 +156,7 @@
     "cliente": "NETFACIL",
     "gestor": "ISMAIL",
     "tipo": "B2C",
-    "nicho": "Provedor",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -172,7 +172,7 @@
     "cliente": "NEX TELECOM",
     "gestor": "VINÍCIUS",
     "tipo": "B2C",
-    "nicho": "Provedor",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -180,7 +180,7 @@
     "cliente": "VTL TELECOM",
     "gestor": "JOÃO PEDRO",
     "tipo": "B2C",
-    "nicho": "Provedor",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -196,7 +196,7 @@
     "cliente": "MOTEL OASIS",
     "gestor": "VINÍCIUS",
     "tipo": "B2C",
-    "nicho": "Motelaria",
+    "nicho": "Motel",
     "pausado": false
   },
   {
@@ -204,7 +204,7 @@
     "cliente": "MIO TELECOM (PROVEDOR)",
     "gestor": "JOÃO PEDRO",
     "tipo": "B2C",
-    "nicho": "Provedor",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -236,7 +236,7 @@
     "cliente": "MONTAÇO (FERRAGENS)",
     "gestor": "DANIEL",
     "tipo": "B2C",
-    "nicho": "FERRAGENS",
+    "nicho": "Ferragens",
     "pausado": false
   },
   {
@@ -252,7 +252,7 @@
     "cliente": "TELCOM",
     "gestor": "LUCAS",
     "tipo": "B2C",
-    "nicho": "AGÊNCIA DE MARKETING",
+    "nicho": "Agência (própria)",
     "pausado": false
   },
   {
@@ -268,7 +268,7 @@
     "cliente": "JP CONSTRUTORA",
     "gestor": "VINÍCIUS",
     "tipo": "B2C",
-    "nicho": "CONSTRUTORA",
+    "nicho": "Construtora",
     "pausado": true
   },
   {
@@ -305,10 +305,10 @@
   },
   {
     "accountId": "act_1040367470846107",
-    "cliente": "INFLUENCIA",
+    "cliente": "SN NET",
     "gestor": "LUCAS",
     "tipo": "B2C",
-    "nicho": "AGÊNCIA DE MARKETING",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -316,7 +316,7 @@
     "cliente": "NORTELINE",
     "gestor": "ANDRÉ",
     "tipo": "B2C",
-    "nicho": "Provedor",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -324,7 +324,7 @@
     "cliente": "DUFIBRA",
     "gestor": "LUCAS",
     "tipo": "B2C",
-    "nicho": "Provedor",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -340,7 +340,7 @@
     "cliente": "DU FIBRA",
     "gestor": "ANDRÉ",
     "tipo": "B2C",
-    "nicho": "Provedor",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -348,7 +348,7 @@
     "cliente": "BV TELECOM (PROVEDOR)",
     "gestor": "LUCAS",
     "tipo": "B2C",
-    "nicho": "PROVEDOR",
+    "nicho": "Provedor (ISP)",
     "pausado": true
   },
   {
@@ -356,7 +356,7 @@
     "cliente": "TEK TELECOM (PROVEDOR)",
     "gestor": "DANIEL",
     "tipo": "B2C",
-    "nicho": "PROVEDOR",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -372,7 +372,7 @@
     "cliente": "INTERNITRO",
     "gestor": "LUCAS",
     "tipo": "B2B",
-    "nicho": "CPL aumentando",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -380,7 +380,7 @@
     "cliente": "BL FIBRA",
     "gestor": "WEDER",
     "tipo": "B2C",
-    "nicho": "Provedor",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -404,23 +404,23 @@
     "cliente": "BRASTURBO (PROVEDOR)",
     "gestor": "DANIEL",
     "tipo": "B2C",
-    "nicho": "PROVEDOR",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
     "accountId": "act_2060095867813465",
-    "cliente": "INFLUENCIA",
+    "cliente": "BAUMAN CA 02",
     "gestor": "LUCAS",
     "tipo": "B2C",
-    "nicho": "AGÊNCIA DE MARKETING",
+    "nicho": "Odonto/Saúde",
     "pausado": false
   },
   {
     "accountId": "act_570867842438179",
-    "cliente": "INFLUENCIA",
+    "cliente": "STARTX",
     "gestor": "LUCAS",
     "tipo": "",
-    "nicho": "AGÊNCIA DE MARKETING",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -428,7 +428,7 @@
     "cliente": "VIA DUPLA",
     "gestor": "JOÃO PEDRO",
     "tipo": "B2C",
-    "nicho": "Provedor",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -468,7 +468,7 @@
     "cliente": "BRASTURBO (PROVEDOR)",
     "gestor": "DANIEL",
     "tipo": "B2C",
-    "nicho": "PROVEDOR",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -484,7 +484,7 @@
     "cliente": "CONEXÃO NET (PROVEDOR)",
     "gestor": "VINÍCIUS",
     "tipo": "B2C",
-    "nicho": "Provedor",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -516,7 +516,7 @@
     "cliente": "SOS TELECOM (PROVEDOR)",
     "gestor": "DANIEL",
     "tipo": "B2C",
-    "nicho": "PROVEDOR",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -548,7 +548,7 @@
     "cliente": "LINK 10",
     "gestor": "WEDER",
     "tipo": "B2C",
-    "nicho": "Provedor",
+    "nicho": "Provedor (ISP)",
     "pausado": true
   },
   {
@@ -556,7 +556,7 @@
     "cliente": "Dr. Samuel",
     "gestor": "ANDRÉ",
     "tipo": "B2C",
-    "nicho": "ODONTO/Saúde",
+    "nicho": "Odonto/Saúde",
     "pausado": false
   },
   {
@@ -564,7 +564,7 @@
     "cliente": "YNOVA NET (PROVEDOR)",
     "gestor": "PAUSADO",
     "tipo": "",
-    "nicho": "Provedor",
+    "nicho": "Provedor (ISP)",
     "pausado": true
   },
   {
@@ -580,7 +580,7 @@
     "cliente": "TAC NET",
     "gestor": "ANDRÉ",
     "tipo": "B2C",
-    "nicho": "Provedor",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -588,7 +588,7 @@
     "cliente": "Proserv",
     "gestor": "PAUSADO",
     "tipo": "B2C",
-    "nicho": "Provedor",
+    "nicho": "Provedor (ISP)",
     "pausado": true
   },
   {
@@ -620,7 +620,7 @@
     "cliente": "ELTEC",
     "gestor": "WEDER",
     "tipo": "B2C",
-    "nicho": "Provedor",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -633,10 +633,10 @@
   },
   {
     "accountId": "act_2646643012379367",
-    "cliente": "INFLUENCIA",
+    "cliente": "BAUMAN CA 03",
     "gestor": "LUCAS",
     "tipo": "B2C",
-    "nicho": "AGÊNCIA DE MARKETING",
+    "nicho": "Odonto/Saúde",
     "pausado": false
   },
   {
@@ -644,7 +644,7 @@
     "cliente": "OBBU",
     "gestor": "LUCAS",
     "tipo": "B2C",
-    "nicho": "PROVEDOR",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -652,7 +652,7 @@
     "cliente": "Líder",
     "gestor": "ANDRÉ",
     "tipo": "B2B",
-    "nicho": "Provedor",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -660,7 +660,7 @@
     "cliente": "HELLO NET",
     "gestor": "LUCAS",
     "tipo": "B2B/B2C",
-    "nicho": "CPL aumentando",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   },
   {
@@ -676,7 +676,7 @@
     "cliente": "SPEEDNET (PROVEDOR)",
     "gestor": "DANIEL",
     "tipo": "B2C",
-    "nicho": "PROVEDOR",
+    "nicho": "Provedor (ISP)",
     "pausado": false
   }
 ]
