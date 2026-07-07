@@ -152,16 +152,38 @@ function DeltaBadge({ delta, menorMelhor = false }: { delta: number | null; meno
   );
 }
 
-// Etiqueta discreta para contas pausadas.
-function SeloPausado() {
+// Contas pausadas: acordeão discreto de rodapé, fechado por padrão. Ao abrir,
+// mostra pills só com o nome do cliente (account_id vai no title). Estado não
+// persiste — volta fechado a cada carga.
+function PausadasRodape({ pausadas }: { pausadas: ContaMap[] }) {
+  const [aberto, setAberto] = useState(false);
+  if (pausadas.length === 0) return null;
   return (
-    <span
-      className="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase"
-      style={{ background: LINE, color: MUTED }}
-      title="Conta pausada — fora de rankings, médias e alertas"
-    >
-      Pausado
-    </span>
+    <div className="mt-10">
+      <button
+        onClick={() => setAberto((a) => !a)}
+        className="flex items-center gap-1.5 text-[12px] transition-colors hover:text-white"
+        style={{ color: MUTED }}
+        aria-expanded={aberto}
+      >
+        <span style={{ fontSize: 10, transform: aberto ? "rotate(90deg)" : "none", transition: "transform 150ms" }}>▸</span>
+        {pausadas.length} contas pausadas · fora dos rankings, médias e alertas
+      </button>
+      {aberto && (
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+          {pausadas.map((c) => (
+            <span
+              key={c.accountId}
+              title={c.accountId}
+              className="truncate rounded-md px-2 py-1 text-[11px]"
+              style={{ background: CARD, border: `1px solid ${LINE}`, color: MUTED }}
+            >
+              {c.cliente}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -585,26 +607,6 @@ export default function Dashboard(
         </div>
       )}
 
-      {/* Contas pausadas — transparência: existem, mas ficam fora da operação. */}
-      {pausadas.length > 0 && (
-        <div className="mb-10 p-5" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard }}>
-          <p className="mb-3 text-[13px] uppercase tracking-wider" style={{ color: MUTED }}>
-            Contas pausadas ({pausadas.length}) · fora dos rankings, médias e alertas
-          </p>
-          <div className="flex flex-col gap-2">
-            {pausadas.map((c) => (
-              <div key={c.accountId} className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className="truncate text-sm text-white">{c.cliente}</span>
-                  <SeloPausado />
-                </div>
-                <span className="text-[11px] tabular-nums" style={{ color: MUTED }}>{c.accountId}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Detalhe por gestor */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <p className="text-[13px] uppercase tracking-wider" style={{ color: MUTED }}>Detalhe por gestor</p>
@@ -710,9 +712,12 @@ export default function Dashboard(
         </>
       )}
 
+      {/* Contas pausadas — acordeão discreto de rodapé (fechado por padrão). */}
+      <PausadasRodape pausadas={pausadas} />
+
       {/* Rodapé discreto — horário do último sync (fuso de Brasília) */}
       <footer
-        className="mt-10 border-t pt-4 text-center text-[11px] tracking-wide"
+        className="mt-6 border-t pt-4 text-center text-[11px] tracking-wide"
         style={{ borderColor: LINE, color: MUTED }}
       >
         {rotuloSync(ultimaSync)}
