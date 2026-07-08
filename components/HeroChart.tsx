@@ -37,6 +37,11 @@ function TooltipGrafico({ active, payload, label }: {
           <div className="flex justify-between gap-4"><span style={{ color: MUTED }}>CPL do dia</span><span>{p.cpl != null ? brlDec(p.cpl) : "—"}</span></div>
         </div>
       )}
+      {p.ghost != null && (
+        <div className="mt-1 flex justify-between gap-4 border-t pt-1 tabular-nums" style={{ borderColor: LINE, color: MUTED }}>
+          <span>Leads · mês anterior</span><span>{num(p.ghost)}</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -54,7 +59,9 @@ function ItemLegenda({ cor, tracejado = false, barra = false, texto }: { cor: st
 
 // Gráfico-herói: gasto (barras, eixo R$ à esquerda), leads totais (linha amarela,
 // eixo contagem à direita) e CPL (linha vermelha tracejada, eixo oculto próprio).
-export default function HeroChart({ pontos, periodoLabel }: { pontos: PontoGrafico[]; periodoLabel: string }) {
+export default function HeroChart({ pontos, periodoLabel, mesAnterior = false }: {
+  pontos: PontoGrafico[]; periodoLabel: string; mesAnterior?: boolean;
+}) {
   return (
     <div className="mb-10 p-5" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard }}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -63,6 +70,7 @@ export default function HeroChart({ pontos, periodoLabel }: { pontos: PontoGrafi
           <ItemLegenda cor={BARRA} barra texto="Gasto (R$, esq.)" />
           <ItemLegenda cor={YELLOW} texto="Leads totais (dir.)" />
           <ItemLegenda cor={RED} tracejado texto="CPL do dia" />
+          {mesAnterior && <ItemLegenda cor={MUTED} tracejado texto="Leads · mês anterior" />}
           <span className="text-[11px]" style={{ color: MUTED }}>· {periodoLabel}</span>
         </div>
       </div>
@@ -105,6 +113,9 @@ export default function HeroChart({ pontos, periodoLabel }: { pontos: PontoGrafi
             <Tooltip content={<TooltipGrafico />} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
 
             <Bar yAxisId="gasto" dataKey="gasto" name="Gasto" fill={BARRA} radius={[2, 2, 0, 0]} maxBarSize={26} />
+            {mesAnterior && (
+              <Line yAxisId="leads" type="monotone" dataKey="ghost" name="Leads · mês anterior" stroke={MUTED} strokeWidth={1.25} strokeDasharray="3 3" dot={false} connectNulls={false} opacity={0.7} />
+            )}
             <Line yAxisId="leads" type="monotone" dataKey="total" name="Leads totais" stroke={YELLOW} strokeWidth={2.5} dot={false} connectNulls={false} />
             <Line yAxisId="cpl" type="monotone" dataKey="cpl" name="CPL" stroke={RED} strokeWidth={1.5} strokeDasharray="4 3" dot={false} connectNulls={false} />
           </ComposedChart>

@@ -10,7 +10,8 @@ import {
 import { ContaMap, LimiteConta, LinhaCliente, MetricaDiaria } from "@/lib/types";
 import { montarNichos, montarPainel } from "@/lib/painel";
 import { brl, brlDec, num, pct } from "@/lib/format";
-import { montarKpis, moedaCard, numCard, serieGrafico } from "@/lib/kpis";
+import { montarKpis, montarKpisMes, moedaCard, numCard, serieGrafico, serieGraficoMes } from "@/lib/kpis";
+import { janelaMes } from "@/lib/periodo";
 import { TEMA } from "@/lib/brand";
 import NichosSection from "./NichosSection";
 import CriativosSection from "./CriativosSection";
@@ -230,9 +231,10 @@ function KpiCard({ label, sub, valorNum, formatar, title, delta, menorMelhor = f
   );
 }
 
-const PERIODOS = ["7 dias", "15 dias", "30 dias"] as const;
+const PERIODOS = ["7 dias", "15 dias", "30 dias", "Mês"] as const;
 type Periodo = (typeof PERIODOS)[number];
-const DIAS_POR_PERIODO: Record<Periodo, number> = { "7 dias": 7, "15 dias": 15, "30 dias": 30 };
+type PeriodoDia = Exclude<Periodo, "Mês">;
+const DIAS_POR_PERIODO: Record<PeriodoDia, number> = { "7 dias": 7, "15 dias": 15, "30 dias": 30 };
 
 type ColCliente = "cliente" | "tipo" | "gasto" | "conversas" | "cplSemanal";
 
@@ -250,21 +252,27 @@ export default function Dashboard(
   const contasAtivas = useMemo(() => contas.filter((c) => !c.pausado), [contas]);
   const pausadas = useMemo(() => contas.filter((c) => c.pausado), [contas]);
 
+  // Modo mês (mês corrente 1..D vs mês anterior 1..D). No modo dia, jm é null.
+  const modoMes = periodo === "Mês";
+  const jm = useMemo(() => (modoMes ? janelaMes(daily, contasAtivas) : null), [modoMes, daily, contasAtivas]);
+  // Nº de dias efetivos: D no modo mês; senão o do botão 7/15/30.
+  const diasEfetivos = modoMes ? jm?.D ?? 30 : DIAS_POR_PERIODO[periodo as PeriodoDia];
+
   const data = useMemo(
-    () => montarPainel(daily, contasAtivas, DIAS_POR_PERIODO[periodo]),
-    [daily, contasAtivas, periodo]
+    () => (modoMes && jm ? montarPainel(daily, contasAtivas, jm.D, jm.espec) : montarPainel(daily, contasAtivas, diasEfetivos)),
+    [daily, contasAtivas, modoMes, jm, diasEfetivos]
   );
 
   // KPIs do topo (formatação/deltas/sparklines) — respeita o período selecionado.
   const kpis = useMemo(
-    () => montarKpis(daily, contasAtivas, DIAS_POR_PERIODO[periodo]),
-    [daily, contasAtivas, periodo]
+    () => (modoMes && jm ? montarKpisMes(daily, contasAtivas, jm) : montarKpis(daily, contasAtivas, diasEfetivos)),
+    [daily, contasAtivas, modoMes, jm, diasEfetivos]
   );
 
-  // Série diária para o gráfico-herói (mesma janela dos KPIs).
+  // Série diária para o gráfico-herói (mesma janela dos KPIs; fantasma no modo mês).
   const serieDoGrafico = useMemo(
-    () => serieGrafico(daily, contasAtivas, DIAS_POR_PERIODO[periodo]),
-    [daily, contasAtivas, periodo]
+    () => (modoMes && jm ? serieGraficoMes(daily, contasAtivas, jm) : serieGrafico(daily, contasAtivas, diasEfetivos)),
+    [daily, contasAtivas, modoMes, jm, diasEfetivos]
   );
 
   // Ranking de gestores por CPL (menor = melhor).
@@ -328,8 +336,8 @@ export default function Dashboard(
     setAba("alertas");
   }
   const nichos = useMemo(
-    () => montarNichos(daily, contasAtivas, DIAS_POR_PERIODO[periodo]),
-    [daily, contasAtivas, periodo]
+    () => (modoMes && jm ? montarNichos(daily, contasAtivas, jm.D, jm.espec) : montarNichos(daily, contasAtivas, diasEfetivos)),
+    [daily, contasAtivas, modoMes, jm, diasEfetivos]
   );
 
   const detalhes = data.detalhes ?? [];
@@ -410,9 +418,20 @@ export default function Dashboard(
       )}
 
       {/* Visão de Liderança */}
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <p className="text-[13px] uppercase tracking-wider" style={{ color: MUTED }}>Visão de liderança</p>
-        <span className="text-[11px]" style={{ color: MUTED }}>{data.periodoLabel}</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[11px]" style={{ color: MUTED }}>{data.periodoLabel}</span>
+          {modoMes && jm?.parcial && (
+            <span
+              className="rounded-md px-1.5 py-0.5 text-[10px] font-medium"
+              style={{ background: "#2a2205", color: AMBAR }}
+              title="Parte do intervalo é anterior ao início do histórico (02/04/2026); a comparação pode subestimar."
+            >
+              dados parciais
+            </span>
+          )}
+        </div>
       </div>
       <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
         <KpiCard
@@ -505,8 +524,8 @@ export default function Dashboard(
         )}
       </div>
 
-      {/* Gráfico-herói: tendência diária do período. */}
-      <HeroChart pontos={serieDoGrafico} periodoLabel={data.periodoLabel} />
+      {/* Gráfico-herói: tendência diária do período (fantasma do mês anterior no modo mês). */}
+      <HeroChart pontos={serieDoGrafico} periodoLabel={data.periodoLabel} mesAnterior={modoMes} />
 
       {/* Toggle de abas: rankings (por CPL) + central de alertas */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -554,7 +573,7 @@ export default function Dashboard(
         )
       ) : aba === "criativos" ? (
         <div className="mb-10">
-          <CriativosSection contas={contasAtivas} diasInicial={DIAS_POR_PERIODO[periodo]} />
+          <CriativosSection contas={contasAtivas} diasInicial={diasEfetivos} />
         </div>
       ) : aba === "gestores" ? (
         <div className="mb-10 rounded-xl p-5" style={{ background: CARD }}>
@@ -724,7 +743,7 @@ export default function Dashboard(
       </footer>
 
       {/* Assistente de IA — só aparece se NEXT_PUBLIC_IA_ATIVA = "true" */}
-      <IAChat periodoDias={DIAS_POR_PERIODO[periodo]} />
+      <IAChat periodoDias={diasEfetivos} />
     </div>
   );
 }

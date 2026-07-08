@@ -2,6 +2,7 @@ import {
   ClienteNicho, ContaMap, Detalhe, LinhaCliente, LinhaGestor, LinhaNicho,
   MetricaDiaria, Painel, PontoCpl, Tipo, Totais,
 } from "./types";
+import { EspecJanela } from "./periodo";
 
 const DIA_MS = 86400000;
 
@@ -55,7 +56,8 @@ function somasPorJanela(
 export function montarPainel(
   daily: MetricaDiaria[],
   contas: ContaMap[],
-  periodoDias: number
+  periodoDias: number,
+  espec?: EspecJanela
 ): Painel {
   const mapaConta = new Map(contas.map((c) => [c.accountId, c]));
 
@@ -68,10 +70,18 @@ export function montarPainel(
     Math.round((ancoraMs - Date.parse(data + "T00:00:00Z")) / DIA_MS);
 
   const N = periodoDias;
+  // Modo dia: janelas derivadas de N (idêntico ao de sempre). Modo mês: faixas
+  // explícitas (mês corrente 1..D vs mês anterior 1..D).
+  const aIni = espec ? espec.atualIni : 0;
+  const aFim = espec ? espec.atualFim : N - 1;
+  const pIni = espec ? espec.antIni : N;
+  const pFim = espec ? espec.antFim : 2 * N - 1;
+  const semanas = espec ? espec.semanas : Math.max(1, Math.round(N / 7)); // 7d→1, 15d→2, 30d→4
+  const periodoLabel = espec ? espec.periodoLabel : `Últimos ${N} dias`;
 
   // Somas por conta para a janela atual e a anterior (mesmo tamanho).
-  const atualPorConta = somasPorJanela(registros, ancoraMs, 0, N - 1);
-  const antPorConta = somasPorJanela(registros, ancoraMs, N, 2 * N - 1);
+  const atualPorConta = somasPorJanela(registros, ancoraMs, aIni, aFim);
+  const antPorConta = somasPorJanela(registros, ancoraMs, pIni, pFim);
   const somaConta = (mapa: Map<string, Soma>, id: string) => mapa.get(id) ?? somaZero();
 
   // Totais e agregação por gestor.
@@ -114,7 +124,6 @@ export function montarPainel(
   };
 
   // Detalhe por gestor: clientes (janela atual) + série semanal de CPL.
-  const semanas = Math.max(1, Math.round(N / 7)); // 7d→1, 15d→2, 30d→4
   const detalhes: Detalhe[] = gestores.map((g) => {
     const contasGestor = contas.filter((c) => c.gestor === g.nome);
 
@@ -147,7 +156,7 @@ export function montarPainel(
   });
 
   return {
-    periodoLabel: `Últimos ${N} dias`,
+    periodoLabel,
     atualizadoEm: registros.length ? new Date(ancoraMs).toISOString().slice(0, 10) : new Date().toISOString(),
     totais,
     gestores,
@@ -164,12 +173,15 @@ export function montarPainel(
 export function montarNichos(
   daily: MetricaDiaria[],
   contas: ContaMap[],
-  periodoDias: number
+  periodoDias: number,
+  espec?: EspecJanela
 ): LinhaNicho[] {
   const mapaConta = new Map(contas.map((c) => [c.accountId, c]));
   const registros = daily.filter((m) => mapaConta.has(m.accountId));
   const ancoraMs = ancoraDe(registros);
-  const atualPorConta = somasPorJanela(registros, ancoraMs, 0, periodoDias - 1);
+  const aIni = espec ? espec.atualIni : 0;
+  const aFim = espec ? espec.atualFim : periodoDias - 1;
+  const atualPorConta = somasPorJanela(registros, ancoraMs, aIni, aFim);
 
   const grupos = new Map<string, { gasto: number; conversas: number; clientes: ClienteNicho[] }>();
   for (const c of contas) {
