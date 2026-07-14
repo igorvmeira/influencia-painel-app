@@ -250,7 +250,7 @@
   {
     "accountId": "act_593066599501100",
     "cliente": "TELCOM",
-    "gestor": "LUCAS",
+    "gestor": "WEDER",
     "tipo": "B2C",
     "nicho": "Agência (própria)",
     "pausado": false
@@ -269,7 +269,7 @@
     "gestor": "VINÍCIUS",
     "tipo": "B2C",
     "nicho": "Construtora",
-    "pausado": true
+    "pausado": false
   },
   {
     "accountId": "act_640604454939758",
@@ -349,7 +349,7 @@
     "gestor": "LUCAS",
     "tipo": "B2C",
     "nicho": "Provedor (ISP)",
-    "pausado": true
+    "pausado": false
   },
   {
     "accountId": "act_575138771730030",
@@ -370,7 +370,7 @@
   {
     "accountId": "act_1148378723627218",
     "cliente": "INTERNITRO",
-    "gestor": "LUCAS",
+    "gestor": "DANIEL",
     "tipo": "B2B",
     "nicho": "Provedor (ISP)",
     "pausado": false
@@ -538,15 +538,15 @@
   {
     "accountId": "act_1986526208850223",
     "cliente": "ADA",
-    "gestor": "ISMAIL",
+    "gestor": "PAUSADO",
     "tipo": "",
     "nicho": "Locação de Máquinas",
-    "pausado": false
+    "pausado": true
   },
   {
     "accountId": "act_3638399999623928",
     "cliente": "LINK 10",
-    "gestor": "WEDER",
+    "gestor": "PAUSADO",
     "tipo": "B2C",
     "nicho": "Provedor (ISP)",
     "pausado": true
@@ -562,10 +562,10 @@
   {
     "accountId": "act_1806079820282103",
     "cliente": "YNOVA NET (PROVEDOR)",
-    "gestor": "PAUSADO",
+    "gestor": "JOÃO PEDRO",
     "tipo": "",
     "nicho": "Provedor (ISP)",
-    "pausado": true
+    "pausado": false
   },
   {
     "accountId": "act_1164653018911640",
@@ -642,7 +642,7 @@
   {
     "accountId": "act_1440128040893971",
     "cliente": "OBBU",
-    "gestor": "LUCAS",
+    "gestor": "JOÃO PEDRO",
     "tipo": "B2C",
     "nicho": "Provedor (ISP)",
     "pausado": false
@@ -658,7 +658,7 @@
   {
     "accountId": "act_1960831434539683",
     "cliente": "HELLO NET",
-    "gestor": "LUCAS",
+    "gestor": "VINÍCIUS",
     "tipo": "B2B/B2C",
     "nicho": "Provedor (ISP)",
     "pausado": false
