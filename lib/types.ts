@@ -80,6 +80,7 @@ export interface Painel {
 }
 
 export interface ClienteNicho {
+  accountId: string; // chave única (nomes de cliente se repetem entre contas)
   cliente: string;
   gasto: number;
   conversas: number;

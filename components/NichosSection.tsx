@@ -113,7 +113,7 @@ export default function NichosSection({ nichos }: { nichos: LinhaNicho[] }) {
               const seta = c.desvioPct > 0 ? "▲" : c.desvioPct < 0 ? "▼" : "•";
               const rotulo = c.desvioPct === 0 ? "na média" : acima ? "acima" : "abaixo";
               return (
-                <div key={c.cliente} className="flex items-center justify-between gap-4">
+                <div key={c.accountId} className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-2">
                     <span className="inline-block h-2 w-2 rounded-full" style={{ background: cor }} />
                     <span className="text-sm text-white">{c.cliente}</span>

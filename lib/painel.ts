@@ -191,6 +191,7 @@ export function montarNichos(
     g.gasto += a.gasto;
     g.conversas += a.conversas;
     g.clientes.push({
+      accountId: c.accountId,
       cliente: c.cliente,
       gasto: a.gasto,
       conversas: a.conversas,

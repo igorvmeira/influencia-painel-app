@@ -28,7 +28,18 @@ export async function getDadosDiarios(): Promise<DadosDiarios> {
         db.collection("sistema").doc("sync").get(),
         db.collection("limitesConta").get(),
       ]);
-      const contas = contasSnap.docs.map((d) => d.data() as ContaMap);
+      // Proteção: o de-para é indexado por accountId (chave única). Se a coleção
+      // tiver docs repetidos para o mesmo accountId, a conta entraria mais de uma
+      // vez (inflando rankings/gestores). Mantém a 1ª ocorrência de cada accountId.
+      // Não apaga nada no Firestore — só ignora o excedente na leitura.
+      const contas: ContaMap[] = [];
+      const vistosAccountId = new Set<string>();
+      for (const d of contasSnap.docs) {
+        const c = d.data() as ContaMap;
+        if (!c.accountId || vistosAccountId.has(c.accountId)) continue;
+        vistosAccountId.add(c.accountId);
+        contas.push(c);
+      }
       const daily = diariasSnap.docs.map((d) => d.data() as MetricaDiaria);
       const ultimaSync =
         (syncSnap.exists ? (syncSnap.data()?.atualizadoEm as string | undefined) : undefined) ?? null;

@@ -722,7 +722,7 @@ export default function Dashboard(
                   </tr>
                 ) : (
                   clientes.map((c) => (
-                    <LinhaClienteRow key={c.cliente} c={c} limite={limitesPorConta.get(c.accountId)} />
+                    <LinhaClienteRow key={c.accountId} c={c} limite={limitesPorConta.get(c.accountId)} />
                   ))
                 )}
               </tbody>
