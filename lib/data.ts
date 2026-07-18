@@ -1,11 +1,10 @@
 import { getDb } from "./firebaseAdmin";
 import { mockDiario, mockLimites, mockContas } from "./mock";
+import { COL_AGREGADAS } from "./agregadas";
 import { ContaMap, LimiteConta, MetricaDiaria } from "./types";
 
-const DIA_MS = 86400000;
-const ymd = (d: Date) => d.toISOString().slice(0, 10);
 // Cache no servidor: os dados só mudam 1x/dia (após o sync). Segura leituras do
-// Firestore (evita reler ~4.6k docs a cada carregamento). Instância quente reusa.
+// Firestore. Instância quente reusa. (item 3: a série vem pré-agregada, ~95 docs.)
 const TTL_MS = 10 * 60 * 1000;
 
 export interface DadosDiarios {
@@ -44,16 +43,19 @@ export async function getDadosDiarios(): Promise<DadosDiarios> {
   }
   if (cacheDados && Date.now() < cacheDados.expira) return cacheDados.dados;
 
-  const cutoff = ymd(new Date(Date.now() - 95 * DIA_MS));
-  const [contasSnap, diariasSnap, syncSnap, limitesSnap] = await Promise.all([
+  // Item 3: lê a série já pré-agregada (1 doc por conta, ~95 docs) em vez de varrer
+  // a metricasDiarias (~4.6k docs). metricasDiarias segue como fonte granular (sync).
+  const [contasSnap, aggSnap, syncSnap, limitesSnap] = await Promise.all([
     db.collection("contas").get(),
-    db.collection("metricasDiarias").where("data", ">=", cutoff).get(),
+    db.collection(COL_AGREGADAS).get(),
     db.collection("sistema").doc("sync").get(),
     db.collection("limitesConta").get(),
   ]);
 
   const contas = dedupContas(contasSnap.docs);
-  const daily = diariasSnap.docs.map((d) => d.data() as MetricaDiaria);
+  // Achata os dias de cada conta no mesmo array plano de antes (valores copiados
+  // como estão — null continua null, nunca vira 0).
+  const daily = aggSnap.docs.flatMap((d) => (d.data()?.dias as MetricaDiaria[] | undefined) ?? []);
   const ultimaSync =
     (syncSnap.exists ? (syncSnap.data()?.atualizadoEm as string | undefined) : undefined) ?? null;
   const limites = limitesSnap.docs.map((d) => d.data() as LimiteConta);
