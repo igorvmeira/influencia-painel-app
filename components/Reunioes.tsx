@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Reuniao } from "@/lib/types";
 import { useAgenda } from "@/lib/useAgenda";
 import { chaveDia, hhmm, rotuloDia, chavesHojeAmanha } from "@/lib/formatAgenda";
@@ -112,19 +113,56 @@ function ListaPorDia({ reunioes }: { reunioes: Reuniao[] }) {
     const k = chaveDia(r.inicio);
     (grupos.get(k) ?? grupos.set(k, []).get(k)!).push(r);
   }
+  const gruposArr = [...grupos.entries()];
+
+  // Padrão: HOJE e AMANHÃ abertos; os demais dias recolhidos. Não persiste.
+  const [abertos, setAbertos] = useState<Set<string>>(
+    () => new Set(gruposArr.filter(([k]) => k === hoje || k === amanha).map(([k]) => k))
+  );
+  const alternar = (chave: string) =>
+    setAbertos((prev) => {
+      const n = new Set(prev);
+      if (n.has(chave)) n.delete(chave); else n.add(chave);
+      return n;
+    });
 
   return (
-    <div className="space-y-8">
-      {[...grupos.entries()].map(([chave, itens]) => (
-        <div key={chave}>
-          <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-wider" style={{ color: chave === hoje ? YELLOW : MUTED }}>
-            {rotuloDia(itens[0].inicio, chave, hoje, amanha)}
-          </h2>
-          <div className="space-y-2">
-            {itens.map((r) => <CardReuniao key={r.id} r={r} />)}
-          </div>
+    <div>
+      {gruposArr.length > 1 && (
+        <div className="mb-4 flex items-center gap-3 text-[12px]" style={{ color: MUTED }}>
+          <button className="hover:text-white" onClick={() => setAbertos(new Set(gruposArr.map(([k]) => k)))}>Expandir tudo</button>
+          <span>·</span>
+          <button className="hover:text-white" onClick={() => setAbertos(new Set())}>Recolher tudo</button>
         </div>
-      ))}
+      )}
+
+      <div className="space-y-6">
+        {gruposArr.map(([chave, itens]) => {
+          const aberto = abertos.has(chave);
+          return (
+            <div key={chave}>
+              <button
+                onClick={() => alternar(chave)}
+                aria-expanded={aberto}
+                className="mb-3 flex w-full items-center gap-2 text-left"
+              >
+                <span style={{ fontSize: 10, color: MUTED, transform: aberto ? "rotate(90deg)" : "none", transition: "transform 150ms" }}>▸</span>
+                <span className="text-[13px] font-semibold uppercase tracking-wider" style={{ color: chave === hoje ? YELLOW : "#fff" }}>
+                  {rotuloDia(itens[0].inicio, chave, hoje, amanha)}
+                </span>
+                <span className="text-[12px] font-normal normal-case" style={{ color: MUTED }}>
+                  {itens.length} {itens.length === 1 ? "reunião" : "reuniões"}
+                </span>
+              </button>
+              {aberto && (
+                <div className="space-y-2">
+                  {itens.map((r) => <CardReuniao key={r.id} r={r} />)}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
