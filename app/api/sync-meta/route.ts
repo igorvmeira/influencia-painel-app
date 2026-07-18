@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/firebaseAdmin";
 import { buscarDiario, buscarLimiteConta } from "@/lib/meta";
-import { ContaMap } from "@/lib/types";
+import { ContaMap, MetricaDiaria } from "@/lib/types";
+import { COL_AGREGADAS, cutoffRetencao, mesclarDias } from "@/lib/agregadas";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -56,6 +57,16 @@ export async function GET(req: Request) {
       }
       await batch.commit();
     }
+
+    // Item 3 — projeção agregada (1 doc/conta). metricasDiarias acima segue como
+    // fonte granular; aqui só derivamos a série pro painel ler ~85 docs, não ~4.6k.
+    // Merge dos dias frescos sobre os antigos (read-modify-write; blocos do sync
+    // tocam contas distintas, então não há concorrência no mesmo doc).
+    const aggRef = db!.collection(COL_AGREGADAS).doc(c.accountId);
+    const aggSnap = await aggRef.get();
+    const antigos = (aggSnap.exists ? (aggSnap.data()?.dias as MetricaDiaria[] | undefined) : undefined) ?? [];
+    const dias = mesclarDias(antigos, registros, cutoffRetencao());
+    await aggRef.set({ accountId: c.accountId, dias, atualizadoEm: new Date().toISOString() });
 
     // Teto de gasto (spend_cap) e gasto acumulado (amount_spent) da conta, para o
     // alerta de limite. É secundário: se falhar, não perde o sync diário acima.
