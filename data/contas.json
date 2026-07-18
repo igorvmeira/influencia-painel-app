@@ -408,14 +408,6 @@
     "pausado": false
   },
   {
-    "accountId": "act_2060095867813465",
-    "cliente": "BAUMAN CA 02",
-    "gestor": "LUCAS",
-    "tipo": "B2C",
-    "nicho": "Odonto/Saúde",
-    "pausado": false
-  },
-  {
     "accountId": "act_570867842438179",
     "cliente": "STARTX",
     "gestor": "LUCAS",
@@ -632,14 +624,6 @@
     "pausado": false
   },
   {
-    "accountId": "act_2646643012379367",
-    "cliente": "BAUMAN CA 03",
-    "gestor": "LUCAS",
-    "tipo": "B2C",
-    "nicho": "Odonto/Saúde",
-    "pausado": false
-  },
-  {
     "accountId": "act_1440128040893971",
     "cliente": "OBBU",
     "gestor": "JOÃO PEDRO",
@@ -676,6 +660,110 @@
     "cliente": "SPEEDNET (PROVEDOR)",
     "gestor": "DANIEL",
     "tipo": "B2C",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1324792096179119",
+    "cliente": "OctorLink",
+    "gestor": "ANDRÉ",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1578265566212508",
+    "cliente": "Drogaria Madri",
+    "gestor": "ANDRÉ",
+    "tipo": "",
+    "nicho": "Farmácia",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1916349755671879",
+    "cliente": "IBNET",
+    "gestor": "ANDRÉ",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
+    "accountId": "act_2581016248962449",
+    "cliente": "Apolo",
+    "gestor": "DANIEL",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
+    "accountId": "act_649154454012324",
+    "cliente": "Netmania",
+    "gestor": "DANIEL",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1159912575356979",
+    "cliente": "ARP Rental",
+    "gestor": "ISMAIL",
+    "tipo": "",
+    "nicho": "Locação de Máquinas",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1141344538820205",
+    "cliente": "Circula Net",
+    "gestor": "ISMAIL",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1841331226592258",
+    "cliente": "ISP4",
+    "gestor": "ISMAIL",
+    "tipo": "",
+    "nicho": "Consultoria Provedor",
+    "pausado": false
+  },
+  {
+    "accountId": "act_2030710527729327",
+    "cliente": "Guará Net",
+    "gestor": "JOÃO PEDRO",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
+    "accountId": "act_830495511608627",
+    "cliente": "NetSystem",
+    "gestor": "JOÃO PEDRO",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1972951736630632",
+    "cliente": "Omega",
+    "gestor": "PAUSADO",
+    "tipo": "",
+    "nicho": "",
+    "pausado": true
+  },
+  {
+    "accountId": "act_1670450540519360",
+    "cliente": "Zay Sushi",
+    "gestor": "VINÍCIUS",
+    "tipo": "",
+    "nicho": "Comida Japonesa",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1282472920705306",
+    "cliente": "Blue3",
+    "gestor": "WEDER",
+    "tipo": "",
     "nicho": "Provedor (ISP)",
     "pausado": false
   }
