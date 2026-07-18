@@ -21,6 +21,13 @@ export async function GET(req: Request) {
     return NextResponse.json({ erro: "não autenticado" }, { status: 401 });
   }
 
-  const dados = await getDadosDiarios();
-  return NextResponse.json({ ok: true, ...dados });
+  // Erro de leitura do Firestore (cota/rede/permissão) → 503, NUNCA dados de
+  // exemplo. O cliente mostra aviso de indisponibilidade, não número falso.
+  try {
+    const dados = await getDadosDiarios();
+    return NextResponse.json({ ok: true, ...dados });
+  } catch (e) {
+    console.error("[/api/painel] falha ao ler dados:", e);
+    return NextResponse.json({ ok: false, erro: "indisponivel" }, { status: 503 });
+  }
 }

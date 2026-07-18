@@ -12,7 +12,7 @@ export default function DashboardLoader() {
   if (erro) {
     return (
       <div className="rounded-xl px-4 py-3 text-[13px]" style={{ background: "#2a1414", color: "#FF6B5E" }}>
-        Erro ao carregar o painel: {erro}
+        {erro}
       </div>
     );
   }

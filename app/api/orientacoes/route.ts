@@ -54,25 +54,34 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const accountId = url.searchParams.get("accountId")?.trim();
 
-  // Modo por conta: traz atual + HISTÓRICO (sob demanda).
-  if (accountId) {
-    const snap = await db.collection("orientacoes").doc(accountId).get();
-    const data = snap.exists ? snap.data() : null;
-    return NextResponse.json({
-      ok: true,
-      accountId,
-      atual: normalizar(data?.atual),
-      historico: ((data?.historico ?? []) as any[]).map(normalizar).filter(Boolean),
-    });
-  }
+  // DEGRADAÇÃO: se a leitura falhar (cota/rede) OU a coleção não existir, devolve
+  // vazio (200) — nunca 500. Assim o dashboard renderiza sem os ícones, sem quebrar.
+  try {
+    // Modo por conta: traz atual + HISTÓRICO (sob demanda).
+    if (accountId) {
+      const snap = await db.collection("orientacoes").doc(accountId).get();
+      const data = snap.exists ? snap.data() : null;
+      return NextResponse.json({
+        ok: true,
+        accountId,
+        atual: normalizar(data?.atual),
+        historico: ((data?.historico ?? []) as any[]).map(normalizar).filter(Boolean),
+      });
+    }
 
-  // Modo lista: SÓ a orientação atual de cada conta (leve).
-  const col = await db.collection("orientacoes").get();
-  const orientacoes = col.docs.map((d) => {
-    const data = d.data();
-    return { accountId: (data.accountId as string) || d.id, atual: normalizar(data.atual) };
-  });
-  return NextResponse.json({ ok: true, orientacoes });
+    // Modo lista: SÓ a orientação atual de cada conta (leve).
+    const col = await db.collection("orientacoes").get();
+    const orientacoes = col.docs.map((d) => {
+      const data = d.data();
+      return { accountId: (data.accountId as string) || d.id, atual: normalizar(data.atual) };
+    });
+    return NextResponse.json({ ok: true, orientacoes });
+  } catch (e) {
+    console.error("[/api/orientacoes] leitura falhou (degradando p/ vazio):", e);
+    return accountId
+      ? NextResponse.json({ ok: true, accountId, atual: null, historico: [] })
+      : NextResponse.json({ ok: true, orientacoes: [] });
+  }
 }
 
 export async function POST(req: Request) {

@@ -77,7 +77,7 @@ export default function Inicio() {
 
       {erro && (
         <div className="mb-4 rounded-xl px-4 py-3 text-[13px]" style={{ background: "#2a1414", color: RED }}>
-          Erro ao carregar: {erro}
+          {erro}
         </div>
       )}
 
@@ -93,7 +93,9 @@ export default function Inicio() {
             <span className="text-[11px]" style={{ color: MUTED }}>últimos {DIAS_RESUMO} dias →</span>
           </div>
 
-          {!dados ? (
+          {erro ? (
+            <p className="mt-3 text-[13px]" style={{ color: MUTED }}>Indisponível no momento.</p>
+          ) : !dados ? (
             <div className="mt-3 h-4 w-40 animate-pulse rounded motion-reduce:animate-none" style={{ background: LINE }} />
           ) : tudoOk ? (
             <div className="mt-3 flex items-center gap-2 text-[13px]">
@@ -157,7 +159,9 @@ export default function Inicio() {
             <span className="text-sm font-medium text-white">Orientações Gerenciais</span>
             <span className="text-[11px]" style={{ color: MUTED }}>gerenciar →</span>
           </div>
-          {erroOri ? (
+          {erro ? (
+            <p className="mt-3 text-[13px]" style={{ color: MUTED }}>Indisponível no momento.</p>
+          ) : erroOri ? (
             <p className="mt-3 text-[13px]" style={{ color: MUTED }}>Não foi possível carregar as orientações.</p>
           ) : !orientacoes || !dados ? (
             <div className="mt-3 h-4 w-52 animate-pulse rounded motion-reduce:animate-none" style={{ background: LINE }} />

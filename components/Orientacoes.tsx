@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ContaMap, EntradaOrientacao } from "@/lib/types";
-import { useDadosPainel } from "@/lib/useDadosPainel";
+import { useContas } from "@/lib/useContas";
 import { useOrientacoes, salvarOrientacao, buscarHistorico } from "@/lib/useOrientacoes";
 import { haQuanto } from "@/lib/tempo";
 import { TEMA } from "@/lib/brand";
@@ -17,12 +17,12 @@ const RED = TEMA.negativo;
 const MAX = 500;
 
 export default function Orientacoes() {
-  const { dados, erro: erroDados } = useDadosPainel();
+  const { contas, erro: erroContas } = useContas();
   const { mapa, erro: erroOri, recarregar } = useOrientacoes();
   const [busca, setBusca] = useState("");
   const [gestorSel, setGestorSel] = useState("todos");
 
-  const contasAtivas = useMemo(() => (dados ? dados.contas.filter((c) => !c.pausado) : []), [dados]);
+  const contasAtivas = useMemo(() => (contas ? contas.filter((c) => !c.pausado) : []), [contas]);
   const gestores = useMemo(() => [...new Set(contasAtivas.map((c) => c.gestor))].sort(), [contasAtivas]);
 
   const gruposFiltrados = useMemo(() => {
@@ -37,8 +37,8 @@ export default function Orientacoes() {
       .map(([g, cs]) => [g, cs.sort((x, y) => x.cliente.localeCompare(y.cliente))] as const);
   }, [contasAtivas, busca, gestorSel]);
 
-  const erro = erroDados || erroOri;
-  const carregando = !dados || !mapa;
+  const erro = erroContas || erroOri;
+  const carregando = (!contas || !mapa) && !erro;
 
   return (
     <div>
@@ -47,13 +47,11 @@ export default function Orientacoes() {
         <p className="text-[13px]" style={{ color: MUTED }}>Uma observação por conta, com histórico. Contas pausadas ficam fora.</p>
       </div>
 
-      {erro && (
-        <div className="mb-4 rounded-xl px-4 py-3 text-[13px]" style={{ background: "#2a1414", color: RED }}>
+      {erro ? (
+        <div className="rounded-xl px-4 py-3 text-[13px]" style={{ background: "#2a1414", color: RED }}>
           {erro}
         </div>
-      )}
-
-      {carregando ? (
+      ) : carregando ? (
         <div className="space-y-2">
           {[0, 1, 2, 3, 4].map((i) => (
             <div key={i} className="h-16 animate-pulse motion-reduce:animate-none" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard }} />
