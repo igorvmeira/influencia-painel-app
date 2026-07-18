@@ -1,14 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { signOut } from "firebase/auth";
 import {
   CartesianGrid, Line, LineChart, ResponsiveContainer,
   Tooltip, XAxis, YAxis,
 } from "recharts";
 import { ContaMap, LimiteConta, LinhaCliente, MetricaDiaria } from "@/lib/types";
 import { montarNichos, montarPainel } from "@/lib/painel";
+import { CPL_ALERTA, LIMITE_ATENCAO, LIMITE_CRITICO, contasPertoDoLimite } from "@/lib/alertas";
 import { brl, brlDec, num, pct } from "@/lib/format";
 import { montarKpis, montarKpisMes, moedaCard, numCard, serieGrafico, serieGraficoMes } from "@/lib/kpis";
 import { janelaMes } from "@/lib/periodo";
@@ -20,7 +19,6 @@ import Sparkline from "./Sparkline";
 import NumeroAnimado from "./NumeroAnimado";
 import IndicadorFrescor from "./IndicadorFrescor";
 import IAChat from "./IAChat";
-import { auth } from "@/lib/firebaseClient";
 
 // Cores lidas dos design tokens (fonte única em lib/brand.ts).
 const INK = TEMA.fundo;
@@ -31,51 +29,8 @@ const MUTED = TEMA.muted;
 const GREEN = TEMA.positivo;
 const RED = TEMA.negativo;
 
-// Limiar do alerta de CPL alto, em R$. Fácil de ajustar aqui no topo.
-const CPL_ALERTA = 15;
-
-// Alerta de limite de gasto: percentual usado (amount_spent / spend_cap) a partir
-// do qual a conta entra em ATENÇÃO (âmbar) ou CRÍTICO (vermelho). Fácil de ajustar.
-const LIMITE_ATENCAO = 0.8; // >= 80% usado
-const LIMITE_CRITICO = 0.9; // >= 90% usado
-
+// Cor âmbar do alerta de limite (as constantes/regra vivem em lib/alertas.ts).
 const AMBAR = TEMA.atencao;
-
-// Uma conta perto do teto de gasto, já com o percentual usado e o restante em R$.
-interface AlertaLimite {
-  accountId: string;
-  cliente: string;
-  gestor: string;
-  spendCap: number;
-  amountSpent: number;
-  usoPct: number;   // 0..1+
-  restante: number; // R$ que faltam até o teto (nunca negativo)
-  critico: boolean;
-}
-
-// Deriva a lista de contas perto do limite a partir do de-para + dos limites.
-// Só entram contas com teto (spend_cap > 0) e uso >= LIMITE_ATENCAO.
-function contasPertoDoLimite(contas: ContaMap[], limites: LimiteConta[]): AlertaLimite[] {
-  const mapaLim = new Map(limites.map((l) => [l.accountId, l]));
-  const out: AlertaLimite[] = [];
-  for (const c of contas) {
-    const l = mapaLim.get(c.accountId);
-    if (!l || l.spendCap <= 0) continue; // sem teto → ignora
-    const usoPct = l.amountSpent / l.spendCap;
-    if (usoPct < LIMITE_ATENCAO) continue;
-    out.push({
-      accountId: c.accountId,
-      cliente: c.cliente,
-      gestor: c.gestor,
-      spendCap: l.spendCap,
-      amountSpent: l.amountSpent,
-      usoPct,
-      restante: Math.max(0, l.spendCap - l.amountSpent),
-      critico: usoPct >= LIMITE_CRITICO,
-    });
-  }
-  return out.sort((a, b) => b.usoPct - a.usoPct);
-}
 
 // ---- Central de alertas: modelo unificado dos três tipos de alerta ----
 type TipoAlerta = "cplSubindo" | "cplAlto" | "limite";
@@ -368,20 +323,11 @@ export default function Dashboard(
 
   const seta = (col: ColCliente) => (ordCol === col ? (ordDir === "asc" ? " ↑" : " ↓") : "");
 
-  const router = useRouter();
-  async function sair() {
-    if (auth) await signOut(auth);
-    router.replace("/login");
-  }
-
   return (
     <div>
-      {/* Topo: logo + seletor de período */}
+      {/* Topo: título da seção + frescor + seletor de período (logo/logout na sidebar) */}
       <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-2.5">
-          <NodeMark />
-          <span className="text-lg font-semibold text-white">Influência</span>
-        </div>
+        <span className="text-lg font-semibold text-white">Dashboard de Tráfego</span>
         <div className="flex flex-wrap items-center gap-3">
           <IndicadorFrescor ultimaSync={ultimaSync} />
           <div className="flex items-center gap-1 rounded-full p-1" style={{ background: CARD }}>
@@ -401,13 +347,6 @@ export default function Dashboard(
               );
             })}
           </div>
-          <button
-            onClick={sair}
-            className="rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors"
-            style={{ background: CARD, color: MUTED }}
-          >
-            Sair
-          </button>
         </div>
       </header>
 
@@ -929,13 +868,3 @@ function BarraLimite({ limite }: { limite?: LimiteConta }) {
   );
 }
 
-function NodeMark() {
-  return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="5" r="2.4" fill="#F6E003" />
-      <circle cx="5.5" cy="16" r="2.4" fill="#F6E003" />
-      <circle cx="18.5" cy="16" r="2.4" fill="#F6E003" />
-      <path d="M12 6.5 L6.5 14.5 M12 6.5 L17.5 14.5 M7.5 16 L16.5 16" stroke="#F6E003" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  );
-}
