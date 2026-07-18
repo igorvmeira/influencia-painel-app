@@ -1,11 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import {
   CartesianGrid, Line, LineChart, ResponsiveContainer,
   Tooltip, XAxis, YAxis,
 } from "recharts";
-import { ContaMap, LimiteConta, LinhaCliente, MetricaDiaria } from "@/lib/types";
+import { ContaMap, EntradaOrientacao, LimiteConta, LinhaCliente, MetricaDiaria } from "@/lib/types";
+import { useOrientacoes } from "@/lib/useOrientacoes";
 import { montarNichos, montarPainel } from "@/lib/painel";
 import { CPL_ALERTA, LIMITE_ATENCAO, LIMITE_CRITICO, contasPertoDoLimite } from "@/lib/alertas";
 import { brl, brlDec, num, pct } from "@/lib/format";
@@ -206,6 +208,9 @@ export default function Dashboard(
   // contador/selo de transparência abaixo.
   const contasAtivas = useMemo(() => contas.filter((c) => !c.pausado), [contas]);
   const pausadas = useMemo(() => contas.filter((c) => c.pausado), [contas]);
+
+  // Orientações (indicador discreto na linha da conta). Degrada gracioso se falhar.
+  const { mapa: orientacoes } = useOrientacoes();
 
   // Modo mês (mês corrente 1..D vs mês anterior 1..D). No modo dia, jm é null.
   const modoMes = periodo === "Mês";
@@ -680,7 +685,7 @@ export default function Dashboard(
                   </tr>
                 ) : (
                   clientes.map((c) => (
-                    <LinhaClienteRow key={c.accountId} c={c} limite={limitesPorConta.get(c.accountId)} tooltipSemDado={tooltipSemDado} />
+                    <LinhaClienteRow key={c.accountId} c={c} limite={limitesPorConta.get(c.accountId)} tooltipSemDado={tooltipSemDado} orientacao={orientacoes?.[c.accountId] ?? null} />
                   ))
                 )}
               </tbody>
@@ -844,11 +849,22 @@ function Th({ children, right, onClick }: { children: React.ReactNode; right?: b
   );
 }
 
-function LinhaClienteRow({ c, limite, tooltipSemDado }: { c: LinhaCliente; limite?: LimiteConta; tooltipSemDado: string }) {
+function LinhaClienteRow({ c, limite, tooltipSemDado, orientacao }: {
+  c: LinhaCliente; limite?: LimiteConta; tooltipSemDado: string; orientacao: EntradaOrientacao | null;
+}) {
   return (
     // hover:bg = TEMA.hover (#232323) — literal exigido pelo Tailwind.
     <tr className="transition-colors hover:bg-[#232323]">
-      <td className="px-4 py-3" style={{ borderBottom: `1px solid ${LINE}`, color: "#fff" }}>{c.cliente}</td>
+      <td className="px-4 py-3" style={{ borderBottom: `1px solid ${LINE}`, color: "#fff" }}>
+        <span className="inline-flex items-center gap-1.5">
+          {c.cliente}
+          {orientacao && (
+            <Link href="/orientacoes" title={orientacao.texto} className="text-[12px] leading-none hover:opacity-80" style={{ color: YELLOW }} aria-label="Ver orientação">
+              💬
+            </Link>
+          )}
+        </span>
+      </td>
       <td className="px-4 py-3" style={{ borderBottom: `1px solid ${LINE}` }}>
         <span
           className="rounded-md px-1.5 py-0.5 text-[11px] font-medium"

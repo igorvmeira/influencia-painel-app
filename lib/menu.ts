@@ -10,6 +10,7 @@ export const MENU_PRINCIPAL: ItemMenu[] = [
   { rotulo: "Início", href: "/", descricao: "O que precisa da sua atenção hoje." },
   { rotulo: "Dashboard de Tráfego", href: "/dashboard", descricao: "KPIs, alertas, rankings e tendência do período." },
   { rotulo: "Pautas e Reuniões", href: "/reunioes", descricao: "Reuniões da agenda da agência (Google Agenda)." },
+  { rotulo: "Orientações Gerenciais", href: "/orientacoes", descricao: "Observações por conta, com histórico." },
 ];
 
 export const MENU_EM_BREVE: ItemMenu[] = [

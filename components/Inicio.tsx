@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useDadosPainel } from "@/lib/useDadosPainel";
 import { useAgenda } from "@/lib/useAgenda";
+import { useOrientacoes } from "@/lib/useOrientacoes";
 import { resumoAtencao, CPL_ALERTA } from "@/lib/alertas";
 import { chaveDia, hhmm, chavesHojeAmanha } from "@/lib/formatAgenda";
+import { haQuanto } from "@/lib/tempo";
 import { MENU_EM_BREVE } from "@/lib/menu";
 import { brlDec } from "@/lib/format";
 import { TEMA } from "@/lib/brand";
@@ -23,9 +25,24 @@ const DIAS_RESUMO = 15;
 export default function Inicio() {
   const { dados, erro } = useDadosPainel();
   const { reunioes, erro: erroAgenda } = useAgenda();
+  const { mapa: orientacoes, erro: erroOri } = useOrientacoes();
 
   // Pausadas ficam FORA de tudo, igual ao Dashboard.
   const contasAtivas = dados ? dados.contas.filter((c) => !c.pausado) : [];
+
+  // Resumo das orientações: contas ativas sem orientação + última atualização.
+  let resumoOri: string | null = null;
+  if (orientacoes && dados) {
+    const sem = contasAtivas.filter((c) => !orientacoes[c.accountId]).length;
+    let ultima = "";
+    for (const k in orientacoes) {
+      const a = orientacoes[k];
+      if (a?.em && (ultima === "" || a.em > ultima)) ultima = a.em;
+    }
+    resumoOri =
+      `${sem} ${sem === 1 ? "conta sem orientação" : "contas sem orientação"}` +
+      (ultima ? ` · última atualização ${haQuanto(ultima)}` : "");
+  }
   const resumo = dados ? resumoAtencao(dados.daily, contasAtivas, dados.limites, DIAS_RESUMO) : null;
   const tudoOk = resumo ? resumo.cplAltoCount === 0 && resumo.pertoCount === 0 : false;
 
@@ -127,6 +144,25 @@ export default function Inicio() {
             <div className="mt-3 h-4 w-48 animate-pulse rounded motion-reduce:animate-none" style={{ background: LINE }} />
           ) : (
             <p className="mt-3 text-[13px]" style={{ color: "#fff" }}>{resumoReunioes}</p>
+          )}
+        </Link>
+
+        {/* Card de Orientações — resumo real */}
+        <Link
+          href="/orientacoes"
+          className="block p-5 transition-colors hover:bg-[#232323]"
+          style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard }}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm font-medium text-white">Orientações Gerenciais</span>
+            <span className="text-[11px]" style={{ color: MUTED }}>gerenciar →</span>
+          </div>
+          {erroOri ? (
+            <p className="mt-3 text-[13px]" style={{ color: MUTED }}>Não foi possível carregar as orientações.</p>
+          ) : !orientacoes || !dados ? (
+            <div className="mt-3 h-4 w-52 animate-pulse rounded motion-reduce:animate-none" style={{ background: LINE }} />
+          ) : (
+            <p className="mt-3 text-[13px]" style={{ color: "#fff" }}>{resumoOri}</p>
           )}
         </Link>
 

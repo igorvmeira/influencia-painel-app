@@ -1,5 +1,17 @@
 export type Tipo = "B2B" | "B2C";
 
+// Orientação gerencial de uma conta (feature de escrita). "em" em ISO no cliente.
+export interface EntradaOrientacao {
+  texto: string;
+  autor: string; // e-mail do usuário (extraído do ID token no servidor)
+  em: string;    // ISO
+}
+export interface Orientacao {
+  accountId: string;
+  atual: EntradaOrientacao | null;
+  historico?: EntradaOrientacao[]; // só vem no GET por conta (sob demanda)
+}
+
 // Participante de uma reunião do Google Agenda.
 export interface Participante {
   nome: string;
