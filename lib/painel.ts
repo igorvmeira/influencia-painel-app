@@ -12,13 +12,23 @@ const variacao = (atual: number, anterior: number) =>
 
 const conversasDe = (m: MetricaDiaria) => m.leadsForm + m.convWhats;
 
-interface Soma { gasto: number; leadsForm: number; convWhats: number; conversas: number }
-const somaZero = (): Soma => ({ gasto: 0, leadsForm: 0, convWhats: 0, conversas: 0 });
+interface Soma {
+  gasto: number; leadsForm: number; convWhats: number; conversas: number;
+  // Soma só dos dias que TÊM o campo (null/ausente é ignorado, não vira 0).
+  reach: number; reachDias: number;
+  impressions: number; imprDias: number;
+}
+const somaZero = (): Soma => ({
+  gasto: 0, leadsForm: 0, convWhats: 0, conversas: 0,
+  reach: 0, reachDias: 0, impressions: 0, imprDias: 0,
+});
 function acumular(s: Soma, m: MetricaDiaria) {
   s.gasto += m.gasto;
   s.leadsForm += m.leadsForm;
   s.convWhats += m.convWhats;
   s.conversas += conversasDe(m);
+  if (typeof m.reach === "number") { s.reach += m.reach; s.reachDias++; }
+  if (typeof m.impressions === "number") { s.impressions += m.impressions; s.imprDias++; }
 }
 
 // Dia mais recente presente nos registros, em ms (cai para hoje se não houver dados).
@@ -136,6 +146,9 @@ export function montarPainel(
         gasto: a.gasto,
         conversas: a.conversas,
         cplSemanal: cpl(a.gasto, a.conversas),
+        // null quando nenhum dia do período tem o dado (dias antigos) → "—" na tela.
+        reach: a.reachDias > 0 ? a.reach : null,
+        impressions: a.imprDias > 0 ? a.impressions : null,
       };
     }).sort((x, y) => y.gasto - x.gasto);
 

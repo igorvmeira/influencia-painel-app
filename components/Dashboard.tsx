@@ -230,6 +230,15 @@ export default function Dashboard(
     [daily, contasAtivas, modoMes, jm, diasEfetivos]
   );
 
+  // Tooltip do "—" (Alcance/Impressões): data DINÂMICA em que a coleta começou.
+  const tooltipSemDado = useMemo(() => {
+    let min = "";
+    for (const m of daily) if (typeof m.reach === "number" && (min === "" || m.data < min)) min = m.data;
+    if (!min) return "Ainda não coletado (passa a ser preenchido no próximo sync).";
+    const [y, mo, d] = min.split("-");
+    return `Passou a ser coletado a partir de ${d}/${mo}/${y}; dias anteriores não têm o dado.`;
+  }, [daily]);
+
   // Ranking de gestores por CPL (menor = melhor).
   const ranking = useMemo(
     () => [...data.gestores].sort((a, b) => a.cpl - b.cpl),
@@ -649,19 +658,29 @@ export default function Dashboard(
                   <Th right onClick={() => ordenar("gasto")}>Gasto{seta("gasto")}</Th>
                   <Th right onClick={() => ordenar("conversas")}>Conv.{seta("conversas")}</Th>
                   <Th right onClick={() => ordenar("cplSemanal")}>CPL{seta("cplSemanal")}</Th>
+                  <th className="px-4 py-3 text-right font-medium" style={{ borderBottom: `1px solid ${LINE}` }}>
+                    <span className="inline-flex items-center gap-1">
+                      Alcance
+                      <span
+                        title="Soma do alcance de cada dia. Como a mesma pessoa pode ser alcançada em dias diferentes, esse número tende a ser maior que o total de pessoas únicas do período."
+                        style={{ cursor: "help", color: MUTED }}
+                      >ⓘ</span>
+                    </span>
+                  </th>
+                  <th className="px-4 py-3 text-right font-medium" style={{ borderBottom: `1px solid ${LINE}` }}>Impressões</th>
                   <th className="px-4 py-3 font-medium" style={{ borderBottom: `1px solid ${LINE}` }}>Limite</th>
                 </tr>
               </thead>
               <tbody>
                 {clientes.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-6 text-center" style={{ color: MUTED }}>
+                    <td colSpan={8} className="px-4 py-6 text-center" style={{ color: MUTED }}>
                       Nenhum cliente encontrado.
                     </td>
                   </tr>
                 ) : (
                   clientes.map((c) => (
-                    <LinhaClienteRow key={c.accountId} c={c} limite={limitesPorConta.get(c.accountId)} />
+                    <LinhaClienteRow key={c.accountId} c={c} limite={limitesPorConta.get(c.accountId)} tooltipSemDado={tooltipSemDado} />
                   ))
                 )}
               </tbody>
@@ -825,7 +844,7 @@ function Th({ children, right, onClick }: { children: React.ReactNode; right?: b
   );
 }
 
-function LinhaClienteRow({ c, limite }: { c: LinhaCliente; limite?: LimiteConta }) {
+function LinhaClienteRow({ c, limite, tooltipSemDado }: { c: LinhaCliente; limite?: LimiteConta; tooltipSemDado: string }) {
   return (
     // hover:bg = TEMA.hover (#232323) — literal exigido pelo Tailwind.
     <tr className="transition-colors hover:bg-[#232323]">
@@ -843,6 +862,12 @@ function LinhaClienteRow({ c, limite }: { c: LinhaCliente; limite?: LimiteConta 
       <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: "#fff" }}>{brl(c.gasto)}</td>
       <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: "#fff" }}>{num(c.conversas)}</td>
       <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: "#fff" }}>{brlDec(c.cplSemanal)}</td>
+      <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: "#fff" }}>
+        {c.reach != null ? num(c.reach) : <span style={{ color: MUTED, cursor: "help" }} title={tooltipSemDado}>—</span>}
+      </td>
+      <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: "#fff" }}>
+        {c.impressions != null ? num(c.impressions) : <span style={{ color: MUTED, cursor: "help" }} title={tooltipSemDado}>—</span>}
+      </td>
       <td className="px-4 py-3" style={{ borderBottom: `1px solid ${LINE}` }}>
         <BarraLimite limite={limite} />
       </td>

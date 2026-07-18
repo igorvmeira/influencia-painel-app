@@ -89,7 +89,8 @@ export async function buscarDiario(accountId: string, dias = 30): Promise<Metric
   const since = new Date();
   since.setDate(since.getDate() - (dias - 1));
   const params = new URLSearchParams({
-    fields: "spend,actions",
+    // reach/impressions adicionados na MESMA chamada (sem custo/chamada extra).
+    fields: "spend,actions,reach,impressions",
     time_range: JSON.stringify({ since: ymd(since), until: ymd(until) }),
     time_increment: "1",
     level: "account",
@@ -115,6 +116,9 @@ export async function buscarDiario(accountId: string, dias = 30): Promise<Metric
         leadsForm,
         convWhats,
         conversas: leadsForm + convWhats,
+        // Ausente na resposta → null (nunca 0). "0" real é preservado como número.
+        reach: r.reach != null ? Number(r.reach) : null,
+        impressions: r.impressions != null ? Number(r.impressions) : null,
       });
     }
     url = json?.paging?.next;

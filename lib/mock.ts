@@ -86,7 +86,16 @@ export function mockDiario(): { daily: MetricaDiaria[]; contas: ContaMap[] } {
       const leadsForm = s.tipo === "B2B" ? conversas : 0;
       const convWhats = s.tipo === "B2C" ? conversas : 0;
 
-      daily.push({ accountId, data: ymd(d), gasto, leadsForm, convWhats, conversas });
+      // Simula a coleta "daqui pra frente": só os ~20 dias mais recentes têm
+      // reach/impressions; dias antigos ficam SEM o campo (viram "—" na tela).
+      const coletado = diasDoHoje < 20;
+      const impressions = coletado ? Math.round(gasto * (25 + 15 * noise(ci * 211 + i * 13 + 5))) : undefined;
+      const reach = coletado ? Math.round((impressions as number) * (0.5 + 0.25 * noise(ci * 233 + i * 17 + 9))) : undefined;
+
+      daily.push({
+        accountId, data: ymd(d), gasto, leadsForm, convWhats, conversas,
+        ...(coletado ? { reach, impressions } : {}),
+      });
     }
   });
 

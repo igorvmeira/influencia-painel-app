@@ -38,6 +38,10 @@ export interface MetricaDiaria {
   leadsForm: number; // leads de formulário (split B2B)
   convWhats: number; // conversas de WhatsApp (split B2C)
   conversas?: number; // leadsForm + convWhats (redundante, gravado por conveniência)
+  // Coletados daqui pra frente; ausência (dias antigos) = campo não presente.
+  // null = a API não retornou no dia (nunca 0, que é valor real).
+  reach?: number | null;       // alcance do dia
+  impressions?: number | null; // impressões do dia
 }
 
 export interface Totais {
@@ -74,6 +78,8 @@ export interface LinhaCliente {
   gasto: number;
   conversas: number;
   cplSemanal: number;
+  reach: number | null;       // soma do alcance diário no período; null = sem dado
+  impressions: number | null; // soma das impressões no período; null = sem dado
 }
 
 /** Teto de gasto e consumo de uma conta (valores já em reais). */
