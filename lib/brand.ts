@@ -6,6 +6,8 @@ export const MARCA = {
   agencia: "Influência",
   // Nome do assistente de IA (usado na UI do chat e no prompt do sistema).
   assistente: "Influ",
+  // Fuso horário do cliente (agrupamento/exibição de datas, ex.: agenda). Troque aqui.
+  fuso: "America/Sao_Paulo",
   // Cores base do tema dark (espelham tailwind.config.ts / o tema do painel).
   cores: {
     ink: "#141414",

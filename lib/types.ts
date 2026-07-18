@@ -1,5 +1,26 @@
 export type Tipo = "B2B" | "B2C";
 
+// Participante de uma reunião do Google Agenda.
+export interface Participante {
+  nome: string;
+  email: string | null;
+  resposta: string | null; // accepted | declined | tentative | needsAction
+}
+
+// Reunião normalizada (Google Calendar → nossos campos). Só leitura.
+export interface Reuniao {
+  id: string;
+  titulo: string;
+  inicio: string;   // ISO (dateTime) ou "YYYY-MM-DD" se dia todo
+  fim: string;      // idem
+  diaTodo: boolean;
+  participantes: Participante[];
+  linkMeet: string | null;
+  linkAgenda: string | null;
+  status: string;   // confirmed | tentative
+  recorrente: boolean;
+}
+
 export interface ContaMap {
   accountId: string;
   cliente: string;
