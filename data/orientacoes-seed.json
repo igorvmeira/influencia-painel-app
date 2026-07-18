@@ -1,0 +1,344 @@
+[
+  {
+    "accountId": "act_1159912575356979",
+    "cliente": "ARP Rental",
+    "gestor": "ISMAIL",
+    "texto": "Google e Meta rodando. Vicente fez uma call com Thiago. Google está otimizado, trazendo bons leads."
+  },
+  {
+    "accountId": "act_640604454939758",
+    "cliente": "IFALEI - ZIEVO",
+    "gestor": "ISMAIL",
+    "texto": "Novos vídeos em produção, André da Zievo está avaliando aumentar o orçamento para R$2.700/MÊS."
+  },
+  {
+    "accountId": "act_856834882178627",
+    "cliente": "NETFACIL",
+    "gestor": "ISMAIL",
+    "texto": "CPL estável."
+  },
+  {
+    "accountId": "act_1841331226592258",
+    "cliente": "ISP4",
+    "gestor": "ISMAIL",
+    "texto": "Qualificação de Consultoria melhorou. CPL estável"
+  },
+  {
+    "accountId": "act_1141344530820205",
+    "cliente": "Circula Net",
+    "gestor": "ISMAIL",
+    "texto": "Novos criativos aguardando aprovação para teste."
+  },
+  {
+    "accountId": "act_1324792096179119",
+    "cliente": "OctorLink",
+    "gestor": "ANDRÉ",
+    "texto": "Iniciar Campanhas dia 20/07. Iniciar com 60% do orçamento (60/dia, 2 CJ de 30)"
+  },
+  {
+    "accountId": "act_1427561475356780",
+    "cliente": "PRO3 ACADEMIA",
+    "gestor": "ANDRÉ",
+    "texto": "CPL estável. Campanhas rodando."
+  },
+  {
+    "accountId": "act_2775914335882809",
+    "cliente": "ARP TELECOM",
+    "gestor": "ANDRÉ",
+    "texto": "CPL levemente alto. Fazer mais 4 criativos para rodar."
+  },
+  {
+    "accountId": "act_1145473760827134",
+    "cliente": "TAC NET",
+    "gestor": "ANDRÉ",
+    "texto": "CPL alto, foco da campanha está em Morro da Fumaça. Necessário mais 3 criativos."
+  },
+  {
+    "accountId": "act_828216221837818",
+    "cliente": "NORTELINE",
+    "gestor": "ANDRÉ",
+    "texto": "Novos criativos rodando. Acompanhar resultados."
+  },
+  {
+    "accountId": "act_1802460987815168",
+    "cliente": "CAFÉ JEQUITINHONHA",
+    "gestor": "ANDRÉ",
+    "texto": "Rodando campanha de branding pro Instagram."
+  },
+  {
+    "accountId": "act_1578265566212508",
+    "cliente": "Drogaria Madri",
+    "gestor": "ANDRÉ",
+    "texto": "Rodando campanha do centro e bairros. Otimizar campanha dos bairros, CPL alto e volume baixo."
+  },
+  {
+    "accountId": "act_1916349755671879",
+    "cliente": "IBNET",
+    "gestor": "ANDRÉ",
+    "texto": "CPL estável e baixo. Enviar acesso IBNET para Ismail"
+  },
+  {
+    "accountId": "act_1260395262058555",
+    "cliente": "Dr. Samuel",
+    "gestor": "ANDRÉ",
+    "texto": "Estável.Reclamando de leads desqualificados, mas vendendo. ROAS 9 em Junho"
+  },
+  {
+    "accountId": "act_1321889532494546",
+    "cliente": "DU FIBRA",
+    "gestor": "ANDRÉ",
+    "texto": "CAC bom, relação OK. Começou Julho mal, mas está vendendo bem essa semana."
+  },
+  {
+    "accountId": "act_4207788105944374",
+    "cliente": "DRA. MARIA FERNANDA",
+    "gestor": "ANDRÉ",
+    "texto": "Estável."
+  },
+  {
+    "accountId": "act_1282472920705306",
+    "cliente": "Blue3",
+    "gestor": "WEDER",
+    "texto": "CPL alto, nenhuma venda pelas campanhas ainda."
+  },
+  {
+    "accountId": "act_1416963989917448",
+    "cliente": "ELTEC",
+    "gestor": "WEDER",
+    "texto": "Subir criativos novos para teste."
+  },
+  {
+    "accountId": "act_612219675509973",
+    "cliente": "BL FIBRA",
+    "gestor": "WEDER",
+    "texto": "Novos criativos em teste para baixar CPL para dentro da normalidade (R$15)"
+  },
+  {
+    "accountId": "act_593066599501100",
+    "cliente": "TELCOM",
+    "gestor": "WEDER",
+    "texto": "CPL bom. Acompanhar CAC."
+  },
+  {
+    "accountId": "act_662142634881699",
+    "cliente": "NEXT",
+    "gestor": "LUCAS",
+    "texto": "Aguardando designer entregar criativos (25/05)"
+  },
+  {
+    "accountId": "act_901220705012452",
+    "cliente": "CAMPEZZA",
+    "gestor": "LUCAS",
+    "texto": "Estável - Poço artesiano rodando"
+  },
+  {
+    "accountId": "act_1040367470846107",
+    "cliente": "SN NET",
+    "gestor": "LUCAS",
+    "texto": "Instagram caiu porém o tráfego não parou."
+  },
+  {
+    "accountId": "act_467779389026591",
+    "cliente": "BV TELECOM (PROVEDOR)",
+    "gestor": "LUCAS",
+    "texto": "Estável CPL Baixo"
+  },
+  {
+    "accountId": "act_382942743051251",
+    "cliente": "INFLUENCIA",
+    "gestor": "LUCAS",
+    "texto": "Melhorando os leads"
+  },
+  {
+    "accountId": "act_1960831434539683",
+    "cliente": "HELLO NET",
+    "gestor": "VINÍCIUS",
+    "texto": "Pedir número de vendas para Marcelo (14/07)"
+  },
+  {
+    "accountId": "act_1960831434539683",
+    "cliente": "HELLO NET",
+    "gestor": "VINÍCIUS",
+    "texto": "Subi criativos novos 14/07. Avaliar resultados."
+  },
+  {
+    "accountId": "act_952855809491449",
+    "cliente": "MOTEL OASIS",
+    "gestor": "VINÍCIUS",
+    "texto": "Cobrar retorno dia 15/07"
+  },
+  {
+    "accountId": "act_7203891913008791",
+    "cliente": "NU PARAISO",
+    "gestor": "VINÍCIUS",
+    "texto": "Cobrar retorno dia 15/07"
+  },
+  {
+    "accountId": "act_805774430778528",
+    "cliente": "NEXA TELECOM",
+    "gestor": "VINÍCIUS",
+    "texto": "Anúncios no ar 15/07. Acompanhar."
+  },
+  {
+    "accountId": "act_1342356503063454",
+    "cliente": "CDL",
+    "gestor": "VINÍCIUS",
+    "texto": "Veiculando Campanha Compra Premiada (14/07)"
+  },
+  {
+    "accountId": "act_1406903296909080",
+    "cliente": "JP CONSTRUTORA",
+    "gestor": "VINÍCIUS",
+    "texto": "Solicitar criativos pra Ruth. Pedi Fernanda as fotos disponíveis do Starpool."
+  },
+  {
+    "accountId": "act_3540374812862284",
+    "cliente": "GRUPO CONESUL",
+    "gestor": "VINÍCIUS",
+    "texto": "CPL Estável. Sem dados (14/07)"
+  },
+  {
+    "accountId": "act_1264456648257931",
+    "cliente": "CONEXÃO NET (PROVEDOR)",
+    "gestor": "VINÍCIUS",
+    "texto": "Estável. (14/07)"
+  },
+  {
+    "accountId": "act_1687506165298657",
+    "cliente": "AMSTERDAM",
+    "gestor": "VINÍCIUS",
+    "texto": "Estável."
+  },
+  {
+    "accountId": "act_609220030867311",
+    "cliente": "NEX TELECOM",
+    "gestor": "VINÍCIUS",
+    "texto": "Estável."
+  },
+  {
+    "accountId": "act_1670450540519360",
+    "cliente": "Zay Sushi",
+    "gestor": "VINÍCIUS",
+    "texto": "Estável. ROAS 13 nos últimos 7 dias."
+  },
+  {
+    "accountId": "act_2581016248962449",
+    "cliente": "Apolo",
+    "gestor": "DANIEL",
+    "texto": "Falta conectar o Whatsapp (14/07)"
+  },
+  {
+    "accountId": "act_1313209170491744",
+    "cliente": "NETCOM  (PROVEDOR)",
+    "gestor": "DANIEL",
+    "texto": "Estável. Sem dados (14/07)"
+  },
+  {
+    "accountId": "act_575138771730030",
+    "cliente": "TEK TELECOM (PROVEDOR)",
+    "gestor": "DANIEL",
+    "texto": "CPL em Ipameri alto. Cliente usa somente um modelo de criativo. Sugerimos trocar o ângulo (14/07)"
+  },
+  {
+    "accountId": "act_1837483150389186",
+    "cliente": "BRASTURBO (PROVEDOR)",
+    "gestor": "DANIEL",
+    "texto": "Estável campanha de chip. Campanha de Wifi ruim e já vamos subir criativos novos (14/07)"
+  },
+  {
+    "accountId": "act_1432314361973993",
+    "cliente": "SPEEDNET (PROVEDOR)",
+    "gestor": "DANIEL",
+    "texto": "CPL bom e CAC bom até o momento (14/07)"
+  },
+  {
+    "accountId": "act_1148378723627218",
+    "cliente": "INTERNITRO",
+    "gestor": "DANIEL",
+    "texto": "CPL baixo mas CAC alto (14/07)"
+  },
+  {
+    "accountId": "act_313868494444325",
+    "cliente": "MONTAÇO (FERRAGENS)",
+    "gestor": "DANIEL",
+    "texto": "Estável MOC. Em Bocaiúva vamos rodar campanha PMAX ou Google meu Negócio (14/07)"
+  },
+  {
+    "accountId": "act_1254298646370970",
+    "cliente": "E-UP (B2B ATENDEM PROVEDOR)",
+    "gestor": "DANIEL",
+    "texto": "Precisando urgente de criativo novo. (14/07)"
+  },
+  {
+    "accountId": "act_786098394310499",
+    "cliente": "SOS TELECOM (PROVEDOR)",
+    "gestor": "DANIEL",
+    "texto": "Estável. Campanha nova com CPL muito alto e sugeri para a cliente pausar (14/07)"
+  },
+  {
+    "accountId": "act_1444062963724677",
+    "cliente": "YNOVA NET (PROVEDOR)",
+    "gestor": "JOÃO PEDRO",
+    "texto": "Campanhas com CPL alto novamente. A sugestão será criativos com SVA do PlayHub (14/07)"
+  },
+  {
+    "accountId": "act_1899656697583453",
+    "cliente": "COPYNORTE",
+    "gestor": "JOÃO PEDRO",
+    "texto": "Anunciando pelo Instagram. Conta de Matheus agora. 09/06"
+  },
+  {
+    "accountId": "act_2030710527729327",
+    "cliente": "Guará Net",
+    "gestor": "JOÃO PEDRO",
+    "texto": "Precisa de treinamento comercial (14/07)"
+  },
+  {
+    "accountId": "act_830495511608627",
+    "cliente": "NetSystem",
+    "gestor": "JOÃO PEDRO",
+    "texto": "Churn (14/07)"
+  },
+  {
+    "accountId": "act_272135675231139",
+    "cliente": "AURA (LOUNGE BAR)",
+    "gestor": "JOÃO PEDRO",
+    "texto": "Ainda falta a reunião com Márcio para verificar o delivery e solicitar criativos em vídeos (14/07)"
+  },
+  {
+    "accountId": "act_1014818350796748",
+    "cliente": "VIA DUPLA",
+    "gestor": "JOÃO PEDRO",
+    "texto": "Falta Buda desenrolar a conexão da BM dentro do sistema de qualificação de Leads (14/07)"
+  },
+  {
+    "accountId": "act_232199732730201",
+    "cliente": "VTL TELECOM",
+    "gestor": "JOÃO PEDRO",
+    "texto": "Cliente vai sair e não colocou saldo mais (14/07)"
+  },
+  {
+    "accountId": "act_1440128040893971",
+    "cliente": "OBBU",
+    "gestor": "JOÃO PEDRO",
+    "texto": "Falta treinamento comercial (14/07)"
+  },
+  {
+    "accountId": "act_1099212031030356",
+    "cliente": "CONSTRUMINAS FERRO E AÇO",
+    "gestor": "JOÃO PEDRO",
+    "texto": "Estável Meta e Google (14/07)"
+  },
+  {
+    "accountId": "act_963483641445277",
+    "cliente": "MIO TELECOM (PROVEDOR)",
+    "gestor": "JOÃO PEDRO",
+    "texto": "Estável. dados de vendas fora da realidade (14/07)"
+  },
+  {
+    "accountId": "act_154424816245025",
+    "cliente": "PLAYIP (PROVEDOR)",
+    "gestor": "JOÃO PEDRO",
+    "texto": "Estável. Números de vendas do mês de Julho críticos (14/07)"
+  }
+]
