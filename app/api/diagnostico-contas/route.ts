@@ -6,6 +6,7 @@
 
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/firebaseAdmin";
+import { checarCronSecret } from "@/lib/cronAuth";
 import { ContaMap } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -62,12 +63,8 @@ async function buscarContasMeta(): Promise<AdAccount[]> {
 
 export async function GET(req: Request) {
   // Mesma proteção do sync (CRON_SECRET; não cria env de segredo).
-  const url = new URL(req.url);
-  const chaveUrl = url.searchParams.get("key");
-  const auth = req.headers.get("authorization");
-  const segredo = process.env.CRON_SECRET;
-  const autorizado = !segredo || auth === `Bearer ${segredo}` || chaveUrl === segredo;
-  if (!autorizado) return NextResponse.json({ erro: "não autorizado" }, { status: 401 });
+  const bloqueio = checarCronSecret(req);
+  if (bloqueio) return bloqueio;
 
   if (!TOKEN) {
     return NextResponse.json({ erro: "META_ACCESS_TOKEN não configurado" }, { status: 500 });

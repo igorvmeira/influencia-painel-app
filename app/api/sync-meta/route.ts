@@ -3,6 +3,7 @@ import { getDb } from "@/lib/firebaseAdmin";
 import { buscarDiario, buscarLimiteConta } from "@/lib/meta";
 import { ContaMap, MetricaDiaria } from "@/lib/types";
 import { COL_AGREGADAS, cutoffRetencao, mesclarDias } from "@/lib/agregadas";
+import { checarCronSecret } from "@/lib/cronAuth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -16,15 +17,10 @@ const LIMITE_PADRAO = 20;
 const LOTE = 450;
 
 export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const chaveUrl = url.searchParams.get("key");
-  const auth = req.headers.get("authorization");
-  const segredo = process.env.CRON_SECRET;
-  const autorizado = !segredo || auth === `Bearer ${segredo}` || chaveUrl === segredo;
-  if (!autorizado) {
-    return NextResponse.json({ erro: "não autorizado" }, { status: 401 });
-  }
+  const bloqueio = checarCronSecret(req);
+  if (bloqueio) return bloqueio;
 
+  const url = new URL(req.url);
   const db = getDb();
   if (!db) return NextResponse.json({ erro: "Firebase não configurado" }, { status: 500 });
 
