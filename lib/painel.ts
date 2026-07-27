@@ -154,8 +154,12 @@ export function montarPainel(
 
     const ids = new Set(contasGestor.map((c) => c.accountId));
     const cplSemanal: PontoCpl[] = [];
+    // Base = offset do dia MAIS RECENTE da janela. É 0 no modo dia e no modo mês
+    // (ambos terminam na âncora), mas > 0 num período personalizado que termina
+    // antes dela — sem isto, as semanas do detalhe cairiam fora do período escolhido.
+    const base = espec ? espec.atualIni : 0;
     for (let p = 1; p <= semanas; p++) {
-      const semFim = (semanas - p) * 7; // 0 = semana mais recente
+      const semFim = base + (semanas - p) * 7; // base = semana mais recente da janela
       const atual = janelaCpl(registros, ids, diasAtras, semFim, semFim + 6);
       const dois = janelaCpl(registros, ids, diasAtras, semFim + 56, semFim + 6 + 56);
       cplSemanal.push({

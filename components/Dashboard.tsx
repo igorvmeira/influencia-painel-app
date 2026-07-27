@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   CartesianGrid, Line, LineChart, ResponsiveContainer,
@@ -12,8 +12,11 @@ import { montarNichos, montarPainel } from "@/lib/painel";
 import { CPL_ALERTA, LIMITE_ATENCAO, LIMITE_CRITICO, contasPertoDoLimite } from "@/lib/alertas";
 import { brl, brlDec, num, pct } from "@/lib/format";
 import { montarKpis, montarKpisMes, moedaCard, numCard, serieGrafico, serieGraficoMes } from "@/lib/kpis";
-import { janelaMes, intervaloLabel } from "@/lib/periodo";
-import { TEMA } from "@/lib/brand";
+import {
+  janelaMes, intervaloLabel, janelaPersonalizada, primeiroDiaDisponivel,
+  ultimoDiaDisponivel, comparacaoExigeDesde, ymdParaBR,
+} from "@/lib/periodo";
+import { MARCA, TEMA } from "@/lib/brand";
 import NichosSection from "./NichosSection";
 import CriativosSection from "./CriativosSection";
 import HeroChart from "./HeroChart";
@@ -100,8 +103,9 @@ function Trend({ v, menorMelhor = false }: { v: number; menorMelhor?: boolean })
 }
 
 // Badge de variação para os KPIs. delta null → "—" (sem base suficiente).
-function DeltaBadge({ delta, menorMelhor = false }: { delta: number | null; menorMelhor?: boolean }) {
-  if (delta === null) return <span className="text-xs font-medium" style={{ color: MUTED }} title="sem período anterior comparável">—</span>;
+// `motivo` explica o "—" no tooltip com o motivo CONCRETO (datas), quando houver.
+function DeltaBadge({ delta, menorMelhor = false, motivo }: { delta: number | null; menorMelhor?: boolean; motivo?: string | null }) {
+  if (delta === null) return <span className="text-xs font-medium" style={{ color: MUTED, cursor: "help" }} title={motivo ?? "sem período anterior comparável"}>—</span>;
   const cor = corVar(delta, menorMelhor);
   const seta = delta > 0 ? "▲" : delta < 0 ? "▼" : "•";
   return (
@@ -162,9 +166,12 @@ function Iniciais({ nome }: { nome: string }) {
 
 // Card de KPI: rótulo + subtítulo, número grande tabular (com count-up), delta
 // semântico e sparkline. O número anima ao trocar de período (respeita reduced-motion).
-function KpiCard({ label, sub, valorNum, formatar, title, delta, menorMelhor = false, destaque = false, serie }: {
+function KpiCard({ label, sub, valorNum, formatar, title, delta, menorMelhor = false, destaque = false, serie, semComparacao }: {
   label: string; sub?: string; valorNum: number; formatar: (n: number) => string; title: string;
   delta: number | null; menorMelhor?: boolean; destaque?: boolean; serie: number[];
+  // Quando preenchido: o período anterior não cabe no histórico → força "—" e
+  // explica o motivo (melhor do que mostrar variação contra base incompleta).
+  semComparacao?: string | null;
 }) {
   return (
     <div className="p-5" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}>
@@ -185,17 +192,41 @@ function KpiCard({ label, sub, valorNum, formatar, title, delta, menorMelhor = f
         style={{ color: destaque ? OURO : TEXTO, fontVariantNumeric: "tabular-nums" }}
       />
       <div className="mt-2 flex items-center gap-2">
-        <DeltaBadge delta={delta} menorMelhor={menorMelhor} />
+        <DeltaBadge delta={semComparacao ? null : delta} menorMelhor={menorMelhor} motivo={semComparacao} />
         <span className="text-[11px]" style={{ color: MUTED }}>vs período anterior</span>
       </div>
     </div>
   );
 }
 
-const PERIODOS = ["7 dias", "15 dias", "30 dias", "Mês"] as const;
+const PERIODOS = ["7 dias", "15 dias", "30 dias", "60 dias", "Mês", "Personalizado"] as const;
 type Periodo = (typeof PERIODOS)[number];
-type PeriodoDia = Exclude<Periodo, "Mês">;
-const DIAS_POR_PERIODO: Record<PeriodoDia, number> = { "7 dias": 7, "15 dias": 15, "30 dias": 30 };
+type PeriodoDia = Exclude<Periodo, "Mês" | "Personalizado">;
+const DIAS_POR_PERIODO: Record<PeriodoDia, number> = { "7 dias": 7, "15 dias": 15, "30 dias": 30, "60 dias": 60 };
+// Rótulo curto dos botões (o "Mês"/"Personalizado" mantêm o nome por extenso).
+const ROTULO_CURTO: Record<Periodo, string> = {
+  "7 dias": "7d", "15 dias": "15d", "30 dias": "30d", "60 dias": "60d",
+  "Mês": "Mês", "Personalizado": "Personalizado",
+};
+
+// Dia de hoje (YYYY-MM-DD) no fuso do cliente — para saber se o último dia com
+// dado ainda está "em andamento" (o sync roda de manhã, então ele é parcial).
+function hojeNoFuso(): string {
+  const p = new Intl.DateTimeFormat("en-CA", {
+    timeZone: MARCA.fuso, year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(new Date());
+  return p; // en-CA já formata como YYYY-MM-DD
+}
+
+// "HH:MM" do último sync no fuso do cliente.
+function horaSync(iso: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: MARCA.fuso, hour: "2-digit", minute: "2-digit", hour12: false,
+  }).format(d);
+}
 
 type ColCliente = "cliente" | "tipo" | "gasto" | "conversas" | "cplSemanal";
 
@@ -216,36 +247,94 @@ export default function Dashboard(
   // Orientações (indicador discreto na linha da conta). Degrada gracioso se falhar.
   const { mapa: orientacoes } = useOrientacoes();
 
+  // ---- Limites do histórico disponível (janela móvel do agregado, ~95 dias) ----
+  // Só contas ATIVAS: o mínimo global pegaria dias órfãos de conta pausada
+  // (ver comentário em lib/periodo.ts).
+  const primeiroDia = useMemo(() => primeiroDiaDisponivel(daily, contasAtivas), [daily, contasAtivas]);
+  const ultimoDia = useMemo(() => ultimoDiaDisponivel(daily, contasAtivas), [daily, contasAtivas]);
+
+  // Período personalizado: por padrão, a última semana FECHADA (termina no dia
+  // anterior à âncora, que costuma estar parcial) — o caso de uso que motivou isto.
+  const [custIni, setCustIni] = useState("");
+  const [custFim, setCustFim] = useState("");
+  useEffect(() => {
+    if (!ultimoDia || custIni || custFim) return;
+    const fimMs = Date.parse(ultimoDia + "T00:00:00Z") - 86400000; // último dia fechado
+    const iniMs = fimMs - 6 * 86400000;
+    const piso = primeiroDia ? Date.parse(primeiroDia + "T00:00:00Z") : iniMs;
+    const ymd = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+    setCustFim(ymd(Math.max(fimMs, piso)));
+    setCustIni(ymd(Math.max(iniMs, piso)));
+  }, [ultimoDia, primeiroDia, custIni, custFim]);
+
   // Modo mês (mês corrente 1..D vs mês anterior 1..D). No modo dia, jm é null.
   const modoMes = periodo === "Mês";
-  const jm = useMemo(() => (modoMes ? janelaMes(daily, contasAtivas) : null), [modoMes, daily, contasAtivas]);
-  // Nº de dias efetivos: D no modo mês; senão o do botão 7/15/30.
-  const diasEfetivos = modoMes ? jm?.D ?? 30 : DIAS_POR_PERIODO[periodo as PeriodoDia];
+  const modoCustom = periodo === "Personalizado";
+  const jmMes = useMemo(() => (modoMes ? janelaMes(daily, contasAtivas) : null), [modoMes, daily, contasAtivas]);
+  const jmCustom = useMemo(
+    () => (modoCustom ? janelaPersonalizada(daily, contasAtivas, custIni, custFim) : null),
+    [modoCustom, daily, contasAtivas, custIni, custFim]
+  );
+  // Janela explícita ativa (mês OU personalizado). No modo dia, é null.
+  const jm = modoCustom ? jmCustom : jmMes;
+  // Nº de dias efetivos: D na janela explícita; senão o do botão 7/15/30/60.
+  const diasEfetivos = jm ? jm.D : DIAS_POR_PERIODO[periodo as PeriodoDia] ?? 30;
 
-  // Intervalo de datas de cada botão (7/15/30), ancorado no último dia COM DADO.
+  // Intervalo de datas de cada botão de dia, ancorado no último dia COM DADO.
   // Deixa a janela explícita na tela — evita confusão ao conferir com a BM.
   const intervalos = useMemo(() => ({
     "7 dias": intervaloLabel(daily, contasAtivas, 7),
     "15 dias": intervaloLabel(daily, contasAtivas, 15),
     "30 dias": intervaloLabel(daily, contasAtivas, 30),
+    "60 dias": intervaloLabel(daily, contasAtivas, 60),
   }) as Record<PeriodoDia, string | null>, [daily, contasAtivas]);
 
   const data = useMemo(
-    () => (modoMes && jm ? montarPainel(daily, contasAtivas, jm.D, jm.espec) : montarPainel(daily, contasAtivas, diasEfetivos)),
-    [daily, contasAtivas, modoMes, jm, diasEfetivos]
+    () => (jm ? montarPainel(daily, contasAtivas, jm.D, jm.espec) : montarPainel(daily, contasAtivas, diasEfetivos)),
+    [daily, contasAtivas, jm, diasEfetivos]
   );
 
   // KPIs do topo (formatação/deltas/sparklines) — respeita o período selecionado.
   const kpis = useMemo(
-    () => (modoMes && jm ? montarKpisMes(daily, contasAtivas, jm) : montarKpis(daily, contasAtivas, diasEfetivos)),
-    [daily, contasAtivas, modoMes, jm, diasEfetivos]
+    () => (jm ? montarKpisMes(daily, contasAtivas, jm) : montarKpis(daily, contasAtivas, diasEfetivos)),
+    [daily, contasAtivas, jm, diasEfetivos]
   );
 
-  // Série diária para o gráfico-herói (mesma janela dos KPIs; fantasma no modo mês).
+  // Série diária para o gráfico-herói (mesma janela dos KPIs; fantasma quando há
+  // janela explícita — no personalizado, o fantasma é o período anterior equivalente).
   const serieDoGrafico = useMemo(
-    () => (modoMes && jm ? serieGraficoMes(daily, contasAtivas, jm) : serieGrafico(daily, contasAtivas, diasEfetivos)),
-    [daily, contasAtivas, modoMes, jm, diasEfetivos]
+    () => (jm ? serieGraficoMes(daily, contasAtivas, jm) : serieGrafico(daily, contasAtivas, diasEfetivos)),
+    [daily, contasAtivas, jm, diasEfetivos]
   );
+
+  // ---- Comparação indisponível: o período anterior não cabe no histórico ----
+  // Regra da casa: melhor "—" do que número subestimado por falta de dado.
+  // Acontece no 60d (exigiria 120 dias; a janela tem ~95) e em personalizados longos.
+  const motivoSemComparacao = useMemo(() => {
+    if (!primeiroDia) return null;
+    const desdeBR = (ymd: string) => ymdParaBR(ymd);
+    if (modoCustom) {
+      if (!jmCustom?.parcial) return null;
+      const exigidoMs = Date.parse(custIni + "T00:00:00Z") - jmCustom.D * 86400000;
+      return `comparação indisponível: exigiria dados desde ${desdeBR(new Date(exigidoMs).toISOString().slice(0, 10))}, o histórico do painel começa em ${desdeBR(primeiroDia)}`;
+    }
+    if (modoMes) return null; // o modo mês já tem o selo "dados parciais" próprio
+    const exigido = comparacaoExigeDesde(daily, contasAtivas, diasEfetivos);
+    if (!exigido) return null;
+    return `comparação indisponível: exigiria dados desde ${desdeBR(exigido)}, o histórico do painel começa em ${desdeBR(primeiroDia)}`;
+  }, [primeiroDia, modoCustom, modoMes, jmCustom, custIni, daily, contasAtivas, diasEfetivos]);
+
+  // ---- Aviso de dia parcial: a janela inclui o último dia sincronizado? ----
+  // O sync roda de manhã, então o dia corrente entra incompleto.
+  const avisoParcial = useMemo(() => {
+    if (!ultimoDia) return null;
+    const ultimoEhHoje = ultimoDia === hojeNoFuso();
+    if (!ultimoEhHoje) return null;             // último dia já fechou: nada a avisar
+    const incluiUltimo = modoCustom ? custFim >= ultimoDia : true; // dia/mês sempre terminam na âncora
+    if (!incluiUltimo) return null;
+    const hora = horaSync(ultimaSync);
+    return hora ? `inclui dia parcial — última sincronização às ${hora}` : "inclui dia parcial (ainda em andamento)";
+  }, [ultimoDia, modoCustom, custFim, ultimaSync]);
 
   // Tooltip do "—" (Alcance/Impressões): data DINÂMICA em que a coleta começou.
   const tooltipSemDado = useMemo(() => {
@@ -317,8 +406,8 @@ export default function Dashboard(
     setAba("alertas");
   }
   const nichos = useMemo(
-    () => (modoMes && jm ? montarNichos(daily, contasAtivas, jm.D, jm.espec) : montarNichos(daily, contasAtivas, diasEfetivos)),
-    [daily, contasAtivas, modoMes, jm, diasEfetivos]
+    () => (jm ? montarNichos(daily, contasAtivas, jm.D, jm.espec) : montarNichos(daily, contasAtivas, diasEfetivos)),
+    [daily, contasAtivas, jm, diasEfetivos]
   );
 
   const detalhes = data.detalhes ?? [];
@@ -361,7 +450,9 @@ export default function Dashboard(
               const ativo = p === periodo;
               // Intervalo real da janela (ancorado no último dia COM DADO), ex.: "21–27/07".
               // O modo Mês já tem rótulo próprio (data.periodoLabel) — não duplica aqui.
-              const faixa = p !== "Mês" ? intervalos[p as PeriodoDia] : null;
+              const faixa = p === "Personalizado"
+                ? jmCustom?.labelAtual ?? null
+                : p !== "Mês" ? intervalos[p as PeriodoDia] : null;
               return (
                 <button
                   key={p}
@@ -372,7 +463,7 @@ export default function Dashboard(
                     : { background: "transparent", color: MUTED }}
                   title={faixa ? `Janela: ${faixa}` : undefined}
                 >
-                  {p === "Mês" ? p : p.replace(" dias", "d")}
+                  {ROTULO_CURTO[p]}
                   {ativo && faixa && (
                     <span className="ml-1.5 font-normal tabular-nums opacity-70">· {faixa}</span>
                   )}
@@ -382,6 +473,69 @@ export default function Dashboard(
           </div>
         </div>
       </header>
+
+      {/* Campos de data do período personalizado (travados na janela disponível) */}
+      {modoCustom && (
+        <div
+          className="mb-5 flex flex-wrap items-end gap-3 px-4 py-3"
+          style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}
+        >
+          <label className="text-[12px]" style={{ color: MUTED }}>
+            Início
+            <input
+              type="date"
+              value={custIni}
+              min={primeiroDia ?? undefined}
+              max={custFim || ultimoDia || undefined}
+              onChange={(e) => setCustIni(e.target.value)}
+              className="mt-1 block rounded-lg px-3 py-2 text-sm outline-none tabular-nums"
+              style={{ background: INK, color: TEXTO, border: `1px solid ${LINE}` }}
+            />
+          </label>
+          <label className="text-[12px]" style={{ color: MUTED }}>
+            Fim
+            <input
+              type="date"
+              value={custFim}
+              min={custIni || primeiroDia || undefined}
+              max={ultimoDia ?? undefined}
+              onChange={(e) => setCustFim(e.target.value)}
+              className="mt-1 block rounded-lg px-3 py-2 text-sm outline-none tabular-nums"
+              style={{ background: INK, color: TEXTO, border: `1px solid ${LINE}` }}
+            />
+          </label>
+          <p className="pb-2 text-[11px]" style={{ color: MUTED }}>
+            {primeiroDia && `Dados disponíveis a partir de ${ymdParaBR(primeiroDia)}`}
+            {ultimoDia && ` até ${ymdParaBR(ultimoDia)}.`}
+            <br />
+            Comparação: mesmo nº de dias imediatamente antes do início.
+          </p>
+        </div>
+      )}
+
+      {/* Avisos honestos da janela ativa (dia parcial / comparação impossível) */}
+      {(avisoParcial || motivoSemComparacao) && (
+        <div className="mb-5 flex flex-wrap gap-2">
+          {avisoParcial && (
+            <span
+              className="rounded-lg px-3 py-1.5 text-[12px]"
+              style={{ background: TEMA.limiteFundo, color: AMBAR }}
+              title="O sync roda de manhã; o dia corrente entra incompleto. Para conferir com a Business Manager, use um período que termine no dia anterior."
+            >
+              ⚠ {avisoParcial}
+            </span>
+          )}
+          {motivoSemComparacao && (
+            <span
+              className="rounded-lg px-3 py-1.5 text-[12px]"
+              style={{ background: TEMA.avisoFundo, color: OURO }}
+              title={motivoSemComparacao}
+            >
+              Δ sem base de comparação neste período
+            </span>
+          )}
+        </div>
+      )}
 
       {fonte === "mock" && (
         <div className="mb-5 rounded-xl px-4 py-3 text-[13px]" style={{ background: TEMA.avisoFundo, color: OURO }}>
@@ -413,6 +567,7 @@ export default function Dashboard(
           title={brl(kpis.gasto.valor)}
           delta={kpis.gasto.delta}
           serie={kpis.gasto.serie}
+          semComparacao={motivoSemComparacao}
         />
         <KpiCard
           label="Leads"
@@ -422,6 +577,7 @@ export default function Dashboard(
           title={`${num(kpis.leads.valor)} leads de formulário`}
           delta={kpis.leads.delta}
           serie={kpis.leads.serie}
+          semComparacao={motivoSemComparacao}
         />
         <KpiCard
           label="CPL médio"
@@ -432,6 +588,7 @@ export default function Dashboard(
           menorMelhor
           destaque
           serie={kpis.cpl.serie}
+          semComparacao={motivoSemComparacao}
         />
         <KpiCard
           label="Conversas"
@@ -441,6 +598,7 @@ export default function Dashboard(
           title={`${num(kpis.conversas.valor)} conversas de WhatsApp`}
           delta={kpis.conversas.delta}
           serie={kpis.conversas.serie}
+          semComparacao={motivoSemComparacao}
         />
       </div>
 

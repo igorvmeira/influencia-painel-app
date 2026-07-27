@@ -112,3 +112,145 @@ export function janelaMes(daily: MetricaDiaria[], contas: ContaMap[]): JanelaMes
 
   return { espec, ancoraMs, D, Dprev, offsetsAtual, offsetsAnterior, labelAtual, labelAnterior, parcial };
 }
+
+// ===========================================================================
+// PERÍODO PERSONALIZADO (datas exatas) — e a trava de disponibilidade
+// ===========================================================================
+//
+// LIMITE DO HISTÓRICO: o painel lê `metricasAgregadas`, que é uma projeção com
+// JANELA MÓVEL de RETENCAO_DIAS (95) — ver lib/agregadas.ts. Não há dado mais
+// antigo que isso para a tela. Por isso o seletor de data TRAVA na primeira data
+// disponível e a tela diz qual é ("dados disponíveis a partir de DD/MM/AAAA").
+//
+// SAÍDA DE EMERGÊNCIA (se um dia precisarem de período anterior à janela):
+// a coleção `metricasDiarias` guarda o histórico COMPLETO (desde 02/04) e nunca
+// é podada — ela é a fonte granular. O agregado é derivado e RECONSTRUÍVEL a
+// partir dela: basta reprocessar `metricasDiarias` → `metricasAgregadas` com um
+// RETENCAO_DIAS maior. Nada se perde; é só custo de leitura.
+//
+// ACHADO DE CAMPO (não é bug, não consertar): existem dias órfãos bem antes do
+// cutoff (na inspeção de 27/07/2026: 14–22/04) pertencentes a UMA conta PAUSADA.
+// Motivo: a poda de retenção só acontece quando o sync REESCREVE o doc daquela
+// conta (mesclarDias filtra pelo cutoff na hora de gravar). Conta parada nunca é
+// reescrita, então seus dias antigos ficam congelados no agregado. Isso é inócuo:
+// pausadas são filtradas de rankings, médias, KPIs e alertas. Mas cuidado ao
+// calcular "primeira data disponível" pelo mínimo GLOBAL — daria uma data que só
+// uma conta pausada tem. Por isso primeiroDiaDisponivel() olha só contas ATIVAS.
+
+// Primeira data (YYYY-MM-DD) com dado entre as contas informadas — passe as contas
+// ATIVAS. É a trava mínima do seletor. null quando não há dado nenhum.
+export function primeiroDiaDisponivel(daily: MetricaDiaria[], contas: ContaMap[]): string | null {
+  const set = new Set(contas.map((c) => c.accountId));
+  let min = "";
+  for (const m of daily) {
+    if (!set.has(m.accountId)) continue;
+    if (min === "" || m.data < min) min = m.data;
+  }
+  return min || null;
+}
+
+// Último dia COM DADO (YYYY-MM-DD) — a âncora, e o teto do seletor.
+export function ultimoDiaDisponivel(daily: MetricaDiaria[], contas: ContaMap[]): string | null {
+  const set = new Set(contas.map((c) => c.accountId));
+  let max = "";
+  for (const m of daily) {
+    if (!set.has(m.accountId)) continue;
+    if (m.data > max) max = m.data;
+  }
+  return max || null;
+}
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const ddmm = (ms: number) => `${pad2(new Date(ms).getUTCDate())}/${pad2(new Date(ms).getUTCMonth() + 1)}`;
+
+// "20–26/07" (mesmo mês) ou "28/06–04/07" (cruzando o mês).
+function faixaLabel(iniMs: number, fimMs: number): string {
+  const mIni = new Date(iniMs).getUTCMonth(), mFim = new Date(fimMs).getUTCMonth();
+  return mIni === mFim
+    ? `${pad2(new Date(iniMs).getUTCDate())}–${ddmm(fimMs)}`
+    : `${ddmm(iniMs)}–${ddmm(fimMs)}`;
+}
+
+/**
+ * Janela de DATAS EXATAS (período personalizado). Devolve o MESMO formato do modo
+ * mês (JanelaMes), para reaproveitar montarPainel/montarKpisMes/serieGraficoMes —
+ * sem criar um caminho de cálculo paralelo.
+ *
+ * A comparação é o intervalo EQUIVALENTE imediatamente anterior, de mesmo tamanho
+ * (ex.: 20–26/07 compara com 13–19/07), alinhado dia a dia na linha-fantasma.
+ *
+ * `parcial` = o intervalo de comparação começa antes do primeiro dia disponível;
+ * nesse caso o Dashboard mostra "—" no delta em vez de número subestimado.
+ */
+export function janelaPersonalizada(
+  daily: MetricaDiaria[],
+  contas: ContaMap[],
+  inicioYmd: string,
+  fimYmd: string
+): JanelaMes | null {
+  const { ancoraMs } = ancoraMin(daily, contas);
+  const primeiro = primeiroDiaDisponivel(daily, contas);
+  if (!inicioYmd || !fimYmd) return null;
+
+  let iniMs = Date.parse(inicioYmd + "T00:00:00Z");
+  let fimMs = Date.parse(fimYmd + "T00:00:00Z");
+  if (Number.isNaN(iniMs) || Number.isNaN(fimMs)) return null;
+  if (iniMs > fimMs) [iniMs, fimMs] = [fimMs, iniMs]; // tolera inversão
+  fimMs = Math.min(fimMs, ancoraMs);                  // nunca além do último dia com dado
+  if (fimMs < iniMs) return null;
+
+  const N = Math.round((fimMs - iniMs) / DIA_MS) + 1;
+  const off = (ms: number) => Math.round((ancoraMs - ms) / DIA_MS);
+
+  // Intervalo anterior equivalente: termina 1 dia antes do início, mesmo tamanho.
+  const fimAntMs = iniMs - DIA_MS;
+  const iniAntMs = iniMs - N * DIA_MS;
+
+  const offsetsAtual: number[] = [];
+  const offsetsAnterior: (number | null)[] = [];
+  for (let i = 0; i < N; i++) {
+    offsetsAtual.push(off(iniMs + i * DIA_MS));       // mais antigo → mais recente
+    offsetsAnterior.push(off(iniAntMs + i * DIA_MS));
+  }
+
+  const labelAtual = faixaLabel(iniMs, fimMs);
+  const labelAnterior = faixaLabel(iniAntMs, fimAntMs);
+
+  const espec: EspecJanela = {
+    atualIni: off(fimMs),   // offset do dia MAIS RECENTE da janela
+    atualFim: off(iniMs),   // offset do dia MAIS ANTIGO
+    antIni: off(fimAntMs),
+    antFim: off(iniAntMs),
+    semanas: Math.max(1, Math.round(N / 7)),
+    periodoLabel: `${labelAtual} vs ${labelAnterior}`,
+  };
+
+  // Comparação não cabe no histórico disponível?
+  const parcial = primeiro != null && iniAntMs < Date.parse(primeiro + "T00:00:00Z");
+
+  return { espec, ancoraMs, D: N, Dprev: N, offsetsAtual, offsetsAnterior, labelAtual, labelAnterior, parcial };
+}
+
+/**
+ * A comparação de uma janela de N dias cabe no histórico disponível?
+ * Devolve a data (YYYY-MM-DD) que seria exigida quando NÃO cabe; null quando cabe.
+ * Usado no modo dia (7/15/30/60): a janela anterior é [N..2N-1] antes da âncora.
+ */
+export function comparacaoExigeDesde(
+  daily: MetricaDiaria[],
+  contas: ContaMap[],
+  periodoDias: number
+): string | null {
+  const { ancoraMs } = ancoraMin(daily, contas);
+  const primeiro = primeiroDiaDisponivel(daily, contas);
+  if (!primeiro) return null;
+  const exigidoMs = ancoraMs - (2 * periodoDias - 1) * DIA_MS;
+  if (exigidoMs >= Date.parse(primeiro + "T00:00:00Z")) return null; // cabe
+  return new Date(exigidoMs).toISOString().slice(0, 10);
+}
+
+// "DD/MM/AAAA" a partir de "YYYY-MM-DD" (pt-BR, sem depender de fuso local).
+export function ymdParaBR(ymd: string): string {
+  const [y, m, d] = ymd.split("-");
+  return `${d}/${m}/${y}`;
+}
