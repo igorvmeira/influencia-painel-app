@@ -33,6 +33,15 @@ export interface Reuniao {
   recorrente: boolean;
 }
 
+// Um registro datado da atribuição de gestor de uma conta (histórico append-only).
+// "desde: null" = "desde sempre" (registro semente do gestor atual, na 1ª edição).
+export interface EntradaGestor {
+  gestor: string;
+  desde: string | null; // ISO de quando passou a valer; null = desde o início do histórico
+  por: string;          // e-mail do autor (extraído do ID token no servidor) ou "sistema" (semente)
+  em: string;           // ISO de quando o registro foi gravado
+}
+
 export interface ContaMap {
   accountId: string;
   cliente: string;
@@ -40,6 +49,10 @@ export interface ContaMap {
   tipo: Tipo;
   nicho?: string;    // segmento do cliente; ausente => "Sem nicho"
   pausado?: boolean; // true => fora da operação (não entra em rankings/médias/alertas)
+  // Edição de gestor pela /carteira (formato datado). Campos ausentes até a 1ª edição.
+  gestorHistorico?: EntradaGestor[]; // append-only, mais recente primeiro (teto defensivo)
+  gestorEditadoEm?: string;          // carimbo: houve edição pela tela (import passa a pular gestor)
+  gestorEditadoPor?: string;         // e-mail de quem fez a última edição
 }
 
 /** Métrica de uma conta em um único dia (granularidade do sync diário). */

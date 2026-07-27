@@ -78,3 +78,14 @@ export async function getContas(): Promise<ContaMap[]> {
   cacheContas = { contas, expira: Date.now() + TTL_MS };
   return contas;
 }
+
+// Zera os caches de contas após uma escrita (ex.: edição de gestor pela /carteira),
+// para a próxima leitura já refletir o novo valor. cacheDados também guarda `contas`
+// (usado no dashboard), então é zerado junto — o próximo load do painel relê a frio.
+// BEST-EFFORT: em serverless a escrita pode cair em outra instância que não a do GET;
+// por isso a /carteira também atualiza o cache de sessão do cliente (reflexo imediato)
+// e, no pior caso, o TTL de 10 min expira sozinho.
+export function invalidarCacheContas(): void {
+  cacheContas = null;
+  cacheDados = null;
+}

@@ -33,11 +33,30 @@ function payloadDe(c: ContaFonte) {
   };
 }
 
+// Conta cujo gestor foi editado pela tela /carteira: import NÃO mexe no campo gestor.
+function gestorTravado(existente: Record<string, unknown>): boolean {
+  return !!existente.gestorEditadoEm;
+}
+
+// Timestamp do Firestore (ou ISO) → "DD/MM" para o relatório da prévia.
+function dataBR(v: unknown): string {
+  const d =
+    v && typeof (v as { toDate?: unknown }).toDate === "function"
+      ? (v as { toDate: () => Date }).toDate()
+      : typeof v === "string"
+        ? new Date(v)
+        : null;
+  if (!d || isNaN(d.getTime())) return "";
+  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
 // Quais dos campos gravados mudariam em relação ao doc existente.
 function camposQueMudam(existente: Record<string, unknown>, c: ContaFonte): string[] {
   const alvo = payloadDe(c);
   const campos: string[] = [];
+  const travado = gestorTravado(existente);
   for (const k of ["cliente", "gestor", "tipo", "nicho"] as const) {
+    if (k === "gestor" && travado) continue; // gestor editado na tela: import ignora
     if ((existente[k] ?? "") !== alvo[k]) campos.push(k);
   }
   if (!!existente.pausado !== alvo.pausado) campos.push("pausado");
@@ -73,6 +92,8 @@ export async function GET(req: Request) {
   const criadas: { accountId: string; cliente: string; gestor: string }[] = [];
   const atualizadas: { accountId: string; cliente: string; campos: string[] }[] = [];
   const inalteradas: { accountId: string; cliente: string }[] = [];
+  // Contas cujo gestor foi editado na tela e diverge do JSON — não são alteradas.
+  const gestorEditados: { accountId: string; cliente: string; gestorJson: string; gestorTela: string; por: string; em: string }[] = [];
   // Fila de gravações (aplicada só no modo aplicar).
   const gravacoes: { docId: string; dados: ReturnType<typeof payloadDe> }[] = [];
 
@@ -84,13 +105,31 @@ export async function GET(req: Request) {
       gravacoes.push({ docId: c.accountId, dados: payloadDe(c) });
       continue;
     }
+
+    // Se o gestor foi editado na tela e o JSON discorda, registra a divergência (não altera).
+    const travado = gestorTravado(existente.data);
+    const gestorTela = (existente.data.gestor as string) ?? "";
+    if (travado && gestorTela !== (c.gestor ?? "")) {
+      gestorEditados.push({
+        accountId: c.accountId,
+        cliente: c.cliente ?? "",
+        gestorJson: c.gestor ?? "",
+        gestorTela,
+        por: (existente.data.gestorEditadoPor as string) ?? "",
+        em: dataBR(existente.data.gestorEditadoEm),
+      });
+    }
+
     const campos = camposQueMudam(existente.data, c);
     if (campos.length === 0) {
       inalteradas.push({ accountId: c.accountId, cliente: c.cliente ?? "" });
     } else {
       atualizadas.push({ accountId: c.accountId, cliente: c.cliente ?? "", campos });
-      // Atualiza o doc existente (qualquer que seja o docId dele).
-      gravacoes.push({ docId: existente.id, dados: payloadDe(c) });
+      // Atualiza o doc existente (qualquer que seja o docId dele). Se o gestor está
+      // travado pela tela, remove-o do payload para o merge não sobrescrevê-lo.
+      const dados = payloadDe(c);
+      if (travado) delete (dados as { gestor?: string }).gestor;
+      gravacoes.push({ docId: existente.id, dados });
     }
   }
 
@@ -123,12 +162,14 @@ export async function GET(req: Request) {
       atualizadas: atualizadas.length,
       inalteradas: inalteradas.length,
       orfas: orfas.length,
+      gestorEditados: gestorEditados.length, // gestor editado na tela — não alterados
       gravadas: aplicar ? gravadas : 0,
     },
     criadas,
     atualizadas,
     inalteradas,
     orfas,
+    gestorEditados,
     ...(aplicar ? { aplicadoEm: new Date().toISOString() } : {}),
   });
 }
