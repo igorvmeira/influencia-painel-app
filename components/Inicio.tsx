@@ -69,14 +69,14 @@ export default function Inicio() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-white">Início</h1>
+          <h1 className="text-lg font-semibold text-brand-ink">Início</h1>
           <p className="text-[13px]" style={{ color: MUTED }}>O que precisa da sua atenção hoje.</p>
         </div>
         <IndicadorFrescor ultimaSync={dados?.ultimaSync ?? null} />
       </div>
 
       {erro && (
-        <div className="mb-4 rounded-xl px-4 py-3 text-[13px]" style={{ background: "#2a1414", color: RED }}>
+        <div className="mb-4 rounded-xl px-4 py-3 text-[13px]" style={{ background: TEMA.erroFundo, color: RED }}>
           {erro}
         </div>
       )}
@@ -85,11 +85,11 @@ export default function Inicio() {
         {/* Card do Dashboard — resumo real de atenção */}
         <Link
           href="/dashboard"
-          className="block p-5 transition-colors hover:bg-[#232323]"
-          style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard }}
+          className="block p-5 transition-colors hover:bg-brand-hover"
+          style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}
         >
           <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-medium text-white">Dashboard de Tráfego</span>
+            <span className="text-sm font-medium text-brand-ink">Dashboard de Tráfego</span>
             <span className="text-[11px]" style={{ color: MUTED }}>últimos {DIAS_RESUMO} dias →</span>
           </div>
 
@@ -107,7 +107,7 @@ export default function Inicio() {
               {resumo!.cplAltoCount > 0 && (
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full" style={{ background: RED }} />
-                  <span style={{ color: "#fff" }}>
+                  <span style={{ color: TEMA.texto }}>
                     {resumo!.cplAltoCount} {resumo!.cplAltoCount === 1 ? "gestor" : "gestores"} com CPL acima de {brlDec(CPL_ALERTA)}
                   </span>
                   {resumo!.piorCplNome && (
@@ -118,7 +118,7 @@ export default function Inicio() {
               {resumo!.pertoCount > 0 && (
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full" style={{ background: AMBAR }} />
-                  <span style={{ color: "#fff" }}>
+                  <span style={{ color: TEMA.texto }}>
                     {resumo!.pertoCount} {resumo!.pertoCount === 1 ? "conta perto" : "contas perto"} do limite de gasto
                   </span>
                   {resumo!.piorLimiteCliente && (
@@ -133,11 +133,11 @@ export default function Inicio() {
         {/* Card de Pautas e Reuniões — resumo real da agenda */}
         <Link
           href="/reunioes"
-          className="block p-5 transition-colors hover:bg-[#232323]"
-          style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard }}
+          className="block p-5 transition-colors hover:bg-brand-hover"
+          style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}
         >
           <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-medium text-white">Pautas e Reuniões</span>
+            <span className="text-sm font-medium text-brand-ink">Pautas e Reuniões</span>
             <span className="text-[11px]" style={{ color: MUTED }}>agenda →</span>
           </div>
           {erroAgenda ? (
@@ -145,18 +145,18 @@ export default function Inicio() {
           ) : !reunioes ? (
             <div className="mt-3 h-4 w-48 animate-pulse rounded motion-reduce:animate-none" style={{ background: LINE }} />
           ) : (
-            <p className="mt-3 text-[13px]" style={{ color: "#fff" }}>{resumoReunioes}</p>
+            <p className="mt-3 text-[13px]" style={{ color: TEMA.texto }}>{resumoReunioes}</p>
           )}
         </Link>
 
         {/* Card de Orientações — resumo real */}
         <Link
           href="/orientacoes"
-          className="block p-5 transition-colors hover:bg-[#232323]"
-          style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard }}
+          className="block p-5 transition-colors hover:bg-brand-hover"
+          style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}
         >
           <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-medium text-white">Orientações Gerenciais</span>
+            <span className="text-sm font-medium text-brand-ink">Orientações Gerenciais</span>
             <span className="text-[11px]" style={{ color: MUTED }}>gerenciar →</span>
           </div>
           {erro ? (
@@ -166,7 +166,7 @@ export default function Inicio() {
           ) : !orientacoes || !dados ? (
             <div className="mt-3 h-4 w-52 animate-pulse rounded motion-reduce:animate-none" style={{ background: LINE }} />
           ) : (
-            <p className="mt-3 text-[13px]" style={{ color: "#fff" }}>{resumoOri}</p>
+            <p className="mt-3 text-[13px]" style={{ color: TEMA.texto }}>{resumoOri}</p>
           )}
         </Link>
 

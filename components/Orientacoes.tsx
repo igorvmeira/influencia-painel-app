@@ -43,18 +43,18 @@ export default function Orientacoes() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-lg font-semibold text-white">Orientações Gerenciais</h1>
+        <h1 className="text-lg font-semibold text-brand-ink">Orientações Gerenciais</h1>
         <p className="text-[13px]" style={{ color: MUTED }}>Uma observação por conta, com histórico. Contas pausadas ficam fora.</p>
       </div>
 
       {erro ? (
-        <div className="rounded-xl px-4 py-3 text-[13px]" style={{ background: "#2a1414", color: RED }}>
+        <div className="rounded-xl px-4 py-3 text-[13px]" style={{ background: TEMA.erroFundo, color: RED }}>
           {erro}
         </div>
       ) : carregando ? (
         <div className="space-y-2">
           {[0, 1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-16 animate-pulse motion-reduce:animate-none" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard }} />
+            <div key={i} className="h-16 animate-pulse motion-reduce:animate-none" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }} />
           ))}
         </div>
       ) : (
@@ -64,14 +64,14 @@ export default function Orientacoes() {
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar cliente…"
-              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-[#6b675f] sm:w-64"
-              style={{ background: CARD, color: "#fff", border: `1px solid ${LINE}` }}
+              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-brand-placeholder sm:w-64"
+              style={{ background: CARD, color: TEMA.texto, border: `1px solid ${LINE}` }}
             />
             <select
               value={gestorSel}
               onChange={(e) => setGestorSel(e.target.value)}
               className="rounded-xl px-3 py-2.5 text-sm outline-none"
-              style={{ background: CARD, color: "#fff", border: `1px solid ${LINE}` }}
+              style={{ background: CARD, color: TEMA.texto, border: `1px solid ${LINE}` }}
             >
               <option value="todos">Todos os gestores</option>
               {gestores.map((g) => <option key={g} value={g}>{g}</option>)}
@@ -152,12 +152,12 @@ function LinhaOrientacao({ conta, atual, aoSalvar }: {
   }
 
   return (
-    <div className="p-4" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard }}>
+    <div className="p-4" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-white">{conta.cliente}</p>
+          <p className="text-sm font-medium text-brand-ink">{conta.cliente}</p>
           {!editando && (
-            <p className="mt-1 whitespace-pre-wrap text-[13px]" style={{ color: atual ? "#fff" : MUTED }}>
+            <p className="mt-1 whitespace-pre-wrap text-[13px]" style={{ color: atual ? TEMA.texto : MUTED }}>
               {atual ? atual.texto : "—"}
             </p>
           )}
@@ -173,7 +173,7 @@ function LinhaOrientacao({ conta, atual, aoSalvar }: {
             <button
               onClick={abrirEdicao}
               className="rounded-full px-3 py-1.5 text-[12px] font-medium"
-              style={{ background: INK, color: "#fff", border: `1px solid ${LINE}` }}
+              style={{ background: INK, color: TEMA.texto, border: `1px solid ${LINE}` }}
             >
               {atual ? "Editar" : "Adicionar"}
             </button>
@@ -188,8 +188,8 @@ function LinhaOrientacao({ conta, atual, aoSalvar }: {
             onChange={(e) => setTexto(e.target.value.slice(0, MAX))}
             rows={3}
             placeholder="Ex.: CPL levemente alto. Fazer mais 4 criativos."
-            className="w-full rounded-lg px-3 py-2 text-[13px] outline-none placeholder:text-[#6b675f]"
-            style={{ background: INK, color: "#fff", border: `1px solid ${LINE}` }}
+            className="w-full rounded-lg px-3 py-2 text-[13px] outline-none placeholder:text-brand-placeholder"
+            style={{ background: INK, color: TEMA.texto, border: `1px solid ${LINE}` }}
           />
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
             <span className="text-[11px]" style={{ color: MUTED }}>{texto.length}/{MAX}</span>
@@ -200,7 +200,7 @@ function LinhaOrientacao({ conta, atual, aoSalvar }: {
                 onClick={salvar}
                 disabled={salvando || !texto.trim()}
                 className="rounded-full px-4 py-1.5 text-[12px] font-semibold transition-opacity disabled:opacity-40"
-                style={{ background: YELLOW, color: INK }}
+                style={{ background: YELLOW, color: TEMA.texto }}
               >
                 {salvando ? "Salvando…" : "Salvar"}
               </button>
@@ -209,7 +209,7 @@ function LinhaOrientacao({ conta, atual, aoSalvar }: {
         </div>
       )}
 
-      <button onClick={alternarHistorico} className="mt-2 text-[12px] hover:text-white" style={{ color: MUTED }}>
+      <button onClick={alternarHistorico} className="mt-2 text-[12px] hover:text-brand-ink" style={{ color: MUTED }}>
         {histAberto ? "Ocultar histórico" : "Ver histórico"}
       </button>
       {histAberto && (
@@ -220,7 +220,7 @@ function LinhaOrientacao({ conta, atual, aoSalvar }: {
             <ul className="space-y-2">
               {hist.map((h, i) => (
                 <li key={i} className="text-[12px]">
-                  <p className="whitespace-pre-wrap" style={{ color: "#cfcbc3" }}>{h.texto}</p>
+                  <p className="whitespace-pre-wrap" style={{ color: TEMA.muted }}>{h.texto}</p>
                   <p className="text-[11px]" style={{ color: MUTED }}>{haQuanto(h.em)}{h.autor ? ` · ${h.autor}` : ""}</p>
                 </li>
               ))}

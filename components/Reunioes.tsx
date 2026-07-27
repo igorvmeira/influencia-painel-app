@@ -20,7 +20,7 @@ function Avatar({ nome }: { nome: string }) {
   return (
     <span
       className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-medium"
-      style={{ background: LINE, color: "#cfcbc3" }}
+      style={{ background: LINE, color: TEMA.muted }}
       title={nome}
     >
       {ini}
@@ -32,10 +32,10 @@ function CardReuniao({ r }: { r: Reuniao }) {
   const horario = r.diaTodo ? "Dia todo" : `${hhmm(r.inicio)}–${hhmm(r.fim)}`;
   const extras = r.participantes.length - 4;
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-3 p-4" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard }}>
-      <div className="w-24 shrink-0 text-sm font-medium tabular-nums text-white">{horario}</div>
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-3 p-4" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}>
+      <div className="w-24 shrink-0 text-sm font-medium tabular-nums text-brand-ink">{horario}</div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-white">
+        <p className="truncate text-sm font-medium text-brand-ink">
           {r.titulo}
           {r.recorrente && <span className="ml-1.5 text-[11px]" style={{ color: MUTED }} title="Evento recorrente">↻</span>}
         </p>
@@ -52,7 +52,7 @@ function CardReuniao({ r }: { r: Reuniao }) {
           target="_blank"
           rel="noopener noreferrer"
           className="shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-opacity hover:opacity-90"
-          style={{ background: YELLOW, color: INK }}
+          style={{ background: YELLOW, color: TEMA.texto }}
         >
           Entrar no Meet
         </a>
@@ -69,7 +69,7 @@ function Skeleton() {
           <div className="mb-3 h-4 w-48 animate-pulse rounded motion-reduce:animate-none" style={{ background: CARD }} />
           <div className="space-y-2">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-16 animate-pulse motion-reduce:animate-none" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard }} />
+              <div key={i} className="h-16 animate-pulse motion-reduce:animate-none" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }} />
             ))}
           </div>
         </div>
@@ -84,12 +84,12 @@ export default function Reunioes() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-lg font-semibold text-white">Pautas e Reuniões</h1>
+        <h1 className="text-lg font-semibold text-brand-ink">Pautas e Reuniões</h1>
         <p className="text-[13px]" style={{ color: MUTED }}>Próximos {DIAS} dias · agenda da Influência.</p>
       </div>
 
       {erro ? (
-        <div className="rounded-xl px-4 py-3 text-[13px]" style={{ background: "#2a1414", color: TEMA.negativo }}>
+        <div className="rounded-xl px-4 py-3 text-[13px]" style={{ background: TEMA.erroFundo, color: TEMA.negativo }}>
           Não foi possível carregar a agenda: {erro}
         </div>
       ) : !reunioes ? (
@@ -130,9 +130,9 @@ function ListaPorDia({ reunioes }: { reunioes: Reuniao[] }) {
     <div>
       {gruposArr.length > 1 && (
         <div className="mb-4 flex items-center gap-3 text-[12px]" style={{ color: MUTED }}>
-          <button className="hover:text-white" onClick={() => setAbertos(new Set(gruposArr.map(([k]) => k)))}>Expandir tudo</button>
+          <button className="hover:text-brand-ink" onClick={() => setAbertos(new Set(gruposArr.map(([k]) => k)))}>Expandir tudo</button>
           <span>·</span>
-          <button className="hover:text-white" onClick={() => setAbertos(new Set())}>Recolher tudo</button>
+          <button className="hover:text-brand-ink" onClick={() => setAbertos(new Set())}>Recolher tudo</button>
         </div>
       )}
 
@@ -147,7 +147,7 @@ function ListaPorDia({ reunioes }: { reunioes: Reuniao[] }) {
                 className="mb-3 flex w-full items-center gap-2 text-left"
               >
                 <span style={{ fontSize: 10, color: MUTED, transform: aberto ? "rotate(90deg)" : "none", transition: "transform 150ms" }}>▸</span>
-                <span className="text-[13px] font-semibold uppercase tracking-wider" style={{ color: chave === hoje ? YELLOW : "#fff" }}>
+                <span className="text-[13px] font-semibold uppercase tracking-wider" style={{ color: chave === hoje ? YELLOW : TEMA.texto }}>
                   {rotuloDia(itens[0].inicio, chave, hoje, amanha)}
                 </span>
                 <span className="text-[12px] font-normal normal-case" style={{ color: MUTED }}>

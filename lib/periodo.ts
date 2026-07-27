@@ -45,6 +45,31 @@ function ancoraMin(daily: MetricaDiaria[], contas: ContaMap[]): { ancoraMs: numb
   };
 }
 
+// Rótulo do intervalo de datas de uma janela de N dias, ancorada no último dia COM
+// DADO (nunca no relógio). Ex.: "21–27/07" — ou "28/06–27/07" quando cruza o mês.
+// Regra da casa: o intervalo comparado fica explícito na tela (evita confusão ao
+// conferir com a BM). Retorna null quando ainda não há nenhum dado.
+export function intervaloLabel(
+  daily: MetricaDiaria[],
+  contas: ContaMap[],
+  periodoDias: number
+): string | null {
+  const set = new Set(contas.map((c) => c.accountId));
+  let max = "";
+  for (const m of daily) if (set.has(m.accountId) && m.data > max) max = m.data;
+  if (!max) return null;
+
+  const fimMs = Date.parse(max + "T00:00:00Z");
+  const iniMs = fimMs - (periodoDias - 1) * DIA_MS;
+  const dd = (ms: number) => String(new Date(ms).getUTCDate()).padStart(2, "0");
+  const mm = (ms: number) => String(new Date(ms).getUTCMonth() + 1).padStart(2, "0");
+
+  // Mesmo mês: "21–27/07". Meses diferentes: "28/06–27/07".
+  return mm(iniMs) === mm(fimMs)
+    ? `${dd(iniMs)}–${dd(fimMs)}/${mm(fimMs)}`
+    : `${dd(iniMs)}/${mm(iniMs)}–${dd(fimMs)}/${mm(fimMs)}`;
+}
+
 // Monta a janela do mês corrente (1..D) vs mês anterior (1..D). null se não há dados.
 export function janelaMes(daily: MetricaDiaria[], contas: ContaMap[]): JanelaMes | null {
   const { ancoraMs, minMs } = ancoraMin(daily, contas);

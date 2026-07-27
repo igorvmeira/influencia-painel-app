@@ -3,6 +3,7 @@
 import Dashboard from "./Dashboard";
 import DashboardSkeleton from "./DashboardSkeleton";
 import { useDadosPainel } from "@/lib/useDadosPainel";
+import { TEMA } from "@/lib/brand";
 
 // Carrega os dados do painel no client, já autenticado (via /api/painel com ID token).
 // Assim os dados nunca vão para o HTML de quem não está logado.
@@ -11,7 +12,7 @@ export default function DashboardLoader() {
 
   if (erro) {
     return (
-      <div className="rounded-xl px-4 py-3 text-[13px]" style={{ background: "#2a1414", color: "#FF6B5E" }}>
+      <div className="rounded-xl px-4 py-3 text-[13px]" style={{ background: TEMA.erroFundo, color: TEMA.negativo }}>
         {erro}
       </div>
     );

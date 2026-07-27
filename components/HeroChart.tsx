@@ -10,9 +10,13 @@ import { TEMA } from "@/lib/brand";
 const CARD = TEMA.card;
 const LINE = TEMA.borda;
 const MUTED = TEMA.muted;
-const YELLOW = TEMA.destaque;
+const TEXTO = TEMA.texto;
 const RED = TEMA.negativo;
-const BARRA = "#3A3A3A"; // barras neutras (mesma família das superfícies)
+// Tema claro: os papéis se invertem em relação ao dark. O gasto vira BARRA DOURADA
+// (preenchimento da marca, que rende bem no claro) e a linha de leads vira
+// quase-preta (linha dourada fina ficaria fraca sobre fundo claro).
+const BARRA = TEMA.destaque;
+const LINHA_LEADS = TEMA.texto;
 
 // Ticks do eixo esquerdo em R$ compacto (ex.: "R$ 12 mil").
 const fmtEixoRS = new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 0 });
@@ -25,7 +29,7 @@ function TooltipGrafico({ active, payload, label }: {
   if (!active || !payload || !payload.length) return null;
   const p = payload[0].payload;
   return (
-    <div className="rounded-lg px-3 py-2 text-[12px]" style={{ background: CARD, border: `1px solid ${LINE}`, color: "#fff" }}>
+    <div className="rounded-lg px-3 py-2 text-[12px]" style={{ background: CARD, border: `1px solid ${LINE}`, color: TEXTO, boxShadow: TEMA.sombraCard }}>
       <div className="mb-1 font-medium">{label}</div>
       {!p.temDados ? (
         <div style={{ color: MUTED }}>Sem dados neste dia</div>
@@ -63,12 +67,12 @@ export default function HeroChart({ pontos, periodoLabel, mesAnterior = false }:
   pontos: PontoGrafico[]; periodoLabel: string; mesAnterior?: boolean;
 }) {
   return (
-    <div className="mb-10 p-5" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard }}>
+    <div className="mb-10 p-5" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <p className="text-[13px] uppercase tracking-wider" style={{ color: MUTED }}>Tendência do período</p>
         <div className="flex flex-wrap items-center gap-3">
           <ItemLegenda cor={BARRA} barra texto="Gasto (R$, esq.)" />
-          <ItemLegenda cor={YELLOW} texto="Leads totais (dir.)" />
+          <ItemLegenda cor={LINHA_LEADS} texto="Leads totais (dir.)" />
           <ItemLegenda cor={RED} tracejado texto="CPL do dia" />
           {mesAnterior && <ItemLegenda cor={MUTED} tracejado texto="Leads · mês anterior" />}
           <span className="text-[11px]" style={{ color: MUTED }}>· {periodoLabel}</span>
@@ -110,13 +114,14 @@ export default function HeroChart({ pontos, periodoLabel, mesAnterior = false }:
             {/* Eixo oculto só para dar forma à linha de CPL (R$/lead) */}
             <YAxis yAxisId="cpl" hide domain={["auto", "auto"]} />
 
-            <Tooltip content={<TooltipGrafico />} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
+            {/* Realce sob o cursor: escuro-sobre-claro (no dark era branco translúcido). */}
+            <Tooltip content={<TooltipGrafico />} cursor={{ fill: "rgba(28,27,23,0.05)" }} />
 
             <Bar yAxisId="gasto" dataKey="gasto" name="Gasto" fill={BARRA} radius={[2, 2, 0, 0]} maxBarSize={26} />
             {mesAnterior && (
               <Line yAxisId="leads" type="monotone" dataKey="ghost" name="Leads · mês anterior" stroke={MUTED} strokeWidth={1.25} strokeDasharray="3 3" dot={false} connectNulls={false} opacity={0.7} />
             )}
-            <Line yAxisId="leads" type="monotone" dataKey="total" name="Leads totais" stroke={YELLOW} strokeWidth={2.5} dot={false} connectNulls={false} />
+            <Line yAxisId="leads" type="monotone" dataKey="total" name="Leads totais" stroke={LINHA_LEADS} strokeWidth={2.5} dot={false} connectNulls={false} />
             <Line yAxisId="cpl" type="monotone" dataKey="cpl" name="CPL" stroke={RED} strokeWidth={1.5} strokeDasharray="4 3" dot={false} connectNulls={false} />
           </ComposedChart>
         </ResponsiveContainer>

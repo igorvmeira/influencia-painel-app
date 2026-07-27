@@ -97,7 +97,7 @@ export default function CriativosSection(
             key={m}
             onClick={() => setModo(m)}
             className="rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors"
-            style={modo === m ? { background: YELLOW, color: INK } : { background: "transparent", color: MUTED }}
+            style={modo === m ? { background: YELLOW, color: TEMA.texto } : { background: "transparent", color: MUTED }}
           >
             {m === "cliente" ? "Por cliente" : "Por nicho"}
           </button>
@@ -111,7 +111,7 @@ export default function CriativosSection(
             value={accountId}
             onChange={(e) => setAccountId(e.target.value)}
             className="min-w-[220px] rounded-lg px-3 py-2 text-sm outline-none"
-            style={{ background: INK, color: "#fff", border: `1px solid ${LINE}` }}
+            style={{ background: INK, color: TEMA.texto, border: `1px solid ${LINE}` }}
           >
             <option value="">Selecione um cliente…</option>
             {opcoes.map((c) => (
@@ -123,7 +123,7 @@ export default function CriativosSection(
             value={nicho}
             onChange={(e) => setNicho(e.target.value)}
             className="min-w-[220px] rounded-lg px-3 py-2 text-sm outline-none"
-            style={{ background: INK, color: "#fff", border: `1px solid ${LINE}` }}
+            style={{ background: INK, color: TEMA.texto, border: `1px solid ${LINE}` }}
           >
             <option value="">Selecione um nicho…</option>
             {nichos.map((n) => (
@@ -140,7 +140,7 @@ export default function CriativosSection(
                 key={p.dias}
                 onClick={() => setDias(p.dias)}
                 className="rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors"
-                style={ativo ? { background: YELLOW, color: INK } : { background: "transparent", color: MUTED }}
+                style={ativo ? { background: YELLOW, color: TEMA.texto } : { background: "transparent", color: MUTED }}
               >
                 {p.label}
               </button>
@@ -159,7 +159,7 @@ export default function CriativosSection(
             : "Selecione um nicho para ranquear os criativos de todos os clientes dele."}
         </div>
       ) : erro ? (
-        <div className="rounded-xl px-4 py-3 text-[13px]" style={{ background: "#2a1414", color: "#FF6B5E" }}>
+        <div className="rounded-xl px-4 py-3 text-[13px]" style={{ background: TEMA.erroFundo, color: TEMA.negativo }}>
           {erro}
         </div>
       ) : carregando ? (
@@ -175,7 +175,7 @@ export default function CriativosSection(
       ) : (
         <>
           {erros.length > 0 && (
-            <div className="rounded-xl px-4 py-2.5 text-[12px]" style={{ background: "#2a2607", color: YELLOW }}>
+            <div className="rounded-xl px-4 py-2.5 text-[12px]" style={{ background: TEMA.avisoFundo, color: TEMA.ouroTexto }}>
               {erros.length} conta(s) do nicho falharam e foram ignoradas.
             </div>
           )}
@@ -221,9 +221,9 @@ function LinhaCriativo({ c, pos, melhor }: { c: Criativo; pos?: number; melhor?:
   return (
     <div
       className="flex items-center gap-3 rounded-lg p-2.5"
-      style={melhor ? { background: "rgba(246,224,3,0.10)", border: `1px solid ${YELLOW}` } : { background: INK }}
+      style={melhor ? { background: TEMA.avisoFundo, border: `1px solid ${YELLOW}` } : { background: INK }}
     >
-      <div className="w-6 shrink-0 text-center text-sm font-medium tabular-nums" style={{ color: pos ? (melhor ? YELLOW : "#fff") : MUTED }}>
+      <div className="w-6 shrink-0 text-center text-sm font-medium tabular-nums" style={{ color: pos ? (melhor ? YELLOW : TEMA.texto) : MUTED }}>
         {pos ?? "—"}
       </div>
       <Miniatura url={c.thumbnailUrl} />
@@ -231,11 +231,11 @@ function LinhaCriativo({ c, pos, melhor }: { c: Criativo; pos?: number; melhor?:
         {c.cliente && (
           <p className="truncate text-[11px] font-medium" style={{ color: MUTED }}>{c.cliente}</p>
         )}
-        <p className="truncate text-sm text-white" title={c.adName}>{c.adName}</p>
+        <p className="truncate text-sm text-brand-ink" title={c.adName}>{c.adName}</p>
         <p className="text-[11px] tabular-nums" style={{ color: MUTED }}>{num(c.conversas)} conversas · {brl(c.gasto)}</p>
       </div>
       <div className="shrink-0 text-right">
-        <p className="text-sm font-medium tabular-nums" style={{ color: melhor ? YELLOW : "#fff" }}>
+        <p className="text-sm font-medium tabular-nums" style={{ color: melhor ? YELLOW : TEMA.texto }}>
           {c.conversas > 0 ? brlDec(c.cpl) : "—"}
         </p>
         <p className="text-[11px]" style={{ color: MUTED }}>CPL</p>
@@ -250,6 +250,6 @@ function Miniatura({ url }: { url: string | null }) {
   }
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={url} alt="" className="h-12 w-12 shrink-0 rounded-md object-cover" style={{ background: "#2a2a2a" }} />
+    <img src={url} alt="" className="h-12 w-12 shrink-0 rounded-md object-cover" style={{ background: TEMA.chip }} />
   );
 }

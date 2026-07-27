@@ -1,6 +1,9 @@
-// Marca gráfica da Influência (nós conectados). cor padrão herdada via currentColor
-// quando não passada, para funcionar bem sobre fundo amarelo (preto) ou escuro.
-export default function NodeMark({ cor = "#F6E003", size = 26 }: { cor?: string; size?: number }) {
+import { TEMA } from "@/lib/brand";
+
+// Marca gráfica da Influência (nós conectados) — PLACEHOLDER da logo definitiva.
+// Quando o SVG/PNG transparente chegar, troque só o conteúdo deste componente:
+// o slot dimensionado já está reservado no Shell (sidebar) e no login.
+export default function NodeMark({ cor = TEMA.destaque, size = 26 }: { cor?: string; size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <circle cx="12" cy="5" r="2.4" fill={cor} />

@@ -10,9 +10,14 @@ import { TEMA } from "@/lib/brand";
 import { MENU_PRINCIPAL, MENU_EM_BREVE } from "@/lib/menu";
 import NodeMark from "./NodeMark";
 
-const AMARELO = TEMA.destaque; // #F6E003 — fundo da sidebar
-const PRETO = TEMA.fundo;      // #141414 — texto/ícones e pill do item ativo
-const SOBRE_AMARELO_FRACO = "rgba(20,20,20,0.55)";
+// Tema claro: sidebar CLARA com o dourado só como acento (pill do item ativo e
+// logo). Um slab dourado inteiro pesaria demais no tema claro.
+const CARD = TEMA.card;
+const FUNDO = TEMA.fundo;
+const LINE = TEMA.borda;
+const TEXTO = TEMA.texto;
+const MUTED = TEMA.muted;
+const AMARELO = TEMA.destaque;
 
 export default function Shell({ children }: { children: React.ReactNode }) {
   const [aberto, setAberto] = useState(false);
@@ -26,9 +31,13 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   }
 
   const nav = (
-    <aside className="flex h-full w-60 shrink-0 flex-col" style={{ background: AMARELO, color: PRETO }}>
-      <div className="flex items-center gap-2.5 px-5 py-5">
-        <NodeMark cor={PRETO} />
+    <aside
+      className="flex h-full w-60 shrink-0 flex-col"
+      style={{ background: CARD, color: TEXTO, borderRight: `1px solid ${LINE}` }}
+    >
+      {/* Slot da logo: dimensionado para receber o SVG/PNG definitivo. */}
+      <div className="flex h-16 items-center gap-2.5 px-5">
+        <NodeMark />
         <span className="text-lg font-semibold">Influência</span>
       </div>
 
@@ -41,14 +50,15 @@ export default function Shell({ children }: { children: React.ReactNode }) {
               href={item.href!}
               onClick={() => setAberto(false)}
               className="mb-1 block rounded-lg px-3 py-2 text-sm font-medium transition-colors"
-              style={ativo ? { background: PRETO, color: AMARELO } : { color: PRETO }}
+              // Item ativo: pill dourado com texto quase-preto (nunca texto dourado).
+              style={ativo ? { background: AMARELO, color: TEXTO } : { color: TEXTO }}
             >
               {item.rotulo}
             </Link>
           );
         })}
 
-        <p className="mb-2 mt-5 px-3 text-[11px] font-semibold uppercase tracking-wider" style={{ color: SOBRE_AMARELO_FRACO }}>
+        <p className="mb-2 mt-5 px-3 text-[11px] font-semibold uppercase tracking-wider" style={{ color: MUTED }}>
           Em breve
         </p>
         {MENU_EM_BREVE.map((item) => (
@@ -57,22 +67,25 @@ export default function Shell({ children }: { children: React.ReactNode }) {
             aria-disabled="true"
             title={item.descricao}
             className="mb-1 flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm"
-            style={{ color: "rgba(20,20,20,0.5)", cursor: "not-allowed" }}
+            style={{ color: MUTED, cursor: "not-allowed" }}
           >
             <span className="truncate">{item.rotulo}</span>
-            <span className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase" style={{ background: "rgba(20,20,20,0.14)" }}>
+            <span
+              className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase"
+              style={{ background: TEMA.chip, color: MUTED }}
+            >
               Em breve
             </span>
           </div>
         ))}
       </nav>
 
-      <div className="border-t px-4 py-4" style={{ borderColor: "rgba(20,20,20,0.15)" }}>
-        {user?.email && <p className="truncate text-[11px]" style={{ color: "rgba(20,20,20,0.7)" }}>{user.email}</p>}
+      <div className="border-t px-4 py-4" style={{ borderColor: LINE }}>
+        {user?.email && <p className="truncate text-[11px]" style={{ color: MUTED }}>{user.email}</p>}
         <button
           onClick={sair}
-          className="mt-2 w-full rounded-lg px-3 py-1.5 text-sm font-medium transition-opacity hover:opacity-90"
-          style={{ background: PRETO, color: AMARELO }}
+          className="mt-2 w-full rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+          style={{ background: FUNDO, color: TEXTO, border: `1px solid ${LINE}` }}
         >
           Sair
         </button>
@@ -81,11 +94,14 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen" style={{ background: PRETO }}>
+    <div className="min-h-screen" style={{ background: FUNDO }}>
       {/* Topbar mobile com hambúrguer */}
-      <div className="flex items-center gap-3 px-4 py-3 md:hidden" style={{ background: AMARELO, color: PRETO }}>
+      <div
+        className="flex items-center gap-3 px-4 py-3 md:hidden"
+        style={{ background: CARD, color: TEXTO, borderBottom: `1px solid ${LINE}` }}
+      >
         <button onClick={() => setAberto(true)} aria-label="Abrir menu" className="text-xl leading-none">☰</button>
-        <NodeMark cor={PRETO} size={22} />
+        <NodeMark size={22} />
         <span className="font-semibold">Influência</span>
       </div>
 
@@ -96,14 +112,14 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         {/* Drawer no mobile */}
         {aberto && (
           <div className="fixed inset-0 z-50 md:hidden">
-            <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.5)" }} onClick={() => setAberto(false)} />
+            <div className="absolute inset-0" style={{ background: "rgba(28,27,23,0.35)" }} onClick={() => setAberto(false)} />
             <div className="absolute left-0 top-0 h-full shadow-2xl">{nav}</div>
           </div>
         )}
 
         {/* Conteúdo */}
         <main className="min-w-0 flex-1">
-          <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">{children}</div>
+          <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">{children}</div>
         </main>
       </div>
     </div>

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
+import { TEMA } from "@/lib/brand";
 
 // Protege as telas do painel: sem usuário logado, redireciona para /login.
 export default function AuthGate({ children }: { children: React.ReactNode }) {
@@ -15,7 +16,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (loading || !user) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center text-sm" style={{ color: "#9A968F" }}>
+      <div className="flex min-h-[60vh] items-center justify-center text-sm" style={{ color: TEMA.muted }}>
         Carregando…
       </div>
     );

@@ -2,17 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --bg: #141414;
-  --card: #1f1f1f;
-  --line: #2a2a2a;
-  --text: #ffffff;
-  --muted: #9a968f;
-}
+/* As cores do painel vivem em lib/brand.ts (TEMA) — fonte ÚNICA. Este arquivo
+   não redefine paleta (antes havia um :root duplicado que já divergia do token).
+   O fundo/texto base do <body> é aplicado em app/layout.tsx a partir do TEMA. */
 
 html, body {
-  background: var(--bg);
-  color: var(--text);
+  min-height: 100%;
 }
 
-* { -webkit-font-smoothing: antialiased; }
+/* Tema claro: antialiasing agressivo afina demais o texto escuro sobre fundo
+   claro. O padrão do sistema (auto) rende melhor aqui. */
+* { -webkit-font-smoothing: auto; }
+
+/* Números sempre alinhados em tabelas/KPIs (tabular-nums é font-variant e
+   independe da família — segue valendo com a Poppins). */
+.tabular-nums { font-variant-numeric: tabular-nums; }

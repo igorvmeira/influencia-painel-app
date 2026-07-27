@@ -45,7 +45,7 @@ export default function Carteira() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-lg font-semibold text-white">Carteira de Contas</h1>
+        <h1 className="text-lg font-semibold text-brand-ink">Carteira de Contas</h1>
         <p className="text-[13px]" style={{ color: MUTED }}>
           Contas por gestor. Edite o responsável; o histórico é datado e nada é apagado. O status
           (ativa/pausada) é só leitura aqui.
@@ -53,13 +53,13 @@ export default function Carteira() {
       </div>
 
       {erro ? (
-        <div className="rounded-xl px-4 py-3 text-[13px]" style={{ background: "#2a1414", color: RED }}>
+        <div className="rounded-xl px-4 py-3 text-[13px]" style={{ background: TEMA.erroFundo, color: RED }}>
           {erro}
         </div>
       ) : carregando ? (
         <div className="space-y-2">
           {[0, 1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-16 animate-pulse motion-reduce:animate-none" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard }} />
+            <div key={i} className="h-16 animate-pulse motion-reduce:animate-none" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }} />
           ))}
         </div>
       ) : (
@@ -69,14 +69,14 @@ export default function Carteira() {
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar cliente…"
-              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-[#6b675f] sm:w-64"
-              style={{ background: CARD, color: "#fff", border: `1px solid ${LINE}` }}
+              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-brand-placeholder sm:w-64"
+              style={{ background: CARD, color: TEMA.texto, border: `1px solid ${LINE}` }}
             />
             <select
               value={gestorSel}
               onChange={(e) => setGestorSel(e.target.value)}
               className="rounded-xl px-3 py-2.5 text-sm outline-none"
-              style={{ background: CARD, color: "#fff", border: `1px solid ${LINE}` }}
+              style={{ background: CARD, color: TEMA.texto, border: `1px solid ${LINE}` }}
             >
               <option value="todos">Todos os gestores</option>
               {OPCOES_GESTOR.map((g) => <option key={g} value={g}>{g}</option>)}
@@ -135,14 +135,16 @@ function LinhaConta({ conta }: { conta: ContaMap }) {
   }
 
   return (
-    <div className="p-4" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard }}>
+    <div className="p-4" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <p className="truncate text-sm font-medium text-white">{conta.cliente}</p>
+            <p className="truncate text-sm font-medium text-brand-ink">{conta.cliente}</p>
             <span
               className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase"
-              style={pausada ? { background: "rgba(154,150,143,0.18)", color: MUTED } : { background: "rgba(78,203,143,0.15)", color: GREEN }}
+              style={pausada
+                ? { background: TEMA.chip, color: MUTED }
+                : { background: TEMA.positivoFundo, color: GREEN }}
             >
               {pausada ? "Pausada" : "Ativa"}
             </span>
@@ -166,7 +168,7 @@ function LinhaConta({ conta }: { conta: ContaMap }) {
             onChange={(e) => setSel(e.target.value)}
             disabled={salvando}
             className="rounded-xl px-3 py-2 text-sm outline-none disabled:opacity-50"
-            style={{ background: INK, color: "#fff", border: `1px solid ${LINE}` }}
+            style={{ background: INK, color: TEMA.texto, border: `1px solid ${LINE}` }}
           >
             {opcoes.map((g) => <option key={g} value={g}>{g}</option>)}
           </select>
@@ -175,7 +177,7 @@ function LinhaConta({ conta }: { conta: ContaMap }) {
               onClick={salvar}
               disabled={salvando}
               className="rounded-full px-4 py-1.5 text-[12px] font-semibold transition-opacity disabled:opacity-40"
-              style={{ background: YELLOW, color: INK }}
+              style={{ background: YELLOW, color: TEMA.texto }}
             >
               {salvando ? "Salvando…" : "Salvar"}
             </button>

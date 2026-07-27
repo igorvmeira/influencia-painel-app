@@ -12,7 +12,7 @@ import { montarNichos, montarPainel } from "@/lib/painel";
 import { CPL_ALERTA, LIMITE_ATENCAO, LIMITE_CRITICO, contasPertoDoLimite } from "@/lib/alertas";
 import { brl, brlDec, num, pct } from "@/lib/format";
 import { montarKpis, montarKpisMes, moedaCard, numCard, serieGrafico, serieGraficoMes } from "@/lib/kpis";
-import { janelaMes } from "@/lib/periodo";
+import { janelaMes, intervaloLabel } from "@/lib/periodo";
 import { TEMA } from "@/lib/brand";
 import NichosSection from "./NichosSection";
 import CriativosSection from "./CriativosSection";
@@ -25,8 +25,10 @@ import IAChat from "./IAChat";
 // Cores lidas dos design tokens (fonte única em lib/brand.ts).
 const INK = TEMA.fundo;
 const CARD = TEMA.card;
-const YELLOW = TEMA.destaque;
+const YELLOW = TEMA.destaque;   // preenchimento (pill/barra) — NUNCA cor de texto
+const OURO = TEMA.ouroTexto;    // "ouro" legível quando precisa ser TEXTO
 const LINE = TEMA.borda;
+const TEXTO = TEMA.texto;
 const MUTED = TEMA.muted;
 const GREEN = TEMA.positivo;
 const RED = TEMA.negativo;
@@ -120,7 +122,7 @@ function PausadasRodape({ pausadas }: { pausadas: ContaMap[] }) {
     <div className="mt-10">
       <button
         onClick={() => setAberto((a) => !a)}
-        className="flex items-center gap-1.5 text-[12px] transition-colors hover:text-white"
+        className="flex items-center gap-1.5 text-[12px] transition-colors"
         style={{ color: MUTED }}
         aria-expanded={aberto}
       >
@@ -151,7 +153,7 @@ function Iniciais({ nome }: { nome: string }) {
   return (
     <span
       className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-medium"
-      style={{ background: LINE, color: "#cfcbc3" }}
+      style={{ background: TEMA.chip, color: MUTED }}
     >
       {ini}
     </span>
@@ -165,10 +167,11 @@ function KpiCard({ label, sub, valorNum, formatar, title, delta, menorMelhor = f
   delta: number | null; menorMelhor?: boolean; destaque?: boolean; serie: number[];
 }) {
   return (
-    <div className="p-5" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard }}>
+    <div className="p-5" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[13px] font-medium text-white">{label}</p>
+          {/* Hierarquia: rótulo menor/secundário — o NÚMERO é o alvo de varredura. */}
+          <p className="text-[12px] font-medium" style={{ color: MUTED }}>{label}</p>
           {sub && <p className="text-[11px]" style={{ color: MUTED }}>{sub}</p>}
         </div>
         <Sparkline dados={serie} cor={TEMA.sparkline} />
@@ -177,8 +180,9 @@ function KpiCard({ label, sub, valorNum, formatar, title, delta, menorMelhor = f
         valor={valorNum}
         formatar={formatar}
         title={title}
-        className="mt-3 block text-3xl font-medium tracking-tight"
-        style={{ color: destaque ? YELLOW : "#fff", fontVariantNumeric: "tabular-nums" }}
+        className="mt-3 block text-[34px] font-semibold leading-none tracking-tight"
+        // Destaque via ouro ESCURO (legível); dourado puro nunca vira texto.
+        style={{ color: destaque ? OURO : TEXTO, fontVariantNumeric: "tabular-nums" }}
       />
       <div className="mt-2 flex items-center gap-2">
         <DeltaBadge delta={delta} menorMelhor={menorMelhor} />
@@ -217,6 +221,14 @@ export default function Dashboard(
   const jm = useMemo(() => (modoMes ? janelaMes(daily, contasAtivas) : null), [modoMes, daily, contasAtivas]);
   // Nº de dias efetivos: D no modo mês; senão o do botão 7/15/30.
   const diasEfetivos = modoMes ? jm?.D ?? 30 : DIAS_POR_PERIODO[periodo as PeriodoDia];
+
+  // Intervalo de datas de cada botão (7/15/30), ancorado no último dia COM DADO.
+  // Deixa a janela explícita na tela — evita confusão ao conferir com a BM.
+  const intervalos = useMemo(() => ({
+    "7 dias": intervaloLabel(daily, contasAtivas, 7),
+    "15 dias": intervaloLabel(daily, contasAtivas, 15),
+    "30 dias": intervaloLabel(daily, contasAtivas, 30),
+  }) as Record<PeriodoDia, string | null>, [daily, contasAtivas]);
 
   const data = useMemo(
     () => (modoMes && jm ? montarPainel(daily, contasAtivas, jm.D, jm.espec) : montarPainel(daily, contasAtivas, diasEfetivos)),
@@ -341,22 +353,29 @@ export default function Dashboard(
     <div>
       {/* Topo: título da seção + frescor + seletor de período (logo/logout na sidebar) */}
       <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <span className="text-lg font-semibold text-white">Dashboard de Tráfego</span>
+        <span className="text-lg font-semibold" style={{ color: TEXTO }}>Dashboard de Tráfego</span>
         <div className="flex flex-wrap items-center gap-3">
           <IndicadorFrescor ultimaSync={ultimaSync} />
-          <div className="flex items-center gap-1 rounded-full p-1" style={{ background: CARD }}>
+          <div className="flex items-center gap-1 rounded-full p-1" style={{ background: CARD, border: `1px solid ${LINE}` }}>
             {PERIODOS.map((p) => {
               const ativo = p === periodo;
+              // Intervalo real da janela (ancorado no último dia COM DADO), ex.: "21–27/07".
+              // O modo Mês já tem rótulo próprio (data.periodoLabel) — não duplica aqui.
+              const faixa = p !== "Mês" ? intervalos[p as PeriodoDia] : null;
               return (
                 <button
                   key={p}
                   onClick={() => setPeriodo(p)}
                   className="rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors"
                   style={ativo
-                    ? { background: YELLOW, color: INK }
+                    ? { background: YELLOW, color: TEXTO }
                     : { background: "transparent", color: MUTED }}
+                  title={faixa ? `Janela: ${faixa}` : undefined}
                 >
-                  {p}
+                  {p === "Mês" ? p : p.replace(" dias", "d")}
+                  {ativo && faixa && (
+                    <span className="ml-1.5 font-normal tabular-nums opacity-70">· {faixa}</span>
+                  )}
                 </button>
               );
             })}
@@ -365,7 +384,7 @@ export default function Dashboard(
       </header>
 
       {fonte === "mock" && (
-        <div className="mb-5 rounded-xl px-4 py-3 text-[13px]" style={{ background: "#2a2607", color: YELLOW }}>
+        <div className="mb-5 rounded-xl px-4 py-3 text-[13px]" style={{ background: TEMA.avisoFundo, color: OURO }}>
           Exibindo dados de exemplo. Configure o Firebase e rode o sync do Meta para ver os números reais.
         </div>
       )}
@@ -378,7 +397,7 @@ export default function Dashboard(
           {modoMes && jm?.parcial && (
             <span
               className="rounded-md px-1.5 py-0.5 text-[10px] font-medium"
-              style={{ background: "#2a2205", color: AMBAR }}
+              style={{ background: TEMA.limiteFundo, color: AMBAR }}
               title="Parte do intervalo é anterior ao início do histórico (02/04/2026); a comparação pode subestimar."
             >
               dados parciais
@@ -429,7 +448,7 @@ export default function Dashboard(
       <p className="mb-3 text-[13px] uppercase tracking-wider" style={{ color: MUTED }}>Precisa de atenção</p>
       <div className="mb-6 grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
         {cplAlto.length === 0 && pertoLimite.length === 0 ? (
-          <div className="flex items-center gap-2 p-4" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard }}>
+          <div className="flex items-center gap-2 p-4" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}>
             <span style={{ color: GREEN }}>✓</span>
             <span className="text-[13px]" style={{ color: MUTED }}>Tudo sob controle — nenhum alerta no período.</span>
           </div>
@@ -438,12 +457,12 @@ export default function Dashboard(
             {cplAlto.length > 0 && (
               <button
                 onClick={() => abrirAlertas("cplAlto")}
-                className="p-4 text-left transition-colors hover:bg-[#232323]"
+                className="p-4 text-left transition-colors hover:bg-brand-hover"
                 style={{ background: CARD, border: `1px solid ${RED}`, borderRadius: TEMA.raioCard }}
               >
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full" style={{ background: RED }} />
-                  <span className="text-sm font-medium text-white">CPL estourado</span>
+                  <span className="text-sm font-medium text-brand-ink">CPL estourado</span>
                 </div>
                 <p className="mt-1 text-sm" style={{ color: RED }}>
                   {cplAlto.length} {cplAlto.length === 1 ? "gestor" : "gestores"} com CPL acima de {brlDec(CPL_ALERTA)}
@@ -458,12 +477,12 @@ export default function Dashboard(
             {pertoLimite.length > 0 && (
               <button
                 onClick={() => abrirAlertas("limite")}
-                className="p-4 text-left transition-colors hover:bg-[#232323]"
+                className="p-4 text-left transition-colors hover:bg-brand-hover"
                 style={{ background: CARD, border: `1px solid ${AMBAR}`, borderRadius: TEMA.raioCard }}
               >
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full" style={{ background: AMBAR }} />
-                  <span className="text-sm font-medium text-white">Perto do limite de gasto</span>
+                  <span className="text-sm font-medium text-brand-ink">Perto do limite de gasto</span>
                 </div>
                 <p className="mt-1 text-sm" style={{ color: AMBAR }}>
                   {pertoLimite.length} {pertoLimite.length === 1 ? "conta" : "contas"} perto do teto
@@ -491,13 +510,13 @@ export default function Dashboard(
               key={a}
               onClick={() => setAba(a)}
               className="inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors"
-              style={aba === a ? { background: YELLOW, color: INK } : { background: CARD, color: MUTED }}
+              style={aba === a ? { background: YELLOW, color: TEMA.texto } : { background: CARD, color: MUTED }}
             >
               {rotulo}
               {a === "alertas" && alertas.length > 0 && (
                 <span
                   className="rounded-full px-1.5 text-[11px] font-semibold tabular-nums"
-                  style={aba === a ? { background: "rgba(0,0,0,0.18)", color: INK } : { background: "#2a2a2a", color: MUTED }}
+                  style={aba === a ? { background: "rgba(0,0,0,0.18)", color: TEMA.texto } : { background: TEMA.chip, color: MUTED }}
                 >
                   {alertas.length}
                 </span>
@@ -537,16 +556,16 @@ export default function Dashboard(
               // Cor da barra reusa CPL_ALERTA: vermelho acima do teto; amarelo só no
               // melhor saudável; neutro nos demais saudáveis.
               const acimaDoTeto = g.cpl >= CPL_ALERTA;
-              const corBarra = acimaDoTeto ? RED : melhor ? YELLOW : "#3A3A3A";
+              const corBarra = acimaDoTeto ? RED : melhor ? YELLOW : TEMA.barraNeutra;
               return (
                 <div key={g.nome} className="flex flex-wrap items-center gap-x-4 gap-y-2">
                   <div className="flex w-28 shrink-0 items-center gap-2 sm:w-44">
                     <Iniciais nome={g.nome} />
-                    <span className="truncate text-sm" style={{ color: "#fff" }}>{g.nome}</span>
+                    <span className="truncate text-sm" style={{ color: TEMA.texto }}>{g.nome}</span>
                     {melhor && (
                       <span
                         className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase"
-                        style={{ background: YELLOW, color: INK }}
+                        style={{ background: YELLOW, color: TEMA.texto }}
                       >
                         melhor
                       </span>
@@ -557,7 +576,7 @@ export default function Dashboard(
                   </div>
                   <div className="ml-auto flex shrink-0 flex-col items-end sm:ml-0 sm:w-52">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium tabular-nums" style={{ color: "#fff" }}>{brlDec(g.cpl)}</span>
+                      <span className="text-sm font-medium tabular-nums" style={{ color: TEMA.texto }}>{brlDec(g.cpl)}</span>
                       {g.cplVar === 0 ? (
                         <span className="text-xs font-medium" style={{ color: MUTED }} title="sem histórico suficiente pra comparar">—</span>
                       ) : (
@@ -594,7 +613,7 @@ export default function Dashboard(
               onClick={() => setGestorSel(d.gestor)}
               className="rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors"
               style={ativo
-                ? { background: YELLOW, color: INK }
+                ? { background: YELLOW, color: TEMA.texto }
                 : { background: CARD, color: MUTED }}
             >
               {d.gestor}
@@ -628,7 +647,7 @@ export default function Dashboard(
                     <YAxis tick={{ fontSize: 11, fill: MUTED }} axisLine={false} tickLine={false} tickFormatter={(v) => "R$ " + v} />
                     <Tooltip
                       formatter={(v: number) => brlDec(v)}
-                      contentStyle={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 8, color: "#fff" }}
+                      contentStyle={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 8, color: TEMA.texto }}
                       labelStyle={{ color: MUTED }}
                     />
                     <Line type="monotone" dataKey="atual" name="CPL atual" stroke={YELLOW} strokeWidth={2.5} dot={{ r: 3, fill: YELLOW }} />
@@ -649,8 +668,8 @@ export default function Dashboard(
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar cliente…"
-              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-[#6b675f] sm:w-72"
-              style={{ background: CARD, color: "#fff", border: `1px solid ${LINE}` }}
+              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-brand-placeholder sm:w-72"
+              style={{ background: CARD, color: TEMA.texto, border: `1px solid ${LINE}` }}
             />
           </div>
 
@@ -684,8 +703,8 @@ export default function Dashboard(
                     </td>
                   </tr>
                 ) : (
-                  clientes.map((c) => (
-                    <LinhaClienteRow key={c.accountId} c={c} limite={limitesPorConta.get(c.accountId)} tooltipSemDado={tooltipSemDado} orientacao={orientacoes?.[c.accountId] ?? null} />
+                  clientes.map((c, i) => (
+                    <LinhaClienteRow key={c.accountId} c={c} limite={limitesPorConta.get(c.accountId)} tooltipSemDado={tooltipSemDado} orientacao={orientacoes?.[c.accountId] ?? null} par={i % 2 === 1} />
                   ))
                 )}
               </tbody>
@@ -717,7 +736,7 @@ function FiltroPill({ rotulo, ativo, onClick }: { rotulo: string; ativo: boolean
     <button
       onClick={onClick}
       className="rounded-full px-3 py-1 text-[12px] font-medium transition-colors"
-      style={ativo ? { background: YELLOW, color: INK } : { background: "#2a2a2a", color: MUTED }}
+      style={ativo ? { background: YELLOW, color: TEMA.texto } : { background: TEMA.chip, color: MUTED }}
     >
       {rotulo}
     </button>
@@ -806,10 +825,10 @@ function AlertaCardRow({ a, limite }: { a: AlertaCard; limite?: LimiteConta }) {
       <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: TIPO_COR[a.tipo] }} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="truncate text-sm font-medium text-white">{a.nome}</span>
+          <span className="truncate text-sm font-medium text-brand-ink">{a.nome}</span>
           <span
             className="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase"
-            style={{ background: "#2a2a2a", color: TIPO_COR[a.tipo] }}
+            style={{ background: TEMA.chip, color: TIPO_COR[a.tipo] }}
           >
             {TIPO_ROTULO[a.tipo]}
           </span>
@@ -828,7 +847,7 @@ function AlertaCardRow({ a, limite }: { a: AlertaCard; limite?: LimiteConta }) {
           </>
         ) : (
           <>
-            <span className="text-sm font-medium tabular-nums text-white">{brlDec(a.cpl ?? 0)}</span>
+            <span className="text-sm font-medium tabular-nums text-brand-ink">{brlDec(a.cpl ?? 0)}</span>
             <Trend v={a.cplVar ?? 0} menorMelhor />
           </>
         )}
@@ -841,7 +860,7 @@ function Th({ children, right, onClick }: { children: React.ReactNode; right?: b
   return (
     <th
       onClick={onClick}
-      className={`cursor-pointer select-none px-4 py-3 font-medium hover:text-white ${right ? "text-right" : ""}`}
+      className={`cursor-pointer select-none px-4 py-3 font-medium hover:text-brand-ink ${right ? "text-right" : ""}`}
       style={{ borderBottom: `1px solid ${LINE}` }}
     >
       {children}
@@ -849,17 +868,18 @@ function Th({ children, right, onClick }: { children: React.ReactNode; right?: b
   );
 }
 
-function LinhaClienteRow({ c, limite, tooltipSemDado, orientacao }: {
-  c: LinhaCliente; limite?: LimiteConta; tooltipSemDado: string; orientacao: EntradaOrientacao | null;
+function LinhaClienteRow({ c, limite, tooltipSemDado, orientacao, par }: {
+  c: LinhaCliente; limite?: LimiteConta; tooltipSemDado: string; orientacao: EntradaOrientacao | null; par?: boolean;
 }) {
   return (
-    // hover:bg = TEMA.hover (#232323) — literal exigido pelo Tailwind.
-    <tr className="transition-colors hover:bg-[#232323]">
-      <td className="px-4 py-3" style={{ borderBottom: `1px solid ${LINE}`, color: "#fff" }}>
+    // Zebra sutil (linhas alternadas) melhora a leitura horizontal em tabela densa;
+    // hover:bg-brand-hover = TEMA.hover (classe Tailwind, ver tailwind.config).
+    <tr className="transition-colors hover:bg-brand-hover" style={par ? { background: TEMA.zebra } : undefined}>
+      <td className="px-4 py-3" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>
         <span className="inline-flex items-center gap-1.5">
           {c.cliente}
           {orientacao && (
-            <Link href="/orientacoes" title={orientacao.texto} className="text-[12px] leading-none hover:opacity-80" style={{ color: YELLOW }} aria-label="Ver orientação">
+            <Link href="/orientacoes" title={orientacao.texto} className="text-[12px] leading-none hover:opacity-80" style={{ color: TEMA.ouroTexto }} aria-label="Ver orientação">
               💬
             </Link>
           )}
@@ -869,19 +889,19 @@ function LinhaClienteRow({ c, limite, tooltipSemDado, orientacao }: {
         <span
           className="rounded-md px-1.5 py-0.5 text-[11px] font-medium"
           style={c.tipo === "B2B"
-            ? { background: "#2a2a2a", color: "#cfcbc3" }
-            : { background: "#2a2607", color: YELLOW }}
+            ? { background: TEMA.chip, color: TEMA.muted }
+            : { background: TEMA.avisoFundo, color: TEMA.ouroTexto }}
         >
           {c.tipo}
         </span>
       </td>
-      <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: "#fff" }}>{brl(c.gasto)}</td>
-      <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: "#fff" }}>{num(c.conversas)}</td>
-      <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: "#fff" }}>{brlDec(c.cplSemanal)}</td>
-      <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: "#fff" }}>
+      <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>{brl(c.gasto)}</td>
+      <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>{num(c.conversas)}</td>
+      <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>{brlDec(c.cplSemanal)}</td>
+      <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>
         {c.reach != null ? num(c.reach) : <span style={{ color: MUTED, cursor: "help" }} title={tooltipSemDado}>—</span>}
       </td>
-      <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: "#fff" }}>
+      <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>
         {c.impressions != null ? num(c.impressions) : <span style={{ color: MUTED, cursor: "help" }} title={tooltipSemDado}>—</span>}
       </td>
       <td className="px-4 py-3" style={{ borderBottom: `1px solid ${LINE}` }}>

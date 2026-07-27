@@ -44,18 +44,18 @@ export default function NichosSection({ nichos }: { nichos: LinhaNicho[] }) {
             const melhor = i === 0;
             const pior = nichos.length > 1 && i === nichos.length - 1;
             const largura = Math.max(6, (n.cpl / maxCpl) * 100);
-            const corBarra = pior ? RED : melhor ? YELLOW : "#3A3A3A";
+            const corBarra = pior ? RED : melhor ? YELLOW : TEMA.barraNeutra;
             return (
               <div key={n.nicho} className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <div className="flex w-32 shrink-0 items-center gap-2 sm:w-44">
-                  <span className="truncate text-sm text-white">{n.nicho}</span>
+                  <span className="truncate text-sm text-brand-ink">{n.nicho}</span>
                   {melhor && (
-                    <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase" style={{ background: YELLOW, color: INK }}>
+                    <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase" style={{ background: YELLOW, color: TEMA.texto }}>
                       melhor
                     </span>
                   )}
                   {pior && (
-                    <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase" style={{ background: RED, color: INK }}>
+                    <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase" style={{ background: RED, color: TEMA.texto }}>
                       pior
                     </span>
                   )}
@@ -64,7 +64,7 @@ export default function NichosSection({ nichos }: { nichos: LinhaNicho[] }) {
                   <div className="h-full rounded-full" style={{ width: `${largura}%`, background: corBarra }} />
                 </div>
                 <div className="ml-auto flex shrink-0 flex-col items-end sm:ml-0 sm:w-44">
-                  <span className="text-sm font-medium tabular-nums text-white">{brlDec(n.cpl)}</span>
+                  <span className="text-sm font-medium tabular-nums text-brand-ink">{brlDec(n.cpl)}</span>
                   <span className="text-[11px]" style={{ color: MUTED }}>
                     {n.clientesCount} {n.clientesCount === 1 ? "cliente" : "clientes"} · {brl(n.gasto)}
                   </span>
@@ -88,7 +88,7 @@ export default function NichosSection({ nichos }: { nichos: LinhaNicho[] }) {
                 key={n.nicho}
                 onClick={() => setSelNicho(n.nicho)}
                 className="rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors"
-                style={ativo ? { background: YELLOW, color: INK } : { background: CARD, color: MUTED }}
+                style={ativo ? { background: YELLOW, color: TEMA.texto } : { background: CARD, color: MUTED }}
               >
                 {n.nicho}
               </button>
@@ -98,8 +98,8 @@ export default function NichosSection({ nichos }: { nichos: LinhaNicho[] }) {
 
         <div className="rounded-xl p-5" style={{ background: CARD }}>
           <div className="mb-4 flex items-center justify-between border-b pb-3" style={{ borderColor: LINE }}>
-            <span className="text-sm text-white">
-              Média do nicho <span className="font-semibold" style={{ color: YELLOW }}>{brlDec(sel.cpl)}</span>
+            <span className="text-sm text-brand-ink">
+              Média do nicho <span className="font-semibold" style={{ color: TEMA.ouroTexto }}>{brlDec(sel.cpl)}</span>
             </span>
             <span className="text-[12px]" style={{ color: MUTED }}>
               {sel.clientesCount} {sel.clientesCount === 1 ? "cliente" : "clientes"} · {brl(sel.gasto)}
@@ -116,10 +116,10 @@ export default function NichosSection({ nichos }: { nichos: LinhaNicho[] }) {
                 <div key={c.accountId} className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-2">
                     <span className="inline-block h-2 w-2 rounded-full" style={{ background: cor }} />
-                    <span className="text-sm text-white">{c.cliente}</span>
+                    <span className="text-sm text-brand-ink">{c.cliente}</span>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="text-sm tabular-nums text-white">{brlDec(c.cpl)}</span>
+                    <span className="text-sm tabular-nums text-brand-ink">{brlDec(c.cpl)}</span>
                     <span className="inline-flex w-28 items-center justify-end gap-1 text-xs font-medium" style={{ color: cor }}>
                       <span style={{ fontSize: 9 }}>{seta}</span>
                       {pct(c.desvioPct)} {rotulo}
@@ -158,7 +158,7 @@ function Seletor({ valor, onChange, opcoes }: { valor: string; onChange: (v: str
       value={valor}
       onChange={(e) => onChange(e.target.value)}
       className="w-full rounded-lg px-3 py-2 text-sm outline-none"
-      style={{ background: INK, color: "#fff", border: `1px solid ${LINE}` }}
+      style={{ background: INK, color: TEMA.texto, border: `1px solid ${LINE}` }}
     >
       {opcoes.map((o) => (
         <option key={o} value={o}>{o}</option>
@@ -171,8 +171,8 @@ function Seletor({ valor, onChange, opcoes }: { valor: string; onChange: (v: str
 function LinhaComp({ label, a, b, melhor, ultima }: {
   label: string; a: string; b: string; melhor: -1 | 0 | 1; ultima?: boolean;
 }) {
-  const corA = melhor === -1 ? YELLOW : "#fff";
-  const corB = melhor === 1 ? YELLOW : "#fff";
+  const corA = melhor === -1 ? YELLOW : TEMA.texto;
+  const corB = melhor === 1 ? YELLOW : TEMA.texto;
   return (
     <div
       className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 py-2.5"

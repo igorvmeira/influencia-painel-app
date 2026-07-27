@@ -5,12 +5,17 @@ import { useRouter } from "next/navigation";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebaseClient";
 import { useAuth } from "@/components/AuthProvider";
+import { TEMA } from "@/lib/brand";
+import NodeMark from "@/components/NodeMark";
 
-const INK = "#141414";
-const CARD = "#1F1F1F";
-const YELLOW = "#F6E003";
-const LINE = "#2A2A2A";
-const MUTED = "#9A968F";
+// Tokens do tema (fonte única: lib/brand.ts). Antes esta tela redeclarava as
+// cores como literais — e já divergia do token.
+const FUNDO = TEMA.fundo;
+const CARD = TEMA.card;
+const LINE = TEMA.borda;
+const MUTED = TEMA.muted;
+const TEXTO = TEMA.texto;
+const YELLOW = TEMA.destaque;
 
 export default function LoginPage() {
   const router = useRouter();
@@ -41,14 +46,18 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4" style={{ background: INK }}>
-      <div className="w-full max-w-sm rounded-2xl p-8" style={{ background: CARD }}>
-        <div className="mb-8 flex items-center gap-2.5">
+    <main className="flex min-h-screen items-center justify-center px-4" style={{ background: FUNDO }}>
+      <div
+        className="w-full max-w-sm rounded-2xl p-8"
+        style={{ background: CARD, border: `1px solid ${LINE}`, boxShadow: TEMA.sombraCard }}
+      >
+        {/* Slot da logo: dimensionado para receber o SVG/PNG definitivo. */}
+        <div className="mb-8 flex h-8 items-center gap-2.5">
           <NodeMark />
-          <span className="text-lg font-semibold text-white">Influência</span>
+          <span className="text-lg font-semibold" style={{ color: TEXTO }}>Influência</span>
         </div>
 
-        <h1 className="mb-1 text-xl font-semibold text-white">Entrar no painel</h1>
+        <h1 className="mb-1 text-xl font-semibold" style={{ color: TEXTO }}>Entrar no painel</h1>
         <p className="mb-6 text-[13px]" style={{ color: MUTED }}>Acesso restrito ao time interno.</p>
 
         <form onSubmit={onSubmit} className="flex flex-col gap-3">
@@ -60,8 +69,8 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
-              className="mt-1 w-full rounded-lg px-3 py-2.5 text-sm text-white outline-none"
-              style={{ background: INK, border: `1px solid ${LINE}` }}
+              className="mt-1 w-full rounded-lg px-3 py-2.5 text-sm outline-none"
+              style={{ background: FUNDO, color: TEXTO, border: `1px solid ${LINE}` }}
             />
           </label>
           <label className="text-[12px]" style={{ color: MUTED }}>
@@ -72,39 +81,29 @@ export default function LoginPage() {
               onChange={(e) => setSenha(e.target.value)}
               required
               autoComplete="current-password"
-              className="mt-1 w-full rounded-lg px-3 py-2.5 text-sm text-white outline-none"
-              style={{ background: INK, border: `1px solid ${LINE}` }}
+              className="mt-1 w-full rounded-lg px-3 py-2.5 text-sm outline-none"
+              style={{ background: FUNDO, color: TEXTO, border: `1px solid ${LINE}` }}
             />
           </label>
 
-          {erro && <p className="text-[13px]" style={{ color: "#FF6B5E" }}>{erro}</p>}
+          {erro && <p className="text-[13px]" style={{ color: TEMA.negativo }}>{erro}</p>}
           {!configurado && (
             <p className="text-[12px]" style={{ color: MUTED }}>
               Configure as variáveis NEXT_PUBLIC_FIREBASE_* para habilitar o login.
             </p>
           )}
 
+          {/* CTA dourado: preenchimento da marca + texto quase-preto (nunca texto dourado). */}
           <button
             type="submit"
             disabled={enviando}
             className="mt-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-opacity disabled:opacity-60"
-            style={{ background: YELLOW, color: INK }}
+            style={{ background: YELLOW, color: TEXTO }}
           >
             {enviando ? "Entrando…" : "Entrar"}
           </button>
         </form>
       </div>
     </main>
-  );
-}
-
-function NodeMark() {
-  return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="5" r="2.4" fill="#F6E003" />
-      <circle cx="5.5" cy="16" r="2.4" fill="#F6E003" />
-      <circle cx="18.5" cy="16" r="2.4" fill="#F6E003" />
-      <path d="M12 6.5 L6.5 14.5 M12 6.5 L17.5 14.5 M7.5 16 L16.5 16" stroke="#F6E003" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
   );
 }

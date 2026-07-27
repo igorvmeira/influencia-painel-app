@@ -73,10 +73,10 @@ function IAChatPainel({ periodoDias }: { periodoDias: number }) {
           <div className="flex items-center justify-between px-4 py-3" style={{ background: CARD, borderBottom: `1px solid ${LINE}` }}>
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full" style={{ background: YELLOW }} />
-              <span className="text-sm font-semibold text-white">{MARCA.assistente}</span>
+              <span className="text-sm font-semibold text-brand-ink">{MARCA.assistente}</span>
               <span className="text-[11px]" style={{ color: MUTED }}>· últimos {periodoDias} dias</span>
             </div>
-            <button onClick={() => setAberto(false)} className="text-[13px] hover:text-white" style={{ color: MUTED }}>✕</button>
+            <button onClick={() => setAberto(false)} className="text-[13px] hover:text-brand-ink" style={{ color: MUTED }}>✕</button>
           </div>
 
           {/* Mensagens */}
@@ -91,8 +91,8 @@ function IAChatPainel({ periodoDias }: { periodoDias: number }) {
                 <div
                   className="max-w-[85%] whitespace-pre-wrap rounded-xl px-3 py-2 text-[13px]"
                   style={m.role === "user"
-                    ? { background: YELLOW, color: INK }
-                    : { background: CARD, color: "#fff", border: `1px solid ${LINE}` }}
+                    ? { background: YELLOW, color: TEMA.texto }
+                    : { background: CARD, color: TEMA.texto, border: `1px solid ${LINE}` }}
                 >
                   {m.content}
                 </div>
@@ -106,7 +106,7 @@ function IAChatPainel({ periodoDias }: { periodoDias: number }) {
               </div>
             )}
             {erro && (
-              <div className="rounded-xl px-3 py-2 text-[12px]" style={{ background: "#2a1414", color: "#FF6B5E" }}>{erro}</div>
+              <div className="rounded-xl px-3 py-2 text-[12px]" style={{ background: TEMA.erroFundo, color: TEMA.negativo }}>{erro}</div>
             )}
             <div ref={fimRef} />
           </div>
@@ -118,14 +118,14 @@ function IAChatPainel({ periodoDias }: { periodoDias: number }) {
               onChange={(e) => setTexto(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviar(); } }}
               placeholder="Pergunte algo…"
-              className="flex-1 rounded-xl px-3 py-2 text-[13px] outline-none placeholder:text-[#6b675f]"
-              style={{ background: INK, color: "#fff", border: `1px solid ${LINE}` }}
+              className="flex-1 rounded-xl px-3 py-2 text-[13px] outline-none placeholder:text-brand-placeholder"
+              style={{ background: INK, color: TEMA.texto, border: `1px solid ${LINE}` }}
             />
             <button
               onClick={enviar}
               disabled={carregando || !texto.trim()}
               className="rounded-xl px-3 py-2 text-[13px] font-semibold transition-opacity disabled:opacity-40"
-              style={{ background: YELLOW, color: INK }}
+              style={{ background: YELLOW, color: TEMA.texto }}
             >
               Enviar
             </button>
@@ -137,7 +137,7 @@ function IAChatPainel({ periodoDias }: { periodoDias: number }) {
       <button
         onClick={() => setAberto((a) => !a)}
         className="rounded-full px-4 py-3 text-sm font-semibold shadow-lg transition-transform hover:scale-105"
-        style={{ background: YELLOW, color: INK }}
+        style={{ background: YELLOW, color: TEMA.texto }}
       >
         {aberto ? "Fechar" : `Falar com ${MARCA.assistente}`}
       </button>
