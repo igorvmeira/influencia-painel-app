@@ -5,7 +5,13 @@ import { montarPainel } from "./painel";
 // pelo resumo da tela Início. Não duplicar limiares/lógica em outro lugar.
 
 // Limiar do alerta de CPL alto, em R$.
-export const CPL_ALERTA = 15;
+// PROVISÓRIO — subiu de 15 para 31 no MESMO commit da correção da contagem dobrada.
+// Motivo: o CPL exibido estava pela METADE do real (o sync contava cada conversão duas
+// vezes, fator ~2,07). Ao corrigir o dado, todo CPL dobra; dobrar o teto junto preserva
+// o comportamento atual dos alertas, para que uma correção de DADO não mude sozinha o
+// que o painel sinaliza. O valor DEFINITIVO virá da agência, com base nos benchmarks
+// oficiais por nicho — agora que a régua (o CPL) está correta.
+export const CPL_ALERTA = 31;
 // Uso do teto (amount_spent / spend_cap) a partir do qual entra em ATENÇÃO/CRÍTICO.
 export const LIMITE_ATENCAO = 0.8; // >= 80% usado
 export const LIMITE_CRITICO = 0.9; // >= 90% usado

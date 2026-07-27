@@ -166,19 +166,24 @@ function Iniciais({ nome }: { nome: string }) {
 
 // Card de KPI: rótulo + subtítulo, número grande tabular (com count-up), delta
 // semântico e sparkline. O número anima ao trocar de período (respeita reduced-motion).
-function KpiCard({ label, sub, valorNum, formatar, title, delta, menorMelhor = false, destaque = false, serie, semComparacao }: {
+function KpiCard({ label, sub, valorNum, formatar, title, delta, menorMelhor = false, destaque = false, serie, semComparacao, info }: {
   label: string; sub?: string; valorNum: number; formatar: (n: number) => string; title: string;
   delta: number | null; menorMelhor?: boolean; destaque?: boolean; serie: number[];
   // Quando preenchido: o período anterior não cabe no histórico → força "—" e
   // explica o motivo (melhor do que mostrar variação contra base incompleta).
   semComparacao?: string | null;
+  // Texto do ⓘ ao lado do rótulo (o que a métrica conta / ressalvas).
+  info?: string;
 }) {
   return (
     <div className="p-5" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}>
       <div className="flex items-start justify-between gap-3">
         <div>
           {/* Hierarquia: rótulo menor/secundário — o NÚMERO é o alvo de varredura. */}
-          <p className="text-[12px] font-medium" style={{ color: MUTED }}>{label}</p>
+          <p className="flex items-center gap-1 text-[12px] font-medium" style={{ color: MUTED }}>
+            {label}
+            {info && <Info texto={info} />}
+          </p>
           {sub && <p className="text-[11px]" style={{ color: MUTED }}>{sub}</p>}
         </div>
         <Sparkline dados={serie} cor={TEMA.sparkline} />
@@ -229,6 +234,21 @@ function horaSync(iso: string | null): string | null {
 }
 
 type ColCliente = "cliente" | "tipo" | "gasto" | "conversas" | "cplSemanal";
+
+// O que o número de conversões conta — e por que pode divergir da Business Manager.
+// Limitação conhecida e documentada (ver lib/meta.ts): a BM exibe como "Resultado" o
+// evento que CADA campanha otimiza; o painel agrega no nível da conta.
+const TOOLTIP_CONVERSOES =
+  "Leads de formulário + conversas de WhatsApp iniciadas. Contas com campanhas "
+  + "otimizadas para outros eventos (ex.: cadastro no site) podem divergir do "
+  + "'Resultados' da BM, que mostra o evento otimizado por campanha.";
+
+// Ícone de ajuda reaproveitável (mesmo padrão do ⓘ do Alcance).
+function Info({ texto }: { texto: string }) {
+  return (
+    <span title={texto} style={{ cursor: "help", color: MUTED }} className="text-[11px]">ⓘ</span>
+  );
+}
 
 export default function Dashboard(
   { daily, contas, fonte, ultimaSync, limites }:
@@ -599,6 +619,7 @@ export default function Dashboard(
           delta={kpis.conversas.delta}
           serie={kpis.conversas.serie}
           semComparacao={motivoSemComparacao}
+          info={TOOLTIP_CONVERSOES}
         />
       </div>
 
@@ -838,7 +859,9 @@ export default function Dashboard(
                   <Th onClick={() => ordenar("cliente")}>Cliente{seta("cliente")}</Th>
                   <Th onClick={() => ordenar("tipo")}>Tipo{seta("tipo")}</Th>
                   <Th right onClick={() => ordenar("gasto")}>Gasto{seta("gasto")}</Th>
-                  <Th right onClick={() => ordenar("conversas")}>Conv.{seta("conversas")}</Th>
+                  <Th right onClick={() => ordenar("conversas")}>
+                    Conv. <Info texto={TOOLTIP_CONVERSOES} />{seta("conversas")}
+                  </Th>
                   <Th right onClick={() => ordenar("cplSemanal")}>CPL{seta("cplSemanal")}</Th>
                   <th className="px-4 py-3 text-right font-medium" style={{ borderBottom: `1px solid ${LINE}` }}>
                     <span className="inline-flex items-center gap-1">

@@ -3,11 +3,45 @@ import { ContaMap, Criativo, MetricaDiaria } from "./types";
 const API = process.env.META_API_VERSION || "v21.0";
 const TOKEN = process.env.META_ACCESS_TOKEN || "";
 
-const FORM_LEAD_ACTIONS = ["lead", "leadgen_grouped", "onsite_conversion.lead_grouped"];
-const WHATS_ACTIONS = [
-  "onsite_conversion.messaging_conversation_started_7d",
-  "onsite_conversion.total_messaging_connection",
-];
+// ===========================================================================
+// ⚠️ LIÇÃO DOS APELIDOS — LEIA ANTES DE ADICIONAR QUALQUER action_type AQUI
+// ===========================================================================
+//
+// A Meta devolve o MESMO evento sob VÁRIOS nomes (apelidos da mesma família).
+// Levantamento real da carteira em 20–26/07/2026:
+//   • complete_registration ... 4 apelidos (complete_registration,
+//     omni_complete_registration, offsite_conversion.fb_pixel_complete_registration,
+//     offsite_complete_registration_add_20_s_calls) — todos com o MESMO valor (12).
+//   • purchase ................ 8 apelidos, todos com o mesmo valor (1).
+//   • add_to_cart ............. 6 apelidos, todos com o mesmo valor (15).
+//
+// SOMAR APELIDOS FOI EXATAMENTE O QUE CAUSOU O BUG que esta lista corrige: o painel
+// contava cada conversão DUAS vezes (fator 2,07 na carteira), e o CPL exibido ficava
+// pela METADE do real — justamente o número que a agência usa para avaliar gestor.
+//
+// REGRA PERMANENTE: escolha UM representante por família. Nunca some dois nomes que
+// possam descrever o mesmo evento. Na dúvida, rode o levantamento de action_types
+// e confira se dois candidatos têm valores idênticos/proporcionais — se tiverem,
+// são apelidos, não eventos distintos. Confirme sempre contra a Business Manager.
+
+// Formulário: "lead" é o AGREGADO canônico da Meta — já inclui os leads de formulário
+// (onsite_conversion.lead_grouped) e os de pixel/site (offsite_conversion.fb_pixel_lead).
+// Conferido na carteira: lead (306) = lead_grouped (273) + fb_pixel_lead (33).
+// Por isso é UM item só: somar os filhos junto com o pai duplicaria a contagem.
+const FORM_LEAD_ACTIONS = ["lead"];
+
+// WhatsApp: conversas iniciadas. É o que a Business Manager exibe como "Resultados"
+// (conferido: HELLO NET = 12, AURA = 108 — ambos batem com este action_type sozinho).
+// NÃO somar onsite_conversion.total_messaging_connection: é um apelido/superset do
+// mesmo evento (era ele o responsável pela contagem em dobro).
+const WHATS_ACTIONS = ["onsite_conversion.messaging_conversation_started_7d"];
+
+// LIMITAÇÃO CONHECIDA (trabalho separado, fora desta correção): a BM mostra como
+// "Resultado" o evento que CADA CAMPANHA otimiza (adset.optimization_goal /
+// promoted_object.custom_event_type). Contas com campanhas otimizadas para outros
+// eventos — ex.: ISP4, com uma campanha em COMPLETE_REGISTRATION — vão divergir do
+// total da BM mesmo com a regra acima correta. Modelar isso exige ler o objetivo por
+// conjunto no sync; foi decidido tratar como etapa própria.
 
 export interface ResultadoConta {
   accountId: string;
