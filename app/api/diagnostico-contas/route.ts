@@ -3,6 +3,15 @@
 // paginação) e compara com o de-para (coleção "contas"): NOVAS (no Meta, fora do
 // de-para) e SUMIDAS (no de-para, fora do Meta). Não escreve, não apaga, não
 // adiciona conta nenhuma. Remover após o uso.
+//
+// ATENÇÃO ao interpretar o resultado: esta rota só enxerga o MUNDO META. Cliente que
+// anuncia só no Google Ads jamais aparece aqui — e isso é o esperado, não é conta
+// faltando (ex.: LAVE MAIS EXPRESS, CHRISTIANE ROBINE). O painel cobre APENAS Meta
+// Ads; ver data/README.md.
+//
+// E o inverso também vale: conta que um gestor reivindica mas que NÃO aparece em
+// `novas` não está compartilhada com o token. Cadastrá-la mesmo assim cria uma conta
+// que nunca sincroniza — o caminho é pedir a parceria de Business Manager primeiro.
 
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/firebaseAdmin";

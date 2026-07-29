@@ -11,6 +11,11 @@ const LOTE = 450; // abaixo do limite de 500 operações por batch do Firestore
 
 // Lista oficial da carteira. Preencha data/contas.json e rode esta rota de novo
 // sempre que a carteira mudar (idempotente e não-destrutiva).
+//
+// ESCOPO: o painel cobre APENAS Meta Ads. Cliente que anuncia só no Google Ads não
+// entra aqui — não é conta faltando, é fora de escopo (ex.: LAVE MAIS EXPRESS,
+// CHRISTIANE ROBINE). Cadastrá-lo criaria uma conta permanentemente zerada na tela.
+// Ver data/README.md para o escopo, as regras do de-para e o checklist de conta nova.
 interface ContaFonte {
   accountId: string;
   cliente: string;
