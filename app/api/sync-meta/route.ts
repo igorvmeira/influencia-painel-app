@@ -10,7 +10,12 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 // Janela padrão de dias sincronizados (fácil de mudar).
+// Pode ser sobrescrita por ?dias=N na chamada — útil para conta NOVA, que não tem
+// histórico anterior para o mesclarDias acumular: sem isso ela nasceria com apenas
+// JANELA_DIAS de série, aparecendo TRUNCADA (e sem aviso) em períodos maiores.
 const JANELA_DIAS = 30;
+// Teto de segurança da janela: acima da retenção do agregado não há ganho.
+const JANELA_MAX = 130;
 // Quantas contas processar por chamada (cabe no limite de 10s da Vercel free).
 const LIMITE_PADRAO = 20;
 // Abaixo do limite de 500 operações por batch do Firestore.
@@ -37,15 +42,42 @@ export async function GET(req: Request) {
   const offset = Math.max(0, Number(url.searchParams.get("offset")) || 0);
   const limiteParam = Number(url.searchParams.get("limite"));
   const limite = Number.isFinite(limiteParam) && limiteParam > 0 ? limiteParam : LIMITE_PADRAO;
-  const bloco = contas.slice(offset, offset + limite);
+
+  // Janela de dias desta chamada (?dias=N). Ausente => JANELA_DIAS (cron intacto).
+  const diasParam = Number(url.searchParams.get("dias"));
+  const janelaDias = Number.isFinite(diasParam) && diasParam > 0
+    ? Math.min(Math.floor(diasParam), JANELA_MAX)
+    : JANELA_DIAS;
+
+  // Alvo por IDENTIDADE (?accountId=act_1,act_2), não por posição. Offset é frágil:
+  // a ordenação muda quando contas entram/saem, e a chamada acertaria OUTRA conta
+  // reportando sucesso — deixando a pretendida truncada sem ninguém perceber.
+  const alvoParam = (url.searchParams.get("accountId") || "").trim();
+  let bloco: ContaMap[];
+  if (alvoParam) {
+    const pedidos = alvoParam.split(",").map((s) => s.trim()).filter(Boolean);
+    const porId = new Map(contas.map((c) => [c.accountId, c]));
+    const achados = pedidos.filter((id) => porId.has(id));
+    const naoAchados = pedidos.filter((id) => !porId.has(id));
+    // FALHA EXPLÍCITA: id inexistente não pode passar como "sucesso".
+    if (naoAchados.length) {
+      return NextResponse.json(
+        { ok: false, erro: "accountId não encontrado no de-para", naoEncontrados: naoAchados },
+        { status: 400 }
+      );
+    }
+    bloco = achados.map((id) => porId.get(id)!);
+  } else {
+    bloco = contas.slice(offset, offset + limite);
+  }
 
   const col = db.collection("metricasDiarias");
   const colLimites = db.collection("limitesConta");
 
   // Processa cada conta do bloco e grava logo que termina, para nunca perder
   // o progresso já feito. Em paralelo para caber no tempo limite.
-  async function processarConta(c: ContaMap): Promise<number> {
-    const registros = await buscarDiario(c.accountId, JANELA_DIAS);
+  async function processarConta(c: ContaMap): Promise<{ accountId: string; cliente: string; registros: number; diasNoAgregado: number; maisAntigo: string | null }> {
+    const registros = await buscarDiario(c.accountId, janelaDias);
     for (let i = 0; i < registros.length; i += LOTE) {
       const batch = db!.batch();
       for (const m of registros.slice(i, i + LOTE)) {
@@ -82,16 +114,25 @@ export async function GET(req: Request) {
       // ignora: o teto é secundário em relação às métricas diárias
     }
 
-    return registros.length;
+    // Devolve a IDENTIDADE do que foi sincronizado (nome + accountId) e o estado
+    // resultante do agregado — para conferir que a chamada acertou a conta certa.
+    return {
+      accountId: c.accountId,
+      cliente: c.cliente ?? "",
+      registros: registros.length,
+      diasNoAgregado: dias.length,
+      maisAntigo: dias.length ? dias[0].data : null, // mesclarDias devolve ordenado asc
+    };
   }
 
   const resultados = await Promise.allSettled(bloco.map(processarConta));
 
   let processadas = 0;
   let registros = 0;
+  const sincronizadas: Awaited<ReturnType<typeof processarConta>>[] = [];
   const erros: { accountId: string; erro: string }[] = [];
   resultados.forEach((r, i) => {
-    if (r.status === "fulfilled") { processadas++; registros += r.value; }
+    if (r.status === "fulfilled") { processadas++; registros += r.value.registros; sincronizadas.push(r.value); }
     else erros.push({ accountId: bloco[i].accountId, erro: String(r.reason) });
   });
 
@@ -106,14 +147,15 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     ok: true,
-    janelaDias: JANELA_DIAS,
-    offset,
-    limite,
+    janelaDias,                    // janela REALMENTE usada nesta chamada
+    janelaPadrao: JANELA_DIAS,
+    modoAlvo: alvoParam ? "accountId" : "offset",
+    ...(alvoParam ? {} : { offset, limite, proximoOffset }),
     totalContas: total,
     contasNoBloco: bloco.length,
     processadas,
     registros,
-    proximoOffset,
+    sincronizadas,                 // identidade + estado do agregado, por conta
     erros,
     atualizadoEm,
   });
