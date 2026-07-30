@@ -103,8 +103,24 @@ export interface LinhaCliente {
   gasto: number;
   conversas: number;
   cplSemanal: number;
-  reach: number | null;       // soma do alcance diário no período; null = sem dado
-  impressions: number | null; // soma das impressões no período; null = sem dado
+  // ---------------------------------------------------------------------------
+  // NÃO EXIBIDOS na tela desde 29/07/2026 — retirados do Dashboard a pedido do
+  // Roberto. O cálculo AQUI e em lib/painel.ts (Soma.reach/reachDias e
+  // Soma.impressions/imprDias) continua existindo e está CORRETO: soma só os dias
+  // que têm o campo, então ausência vira null e nunca 0.
+  //
+  // Foram mantidos de propósito: o sync segue coletando reach/impressions na mesma
+  // chamada da API (custo zero) e o histórico fica preservado. Para reexibir, basta
+  // devolver o <th> no cabeçalho e o <td> em LinhaClienteRow, em Dashboard.tsx —
+  // nenhum cálculo precisa ser reescrito.
+  //
+  // Ressalva se o alcance voltar: `reach` é a SOMA do alcance diário, não o alcance
+  // único. A mesma pessoa alcançada em dias diferentes conta mais de uma vez, então
+  // o número fica acima do "Alcance" da BM (medido: ~69% acima na HELLO NET).
+  // `impressions`, ao contrário, é legitimamente somável e bate com a BM.
+  // ---------------------------------------------------------------------------
+  reach: number | null;
+  impressions: number | null;
 }
 
 /** Teto de gasto e consumo de uma conta (valores já em reais). */

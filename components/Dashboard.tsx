@@ -243,6 +243,13 @@ const TOOLTIP_CONVERSOES =
   + "otimizadas para outros eventos (ex.: cadastro no site) podem divergir do "
   + "'Resultados' da BM, que mostra o evento otimizado por campanha.";
 
+// NOTA (29/07/2026): existia aqui um TOOLTIP_ALCANCE, para a coluna "Alcance somado".
+// A coluna foi retirada a pedido do Roberto, junto com Impressões, então o tooltip
+// saiu com ela. Se o alcance voltar, o ponto a explicar é: o painel SOMA o alcance
+// diário e alcance NÃO é somável — a Meta só sabe o único de um intervalo consultado
+// explicitamente, e não dá para derivá-lo dos diários (a sobreposição não está no
+// dado). Medido na HELLO NET (20–26/07): 13.318 somado vs 7.870 únicos, ~69% acima.
+
 // Ícone de ajuda reaproveitável (mesmo padrão do ⓘ do Alcance).
 function Info({ texto }: { texto: string }) {
   return (
@@ -356,14 +363,9 @@ export default function Dashboard(
     return hora ? `inclui dia parcial — última sincronização às ${hora}` : "inclui dia parcial (ainda em andamento)";
   }, [ultimoDia, modoCustom, custFim, ultimaSync]);
 
-  // Tooltip do "—" (Alcance/Impressões): data DINÂMICA em que a coleta começou.
-  const tooltipSemDado = useMemo(() => {
-    let min = "";
-    for (const m of daily) if (typeof m.reach === "number" && (min === "" || m.data < min)) min = m.data;
-    if (!min) return "Ainda não coletado (passa a ser preenchido no próximo sync).";
-    const [y, mo, d] = min.split("-");
-    return `Passou a ser coletado a partir de ${d}/${mo}/${y}; dias anteriores não têm o dado.`;
-  }, [daily]);
+  // NOTA (29/07/2026): existia aqui um `tooltipSemDado`, que calculava a data em que a
+  // coleta de reach/impressions começou para explicar o "—" dessas duas colunas.
+  // Ficou órfão quando Alcance e Impressões saíram da exibição — era o único uso.
 
   // Ranking de gestores por CPL (menor = melhor).
   const ranking = useMemo(
@@ -863,29 +865,23 @@ export default function Dashboard(
                     Conv. <Info texto={TOOLTIP_CONVERSOES} />{seta("conversas")}
                   </Th>
                   <Th right onClick={() => ordenar("cplSemanal")}>CPL{seta("cplSemanal")}</Th>
-                  <th className="px-4 py-3 text-right font-medium" style={{ borderBottom: `1px solid ${LINE}` }}>
-                    <span className="inline-flex items-center gap-1">
-                      Alcance
-                      <span
-                        title="Soma do alcance de cada dia. Como a mesma pessoa pode ser alcançada em dias diferentes, esse número tende a ser maior que o total de pessoas únicas do período."
-                        style={{ cursor: "help", color: MUTED }}
-                      >ⓘ</span>
-                    </span>
-                  </th>
-                  <th className="px-4 py-3 text-right font-medium" style={{ borderBottom: `1px solid ${LINE}` }}>Impressões</th>
+                  {/* Alcance e Impressões foram RETIRADOS da exibição a pedido do Roberto
+                      (29/07/2026). O sync continua coletando e o cálculo continua em
+                      painel.ts — reexibir é só devolver <th> aqui e <td> em
+                      LinhaClienteRow. Ver comentário em lib/types.ts (LinhaCliente). */}
                   <th className="px-4 py-3 font-medium" style={{ borderBottom: `1px solid ${LINE}` }}>Limite</th>
                 </tr>
               </thead>
               <tbody>
                 {clientes.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-6 text-center" style={{ color: MUTED }}>
+                    <td colSpan={6} className="px-4 py-6 text-center" style={{ color: MUTED }}>
                       Nenhum cliente encontrado.
                     </td>
                   </tr>
                 ) : (
                   clientes.map((c, i) => (
-                    <LinhaClienteRow key={c.accountId} c={c} limite={limitesPorConta.get(c.accountId)} tooltipSemDado={tooltipSemDado} orientacao={orientacoes?.[c.accountId] ?? null} par={i % 2 === 1} />
+                    <LinhaClienteRow key={c.accountId} c={c} limite={limitesPorConta.get(c.accountId)} orientacao={orientacoes?.[c.accountId] ?? null} par={i % 2 === 1} />
                   ))
                 )}
               </tbody>
@@ -1049,8 +1045,8 @@ function Th({ children, right, onClick }: { children: React.ReactNode; right?: b
   );
 }
 
-function LinhaClienteRow({ c, limite, tooltipSemDado, orientacao, par }: {
-  c: LinhaCliente; limite?: LimiteConta; tooltipSemDado: string; orientacao: EntradaOrientacao | null; par?: boolean;
+function LinhaClienteRow({ c, limite, orientacao, par }: {
+  c: LinhaCliente; limite?: LimiteConta; orientacao: EntradaOrientacao | null; par?: boolean;
 }) {
   return (
     // Zebra sutil (linhas alternadas) melhora a leitura horizontal em tabela densa;
@@ -1079,12 +1075,8 @@ function LinhaClienteRow({ c, limite, tooltipSemDado, orientacao, par }: {
       <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>{brl(c.gasto)}</td>
       <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>{num(c.conversas)}</td>
       <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>{brlDec(c.cplSemanal)}</td>
-      <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>
-        {c.reach != null ? num(c.reach) : <span style={{ color: MUTED, cursor: "help" }} title={tooltipSemDado}>—</span>}
-      </td>
-      <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>
-        {c.impressions != null ? num(c.impressions) : <span style={{ color: MUTED, cursor: "help" }} title={tooltipSemDado}>—</span>}
-      </td>
+      {/* Alcance/Impressões retirados da exibição (ver <thead>). c.reach e
+          c.impressions continuam chegando preenchidos em LinhaCliente. */}
       <td className="px-4 py-3" style={{ borderBottom: `1px solid ${LINE}` }}>
         <BarraLimite limite={limite} />
       </td>
