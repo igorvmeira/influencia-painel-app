@@ -47,4 +47,36 @@ export const TEMA = {
   zebra: "#FBFAF7",       // linha alternada de tabela densa (zebra striping)
   raioCard: "0.75rem",    // raio de borda dos cards (~12px)
   sombraCard: "0 1px 2px rgba(28,27,23,0.04), 0 1px 3px rgba(28,27,23,0.06)", // elevação suave
+
+  // ===== SIDEBAR ESCURA (âncora visual) =====
+  // A sidebar é a única superfície ESCURA do painel: cria contraste e ancora o
+  // layout claro. Precisa de paleta PRÓPRIA porque os tokens de cima foram
+  // calibrados para ler sobre claro — `muted` (#6C6960) sobre quase-preto dá ~2,4:1,
+  // ilegível. Não reaproveite `texto`/`muted`/`borda` aqui.
+  // O item ativo segue a regra geral: pill `destaque` com texto `texto` (9,4:1);
+  // dourado continua sendo preenchimento, nunca cor de texto.
+  navFundo: "#1C1B17",    // fundo da sidebar (mesmo quase-preto morno de `texto`)
+  navTexto: "#F2F0EA",    // itens do menu — off-white (14,1:1 sobre navFundo)
+  navMuted: "#9C978B",    // "Em breve", e-mail do rodapé (5,2:1)
+  navBorda: "#2E2C26",    // divisórias internas da sidebar
+  navHover: "#26241E",    // hover de item inativo
+  navChip: "#2A2822",     // fundo do selo "Em breve" dentro da sidebar
+
+  // ===== CHIPS DE ÍCONE (tela Início) =====
+  // ⚠️ PROVISÓRIO — terra e oliva são escolha de DESIGN, NÃO cores de marca.
+  // A marca oficial tem só o dourado (#F3B60E). Se a agência informar cores
+  // secundárias oficiais, troque os hex de chipTerra/terraTexto e chipOliva/
+  // olivaTexto aqui e o resto do app acompanha.
+  // Família quente, deliberadamente dessaturada para NÃO competir com
+  // positivo/negativo (que só aparecem em número e status, com significado).
+  chipDourado: "#FCF0CE", // chip do card Dashboard (ícone em ouroTexto)
+  chipTerra: "#F6E7DC",   // chip do card Reuniões (ícone em terraTexto)
+  terraTexto: "#8A4A22",  // terracota escuro — 6,1:1 sobre chipTerra [PROVISÓRIO]
+  chipOliva: "#EDF0DE",   // chip do card Orientações (ícone em olivaTexto)
+  olivaTexto: "#4F5B22",  // oliva escuro — 6,4:1 sobre chipOliva [PROVISÓRIO]
+
+  // ===== CHIPS DE DELTA (KPIs) =====
+  // Variação com fundo tingido, para o sinal ler de longe. Texto na cor semântica.
+  negativoFundo: "#FBE9E6", // tint do delta ruim (texto = negativo, 5,9:1)
+  neutroFundo: "#F1EFE9",   // delta zero ou sem comparação (texto = muted)
 } as const;

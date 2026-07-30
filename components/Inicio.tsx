@@ -22,6 +22,21 @@ const AMBAR = TEMA.atencao;
 // Período fixo do resumo da Início (a tela não tem seletor). Mesmo default do Dashboard.
 const DIAS_RESUMO = 15;
 
+// Identidade por card: chip de ícone em tint quente + ícone na cor escura do par.
+// Os pares (fundo/cor) vêm dos tokens e já foram conferidos em contraste (≥6:1).
+// Terra e oliva são PROVISÓRIOS — ver a nota em lib/brand.ts.
+function ChipIcone({ fundo, cor, children }: { fundo: string; cor: string; children: React.ReactNode }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[15px] leading-none"
+      style={{ background: fundo, color: cor }}
+    >
+      {children}
+    </span>
+  );
+}
+
 export default function Inicio() {
   const { dados, erro } = useDadosPainel();
   const { reunioes, erro: erroAgenda } = useAgenda();
@@ -89,7 +104,10 @@ export default function Inicio() {
           style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}
         >
           <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-medium text-brand-ink">Dashboard de Tráfego</span>
+            <span className="flex items-center gap-2.5">
+              <ChipIcone fundo={TEMA.chipDourado} cor={TEMA.ouroTexto}>◧</ChipIcone>
+              <span className="text-sm font-medium text-brand-ink">Dashboard de Tráfego</span>
+            </span>
             <span className="text-[11px]" style={{ color: MUTED }}>últimos {DIAS_RESUMO} dias →</span>
           </div>
 
@@ -105,10 +123,12 @@ export default function Inicio() {
           ) : (
             <div className="mt-3 space-y-1.5 text-[13px]">
               {resumo!.cplAltoCount > 0 && (
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full" style={{ background: RED }} />
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                  {/* Número em cor semântica e peso forte: o sinal está no próprio
+                      dado, não num pontinho decorativo ao lado. */}
                   <span style={{ color: TEMA.texto }}>
-                    {resumo!.cplAltoCount} {resumo!.cplAltoCount === 1 ? "gestor" : "gestores"} com CPL acima de {brlDec(CPL_ALERTA)}
+                    <strong className="font-semibold tabular-nums" style={{ color: RED }}>{resumo!.cplAltoCount}</strong>
+                    {" "}{resumo!.cplAltoCount === 1 ? "gestor" : "gestores"} com CPL acima de {brlDec(CPL_ALERTA)}
                   </span>
                   {resumo!.piorCplNome && (
                     <span style={{ color: MUTED }}>· pior: {resumo!.piorCplNome} ({brlDec(resumo!.piorCplValor ?? 0)})</span>
@@ -116,10 +136,10 @@ export default function Inicio() {
                 </div>
               )}
               {resumo!.pertoCount > 0 && (
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full" style={{ background: AMBAR }} />
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                   <span style={{ color: TEMA.texto }}>
-                    {resumo!.pertoCount} {resumo!.pertoCount === 1 ? "conta perto" : "contas perto"} do limite de gasto
+                    <strong className="font-semibold tabular-nums" style={{ color: AMBAR }}>{resumo!.pertoCount}</strong>
+                    {" "}{resumo!.pertoCount === 1 ? "conta perto" : "contas perto"} do limite de gasto
                   </span>
                   {resumo!.piorLimiteCliente && (
                     <span style={{ color: MUTED }}>· mais crítica: {resumo!.piorLimiteCliente} ({resumo!.piorLimitePct}%)</span>
@@ -137,7 +157,10 @@ export default function Inicio() {
           style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}
         >
           <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-medium text-brand-ink">Pautas e Reuniões</span>
+            <span className="flex items-center gap-2.5">
+              <ChipIcone fundo={TEMA.chipTerra} cor={TEMA.terraTexto}>▤</ChipIcone>
+              <span className="text-sm font-medium text-brand-ink">Pautas e Reuniões</span>
+            </span>
             <span className="text-[11px]" style={{ color: MUTED }}>agenda →</span>
           </div>
           {erroAgenda ? (
@@ -156,7 +179,10 @@ export default function Inicio() {
           style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}
         >
           <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-medium text-brand-ink">Orientações Gerenciais</span>
+            <span className="flex items-center gap-2.5">
+              <ChipIcone fundo={TEMA.chipOliva} cor={TEMA.olivaTexto}>✎</ChipIcone>
+              <span className="text-sm font-medium text-brand-ink">Orientações Gerenciais</span>
+            </span>
             <span className="text-[11px]" style={{ color: MUTED }}>gerenciar →</span>
           </div>
           {erro ? (

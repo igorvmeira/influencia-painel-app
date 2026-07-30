@@ -21,6 +21,16 @@ const config: Config = {
           placeholder: "#8B877D",// placeholder de inputs
           zebra: "#FBFAF7",      // linha alternada de tabela
         },
+        // Sidebar ESCURA (TEMA.nav*). Paleta separada: os tons de cima foram
+        // calibrados para ler sobre claro e não servem invertidos.
+        nav: {
+          bg: "#1C1B17",     // fundo da sidebar (TEMA.navFundo)
+          text: "#F2F0EA",   // itens do menu (TEMA.navTexto)
+          muted: "#9C978B",  // secundário na sidebar (TEMA.navMuted)
+          line: "#2E2C26",   // divisória interna (TEMA.navBorda)
+          hover: "#26241E",  // hover de item inativo (TEMA.navHover)
+          chip: "#2A2822",   // selo "Em breve" (TEMA.navChip)
+        },
       },
       fontFamily: {
         // Poppins via next/font (self-host); a var é definida em app/layout.tsx.

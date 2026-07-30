@@ -105,11 +105,19 @@ function Trend({ v, menorMelhor = false }: { v: number; menorMelhor?: boolean })
 // Badge de variação para os KPIs. delta null → "—" (sem base suficiente).
 // `motivo` explica o "—" no tooltip com o motivo CONCRETO (datas), quando houver.
 function DeltaBadge({ delta, menorMelhor = false, motivo }: { delta: number | null; menorMelhor?: boolean; motivo?: string | null }) {
-  if (delta === null) return <span className="text-xs font-medium" style={{ color: MUTED, cursor: "help" }} title={motivo ?? "sem período anterior comparável"}>—</span>;
+  // Chip com fundo tingido: o delta é o sinal que se lê de longe no KPI.
+  const base = "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium";
+  if (delta === null) {
+    return (
+      <span className={base} style={{ background: TEMA.neutroFundo, color: MUTED, cursor: "help" }} title={motivo ?? "sem período anterior comparável"}>—</span>
+    );
+  }
   const cor = corVar(delta, menorMelhor);
   const seta = delta > 0 ? "▲" : delta < 0 ? "▼" : "•";
+  // O tint acompanha a SEMÂNTICA (cor), não o sinal do número: em CPL, subir é ruim.
+  const fundo = cor === GREEN ? TEMA.positivoFundo : cor === RED ? TEMA.negativoFundo : TEMA.neutroFundo;
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: cor }}>
+    <span className={`${base} tabular-nums`} style={{ background: fundo, color: cor }}>
       <span style={{ fontSize: 9 }}>{seta}</span>
       {pct(delta)}
     </span>
@@ -625,7 +633,10 @@ export default function Dashboard(
         />
       </div>
 
-      {/* Precisa de atenção — reusa as MESMAS regras da central (cplAlto + pertoLimite). */}
+      {/* Precisa de atenção — reusa as MESMAS regras da central (cplAlto + pertoLimite).
+          Os cards de alerta levam fundo levemente tingido (erroFundo/limiteFundo) além
+          da borda semântica. Sem hover de fundo: sobre tint, o hover claro "lavava" a
+          cor — o retorno vem por opacidade. */}
       <p className="mb-3 text-[13px] uppercase tracking-wider" style={{ color: MUTED }}>Precisa de atenção</p>
       <div className="mb-6 grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
         {cplAlto.length === 0 && pertoLimite.length === 0 ? (
@@ -638,8 +649,8 @@ export default function Dashboard(
             {cplAlto.length > 0 && (
               <button
                 onClick={() => abrirAlertas("cplAlto")}
-                className="p-4 text-left transition-colors hover:bg-brand-hover"
-                style={{ background: CARD, border: `1px solid ${RED}`, borderRadius: TEMA.raioCard }}
+                className="p-4 text-left transition-opacity hover:opacity-90"
+                style={{ background: TEMA.erroFundo, border: `1px solid ${RED}`, borderRadius: TEMA.raioCard }}
               >
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full" style={{ background: RED }} />
@@ -658,8 +669,8 @@ export default function Dashboard(
             {pertoLimite.length > 0 && (
               <button
                 onClick={() => abrirAlertas("limite")}
-                className="p-4 text-left transition-colors hover:bg-brand-hover"
-                style={{ background: CARD, border: `1px solid ${AMBAR}`, borderRadius: TEMA.raioCard }}
+                className="p-4 text-left transition-opacity hover:opacity-90"
+                style={{ background: TEMA.limiteFundo, border: `1px solid ${AMBAR}`, borderRadius: TEMA.raioCard }}
               >
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full" style={{ background: AMBAR }} />
