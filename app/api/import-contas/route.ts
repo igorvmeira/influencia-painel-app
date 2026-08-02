@@ -122,8 +122,12 @@ export async function GET(req: Request) {
   const criadas: { accountId: string; cliente: string; gestor: string }[] = [];
   const atualizadas: { accountId: string; cliente: string; campos: string[] }[] = [];
   const inalteradas: { accountId: string; cliente: string }[] = [];
-  // Contas cujo gestor foi editado na tela e diverge do JSON — não são alteradas.
-  const gestorEditados: { accountId: string; cliente: string; gestorJson: string; gestorTela: string; por: string; em: string }[] = [];
+  // Contas CARIMBADAS pela tela /carteira (gestorEditadoEm presente): o import não
+  // gerencia mais o campo `gestor` delas. Separadas em duas listas porque o risco é
+  // diferente — ver o comentário no laço abaixo.
+  type Carimbada = { accountId: string; cliente: string; gestorJson: string; gestorTela: string; por: string; em: string };
+  const carimbadasDivergentes: Carimbada[] = []; // JSON discorda: a troca NÃO será aplicada
+  const carimbadasConcordantes: Carimbada[] = []; // JSON concorda hoje, mas a trava existe
   // Trocas de gestor que serão REGISTRADAS no gestorHistorico (append-only).
   const trocasGestor: { accountId: string; cliente: string; de: string; para: string; primeiroRegistro: boolean }[] = [];
   // Instante único desta execução — todas as entradas do histórico levam a mesma data.
@@ -140,18 +144,24 @@ export async function GET(req: Request) {
       continue;
     }
 
-    // Se o gestor foi editado na tela e o JSON discorda, registra a divergência (não altera).
+    // TODA conta carimbada entra no relatório — não só as divergentes.
+    // Motivo: a versão anterior só listava quando o JSON discordava, então uma conta
+    // carimbada cujo JSON por acaso CONCORDA sumia do relatório e a trava ficava
+    // invisível. O efeito é traiçoeiro: quem depois trocar o gestor dela no JSON vê o
+    // import reportar sucesso e a troca simplesmente não acontecer.
     const travado = gestorTravado(existente.data);
     const gestorTela = (existente.data.gestor as string) ?? "";
-    if (travado && gestorTela !== (c.gestor ?? "")) {
-      gestorEditados.push({
+    if (travado) {
+      const reg = {
         accountId: c.accountId,
         cliente: c.cliente ?? "",
         gestorJson: c.gestor ?? "",
         gestorTela,
         por: (existente.data.gestorEditadoPor as string) ?? "",
         em: dataBR(existente.data.gestorEditadoEm),
-      });
+      };
+      if (gestorTela !== (c.gestor ?? "")) carimbadasDivergentes.push(reg);
+      else carimbadasConcordantes.push(reg);
     }
 
     const campos = camposQueMudam(existente.data, c);
@@ -212,11 +222,25 @@ export async function GET(req: Request) {
       atualizadas: atualizadas.length,
       inalteradas: inalteradas.length,
       orfas: orfas.length,
-      gestorEditados: gestorEditados.length, // gestor editado na tela — não alterados
+      // Contas cujo gestor o import NÃO gerencia (carimbadas pela tela /carteira).
+      carimbadas: carimbadasDivergentes.length + carimbadasConcordantes.length,
+      carimbadasDivergentes: carimbadasDivergentes.length,
+      carimbadasConcordantes: carimbadasConcordantes.length,
       // Trocas que entram no gestorHistorico. Só REGISTRO: não carimba a conta,
       // o import continua mandando no campo `gestor` dela.
       trocasDeGestor: trocasGestor.length,
       gravadas: aplicar ? gravadas : 0,
+    },
+    carimbadas: {
+      mensagem: (carimbadasDivergentes.length + carimbadasConcordantes.length) === 0
+        ? "Nenhuma conta carimbada — o import gerencia o gestor de todas."
+        : `${carimbadasDivergentes.length + carimbadasConcordantes.length} conta(s) com gestor TRAVADO pela tela /carteira. `
+          + "Para devolvê-las ao controle do JSON, apague gestorEditadoEm e gestorEditadoPor no Console do Firebase.",
+      // JSON discorda: a troca pedida no JSON NÃO será aplicada.
+      divergentes: carimbadasDivergentes,
+      // JSON concorda HOJE — mas a trava existe e uma troca futura pelo JSON seria
+      // ignorada em silêncio. Esta lista existe justamente para a trava não sumir.
+      concordantes: carimbadasConcordantes,
     },
     trocasDeGestor: {
       mensagem: trocasGestor.length
@@ -229,7 +253,6 @@ export async function GET(req: Request) {
     atualizadas,
     inalteradas,
     orfas,
-    gestorEditados,
     ...(aplicar ? { aplicadoEm: new Date().toISOString() } : {}),
   });
 }
