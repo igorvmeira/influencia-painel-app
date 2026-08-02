@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useDadosPainel } from "@/lib/useDadosPainel";
 import { montarPainel } from "@/lib/painel";
 import { janelaMesFechado, mesesDisponiveis, coberturaMes, ymdParaBR } from "@/lib/periodo";
 import { brl, brlDec, num } from "@/lib/format";
 import { TEMA } from "@/lib/brand";
+import { ContaMap } from "@/lib/types";
 import IndicadorFrescor from "./IndicadorFrescor";
 import DeltaChip from "./DeltaChip";
 
@@ -20,7 +21,48 @@ const AMBAR = TEMA.atencao;
 const TOOLTIP_INCOMPLETO =
   "Contas cuja série de dados começa depois do dia 1 do mês analisado ou do mês de "
   + "comparação. O total do mês delas fica subestimado, então a evolução não é "
-  + "confiável. O detalhe conta a conta vem na próxima etapa desta tela.";
+  + "confiável. Expanda o gestor para ver quais são.";
+
+// Mês anterior a (ano, mes), tratando a virada de ano.
+const mesAnteriorDe = (ano: number, mes: number) => (mes === 1 ? { ano: ano - 1, mes: 12 } : { ano, mes: mes - 1 });
+
+// Normaliza `desde` do gestorHistorico: pode vir como Timestamp serializado pelo
+// /api/painel ({_seconds}) ou como ISO (gravado pelo import-contas). null = "desde
+// sempre" (registro semente) e nunca conta como troca dentro do mês.
+function desdeParaYmd(v: unknown): string | null {
+  if (v == null) return null;
+  if (typeof v === "string") return v.slice(0, 10);
+  if (typeof v === "object" && "_seconds" in (v as object)) {
+    const s = (v as { _seconds: number })._seconds;
+    return new Date(s * 1000).toISOString().slice(0, 10);
+  }
+  return null;
+}
+
+/**
+ * A conta trocou de gestor DENTRO do mês analisado?
+ *
+ * A regra da agência é trocar só na virada do mês — então, dentro de um mês fechado,
+ * cada conta tem um dono só e o campo `gestor` atual vale. Isto aqui é a DEFESA
+ * contra o furo dessa regra: se alguém trocar no meio do mês, os números do mês
+ * inteiro vão para o dono atual, e o mês do outro gestor some sem aviso.
+ *
+ * LIMITE CONHECIDO: o histórico só existe a partir de 29/07/2026 (quando a tela
+ * /carteira entrou), e o import só passou a registrar na Etapa A. Trocas anteriores
+ * a isso não têm registro — ausência de selo NÃO prova que não houve troca.
+ */
+function trocaNoMes(conta: ContaMap, ano: number, mes: number): string | null {
+  const hist = conta.gestorHistorico;
+  if (!Array.isArray(hist)) return null;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const ini = `${ano}-${pad(mes)}-01`;
+  const fim = `${ano}-${pad(mes)}-31`; // limite superior lexicográfico basta
+  for (const h of hist) {
+    const d = desdeParaYmd((h as { desde?: unknown })?.desde);
+    if (d && d >= ini && d <= fim) return d;
+  }
+  return null;
+}
 
 export default function Gestores() {
   const { dados, erro } = useDadosPainel();
@@ -50,12 +92,36 @@ export default function Gestores() {
     [daily, contasAtivas, janela]
   );
 
+  // Mês ANTERIOR montado à parte, para a evolução CONTA A CONTA. O painel do mês
+  // selecionado só traz a janela atual; aqui reaproveitamos a mesma janelaMesFechado
+  // apontada para o mês anterior e usamos só a parte "atual" dela.
+  const painelAnterior = useMemo(() => {
+    if (!sel) return null;
+    const a = mesAnteriorDe(sel.ano, sel.mes);
+    const j = janelaMesFechado(daily, contasAtivas, a.ano, a.mes);
+    return j ? montarPainel(daily, contasAtivas, j.D, j.espec) : null;
+  }, [daily, contasAtivas, sel]);
+
+  // accountId -> números do mês anterior (para o Δ por conta).
+  const anteriorPorConta = useMemo(() => {
+    const m = new Map<string, { gasto: number; conversas: number; cpl: number }>();
+    for (const d of painelAnterior?.detalhes ?? []) {
+      for (const c of d.clientes) {
+        m.set(c.accountId, { gasto: c.gasto, conversas: c.conversas, cpl: c.cplSemanal });
+      }
+    }
+    return m;
+  }, [painelAnterior]);
+
+  const [expandido, setExpandido] = useState<string | null>(null);
+  const contaPorId = useMemo(() => new Map(contasAtivas.map((c) => [c.accountId, c])), [contasAtivas]);
+
   // Contagem de contas com mês incompleto, POR GESTOR. Aparece já nesta etapa: sem
   // isso alguém bate o olho no comparativo e tira conclusão de base incompleta.
   const incompletasPorGestor = useMemo(() => {
     const mapa = new Map<string, { total: number; incompletas: number; nomes: string[] }>();
     if (!sel) return mapa;
-    const ant = sel.mes === 1 ? { ano: sel.ano - 1, mes: 12 } : { ano: sel.ano, mes: sel.mes - 1 };
+    const ant = mesAnteriorDe(sel.ano, sel.mes);
     for (const c of contasAtivas) {
       const a = coberturaMes(daily, c.accountId, sel.ano, sel.mes);
       const b = coberturaMes(daily, c.accountId, ant.ano, ant.mes);
@@ -67,6 +133,25 @@ export default function Gestores() {
       mapa.set(c.gestor, reg);
     }
     return mapa;
+  }, [daily, contasAtivas, sel]);
+
+  // Cobertura por CONTA (accountId → detalhe), consumida pela expansão.
+  const coberturaPorConta = useMemo(() => {
+    const m = new Map<string, { incompleta: boolean; desde: string | null; semDado: boolean }>();
+    if (!sel) return m;
+    const ant = mesAnteriorDe(sel.ano, sel.mes);
+    for (const c of contasAtivas) {
+      const a = coberturaMes(daily, c.accountId, sel.ano, sel.mes);
+      const b = coberturaMes(daily, c.accountId, ant.ano, ant.mes);
+      const semDado = a.primeiroDiaSerie === null;
+      m.set(c.accountId, {
+        semDado,
+        incompleta: !semDado && (!a.completo || !b.completo),
+        // Mostra a partir de quando existe dado — o "desde" que a tela exibe.
+        desde: a.completo ? (b.completo ? null : b.primeiroDiaSerie) : a.primeiroDiaSerie,
+      });
+    }
+    return m;
   }, [daily, contasAtivas, sel]);
 
   const carregando = !dados && !erro;
@@ -167,9 +252,17 @@ export default function Gestores() {
               <tbody>
                 {painel.gestores.map((g, i) => {
                   const cob = incompletasPorGestor.get(g.nome);
+                  const aberto = expandido === g.nome;
+                  const det = painel.detalhes.find((d) => d.gestor === g.nome);
                   return (
-                    <tr key={g.nome} style={i % 2 === 1 ? { background: TEMA.zebra } : undefined}>
+                    <Fragment key={g.nome}>
+                    <tr
+                      onClick={() => setExpandido(aberto ? null : g.nome)}
+                      className="cursor-pointer transition-colors hover:bg-brand-hover"
+                      style={i % 2 === 1 && !aberto ? { background: TEMA.zebra } : undefined}
+                    >
                       <td className="px-4 py-3 font-medium" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>
+                        <span className="mr-1.5 inline-block text-[10px]" style={{ color: MUTED }}>{aberto ? "▼" : "▶"}</span>
                         {g.nome}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>
@@ -197,6 +290,21 @@ export default function Gestores() {
                         )}
                       </td>
                     </tr>
+                    {aberto && (
+                      <tr>
+                        <td colSpan={6} className="px-4 pb-5 pt-1" style={{ borderBottom: `1px solid ${LINE}`, background: TEMA.zebra }}>
+                          <DetalheGestor
+                            clientes={det?.clientes ?? []}
+                            anteriorPorConta={anteriorPorConta}
+                            coberturaPorConta={coberturaPorConta}
+                            contaPorId={contaPorId}
+                            ano={sel!.ano}
+                            mes={sel!.mes}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   );
                 })}
               </tbody>
@@ -204,11 +312,112 @@ export default function Gestores() {
           </div>
 
           <p className="mt-4 text-[12px]" style={{ color: MUTED }}>
-            Detalhe por conta, destaques calculados e criativos do mês entram nas próximas etapas desta tela.
+            Clique num gestor para ver a carteira conta a conta. Destaques calculados e criativos
+            do mês entram nas próximas etapas.
             {dados?.ultimaSync && ` Dados até ${ymdParaBR(dados.ultimaSync.slice(0, 10))}.`}
           </p>
         </>
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Detalhe de um gestor: a carteira conta a conta, no mês selecionado.
+// ---------------------------------------------------------------------------
+function DetalheGestor({
+  clientes, anteriorPorConta, coberturaPorConta, contaPorId, ano, mes,
+}: {
+  clientes: { accountId: string; cliente: string; gasto: number; conversas: number; cplSemanal: number }[];
+  anteriorPorConta: Map<string, { gasto: number; conversas: number; cpl: number }>;
+  coberturaPorConta: Map<string, { incompleta: boolean; desde: string | null; semDado: boolean }>;
+  contaPorId: Map<string, ContaMap>;
+  ano: number;
+  mes: number;
+}) {
+  const linhas = [...clientes].sort((a, b) => b.gasto - a.gasto);
+  // Quanto do gasto do gestor vem de contas com base de comparação quebrada.
+  const gastoTotal = linhas.reduce((s, c) => s + c.gasto, 0);
+  const gastoIncompleto = linhas.reduce(
+    (s, c) => s + (coberturaPorConta.get(c.accountId)?.incompleta ? c.gasto : 0), 0
+  );
+
+  if (!linhas.length) {
+    return <p className="py-3 text-[13px]" style={{ color: MUTED }}>Nenhuma conta com dado no período.</p>;
+  }
+
+  return (
+    <div className="pt-2">
+      {gastoIncompleto > 0 && (
+        <p className="mb-3 rounded-lg px-3 py-1.5 text-[12px]" style={{ background: TEMA.limiteFundo, color: AMBAR }}>
+          {brl(gastoIncompleto)} de {brl(gastoTotal)} ({Math.round((gastoIncompleto / gastoTotal) * 100)}%)
+          vêm de contas sem mês completo — a evolução delas não é comparável.
+        </p>
+      )}
+      <table className="w-full border-collapse text-[12px]">
+        <thead>
+          <tr style={{ color: MUTED }} className="text-left">
+            <th className="py-2 pr-3 font-medium">Conta</th>
+            <th className="py-2 pr-3 text-right font-medium">Gasto</th>
+            <th className="py-2 pr-3 text-right font-medium">Conv.</th>
+            <th className="py-2 pr-3 text-right font-medium">CPL</th>
+            <th className="py-2 pr-3 text-right font-medium">Δ CPL</th>
+            <th className="py-2 font-medium">Observação</th>
+          </tr>
+        </thead>
+        <tbody>
+          {linhas.map((c) => {
+            const ant = anteriorPorConta.get(c.accountId);
+            const cob = coberturaPorConta.get(c.accountId);
+            const conta = contaPorId.get(c.accountId);
+            const troca = conta ? trocaNoMes(conta, ano, mes) : null;
+
+            // Δ só existe com base comparável: mês completo dos DOIS lados e
+            // conversões nos dois meses. Fora disso é "—" com o motivo — nunca
+            // número limpo sobre base quebrada.
+            const temBase = !cob?.incompleta && !!ant && ant.conversas > 0 && c.conversas > 0;
+            const delta = temBase ? Math.round(((c.cplSemanal - ant!.cpl) / ant!.cpl) * 100) : null;
+            const motivo = cob?.incompleta
+              ? `Mês incompleto${cob.desde ? ` — dados a partir de ${ymdParaBR(cob.desde)}` : ""}. Sem base de comparação confiável.`
+              : !ant || ant.conversas === 0
+                ? "Sem conversões no mês anterior — não há CPL para comparar."
+                : c.conversas === 0
+                  ? "Sem conversões neste mês — CPL indefinido."
+                  : null;
+
+            return (
+              <tr key={c.accountId}>
+                <td className="py-2 pr-3" style={{ color: TEMA.texto }}>{c.cliente}</td>
+                <td className="py-2 pr-3 text-right tabular-nums" style={{ color: TEMA.texto }}>{brl(c.gasto)}</td>
+                <td className="py-2 pr-3 text-right tabular-nums" style={{ color: TEMA.texto }}>{num(c.conversas)}</td>
+                <td className="py-2 pr-3 text-right tabular-nums" style={{ color: TEMA.texto }}>
+                  {c.conversas > 0 ? brlDec(c.cplSemanal) : "—"}
+                </td>
+                <td className="py-2 pr-3 text-right">
+                  <DeltaChip delta={delta} menorMelhor motivo={motivo} />
+                </td>
+                <td className="py-2">
+                  <span className="flex flex-wrap gap-1">
+                    {cob?.incompleta && (
+                      <span className="rounded-md px-1.5 py-0.5 text-[11px] font-medium"
+                        style={{ background: TEMA.limiteFundo, color: AMBAR }}>
+                        {cob.desde ? `dados a partir de ${ymdParaBR(cob.desde)}` : "mês incompleto"}
+                      </span>
+                    )}
+                    {troca && (
+                      <span className="rounded-md px-1.5 py-0.5 text-[11px] font-medium"
+                        style={{ background: TEMA.erroFundo, color: TEMA.negativo, cursor: "help" }}
+                        title="A regra da agência é trocar gestor só na virada do mês. Esta conta trocou DENTRO do mês, então os números do mês inteiro estão atribuídos ao gestor atual.">
+                        trocou de gestor em {ymdParaBR(troca)}
+                      </span>
+                    )}
+                  </span>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
