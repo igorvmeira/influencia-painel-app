@@ -18,6 +18,22 @@ diferentes, reaproveitando o mesmo "motor" e trocando só a "casca" (marca, tela
 - Repositório **nunca dentro de pasta sincronizada** (OneDrive, Google Drive, Dropbox) —
   a sincronização corrompe a pasta `.git`. Use algo como `C:\dev\nome-do-projeto`.
 
+### Dev server e a pasta `.next` (ordem que evita falso alarme)
+`next build` e `next dev` escrevem na MESMA pasta `.next`. Rodar o build com o dev de pé
+(ou apagar `.next` sem parar o dev) deixa o servidor apontando para chunks que não existem
+mais. O sintoma é um **500 que parece bug do código** — quase sempre
+`TypeError: Cannot read properties of undefined (reading 'call')` ou
+`__webpack_modules__[moduleId] is not a function` no `webpack-runtime`, às vezes junto de
+`Failed to read source code from <arquivo>` num arquivo que está intacto.
+
+**Ordem correta, sempre nesta sequência:**
+1. **parar** o dev server;
+2. **limpar** o `.next`;
+3. **subir** o dev de novo.
+
+Antes de investigar um 500 no dev, confira se o `next build` passa: **build verde + 500 só
+no dev = cache, não código.** Não saia procurando bug no que você acabou de escrever.
+
 ## Login (padrão em todo projeto)
 - Todo projeto **nasce com login** (Firebase Auth, e-mail/senha). Todas as telas protegidas;
   sem sessão, redireciona para `/login`.
