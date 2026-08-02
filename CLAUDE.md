@@ -61,6 +61,12 @@ diferentes, reaproveitando o mesmo "motor" e trocando só a "casca" (marca, tela
   cria registro fantasma que nunca sincroniza. Peça sempre o retorno em **texto**.
 - **Joins sempre por ID único, nunca por nome.** Nomes de cliente se repetem e geram
   duplicação silenciosa (a mesma conta aparecendo em vários lugares).
+- **Status ≠ atividade.** No Meta, `account_status: ACTIVE` diz que a conta de anúncios
+  está **regular** (não desabilitada, não encerrada) — **não** que há campanha rodando.
+  Veiculação só se afere por **gasto > 0 no período**, consultado dia a dia. Confundir os
+  dois já custou a classificação errada de 3 contas numa conciliação de carteira, e quase
+  levou a decisões de pausa erradas. Vale para qualquer API: **campo de estado descreve o
+  cadastro, não o comportamento** — para saber se algo aconteceu, olhe a métrica, não a flag.
 
 ## Escrita e importação de dados
 - Toda rotina que grava em massa precisa de **prévia (dry-run) por padrão** e só gravar com
