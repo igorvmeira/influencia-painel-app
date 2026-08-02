@@ -6,7 +6,8 @@ import { montarPainel } from "@/lib/painel";
 import { janelaMesFechado, mesesDisponiveis, coberturaMes, ymdParaBR } from "@/lib/periodo";
 import { brl, brlDec, num } from "@/lib/format";
 import { TEMA } from "@/lib/brand";
-import { ContaMap } from "@/lib/types";
+import { ContaMap, LinhaCliente } from "@/lib/types";
+import { calcularDestaques, ContribuicaoConta } from "@/lib/destaques";
 import IndicadorFrescor from "./IndicadorFrescor";
 import DeltaChip from "./DeltaChip";
 
@@ -328,26 +329,46 @@ export default function Gestores() {
 function DetalheGestor({
   clientes, anteriorPorConta, coberturaPorConta, contaPorId, ano, mes,
 }: {
-  clientes: { accountId: string; cliente: string; gasto: number; conversas: number; cplSemanal: number }[];
+  clientes: LinhaCliente[];
   anteriorPorConta: Map<string, { gasto: number; conversas: number; cpl: number }>;
   coberturaPorConta: Map<string, { incompleta: boolean; desde: string | null; semDado: boolean }>;
   contaPorId: Map<string, ContaMap>;
   ano: number;
   mes: number;
 }) {
-  const linhas = [...clientes].sort((a, b) => b.gasto - a.gasto);
+  const todas = [...clientes].sort((a, b) => b.gasto - a.gasto);
   // Quanto do gasto do gestor vem de contas com base de comparação quebrada.
-  const gastoTotal = linhas.reduce((s, c) => s + c.gasto, 0);
-  const gastoIncompleto = linhas.reduce(
+  const gastoTotal = todas.reduce((s, c) => s + c.gasto, 0);
+  const gastoIncompleto = todas.reduce(
     (s, c) => s + (coberturaPorConta.get(c.accountId)?.incompleta ? c.gasto : 0), 0
   );
 
-  if (!linhas.length) {
+  // Destaques calculados por regra (lib/destaques.ts) — a decomposição do ΔCPL.
+  const incompletas = useMemo(() => {
+    const s = new Set<string>();
+    for (const [id, c] of coberturaPorConta) if (c.incompleta) s.add(id);
+    return s;
+  }, [coberturaPorConta]);
+  const destaques = useMemo(
+    () => calcularDestaques(clientes, anteriorPorConta, incompletas),
+    [clientes, anteriorPorConta, incompletas]
+  );
+
+  // Contas sem veiculação nos DOIS meses saem da tabela e viram um rodapé discreto:
+  // linha cheia de traços não informa nada e só empurra o que importa para baixo.
+  const semVeiculacao = new Set((destaques?.semVeiculacao ?? []).map((c) => c.accountId));
+  const linhas = todas.filter((c) => !semVeiculacao.has(c.accountId));
+  const nomesSemVeiculacao = (destaques?.semVeiculacao ?? []).map((c) => c.cliente);
+
+  if (!todas.length) {
     return <p className="py-3 text-[13px]" style={{ color: MUTED }}>Nenhuma conta com dado no período.</p>;
   }
 
   return (
     <div className="pt-2">
+      {destaques && destaques.deltaCpl !== null && (
+        <BlocoDestaques d={destaques} />
+      )}
       {gastoIncompleto > 0 && (
         <p className="mb-3 rounded-lg px-3 py-1.5 text-[12px]" style={{ background: TEMA.limiteFundo, color: AMBAR }}>
           {brl(gastoIncompleto)} de {brl(gastoTotal)} ({Math.round((gastoIncompleto / gastoTotal) * 100)}%)
@@ -418,6 +439,74 @@ function DetalheGestor({
           })}
         </tbody>
       </table>
+
+      {nomesSemVeiculacao.length > 0 && (
+        <p className="mt-3 text-[11px]" style={{ color: MUTED }}>
+          {nomesSemVeiculacao.length} conta{nomesSemVeiculacao.length > 1 ? "s" : ""} sem veiculação no período
+          (gasto zero nos dois meses): {nomesSemVeiculacao.join(", ")}.
+        </p>
+      )}
+    </div>
+  );
+}
+
+// Destaques calculados por regra: o "por que o CPL mudou" em números conferíveis.
+function BlocoDestaques({ d }: { d: NonNullable<ReturnType<typeof calcularDestaques>> }) {
+  const seta = d.melhorou ? "▼" : "▲";
+  const cor = d.melhorou ? TEMA.positivo : TEMA.negativo;
+  const fundo = d.melhorou ? TEMA.positivoFundo : TEMA.negativoFundo;
+
+  const Item = ({ c }: { c: ContribuicaoConta }) => (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+      <span style={{ color: TEMA.texto }}>{c.cliente}</span>
+      <span className="tabular-nums font-medium" style={{ color: c.contribuicao < 0 ? TEMA.positivo : TEMA.negativo }}>
+        {c.contribuicao > 0 ? "+" : "−"}{brlDec(Math.abs(c.contribuicao))}
+      </span>
+      <span className="tabular-nums" style={{ color: MUTED }}>({Math.round(c.pesoPct)}%)</span>
+      {c.incompleta && (
+        <span className="rounded px-1 py-0.5 text-[10px]" style={{ background: TEMA.limiteFundo, color: AMBAR }}>
+          mês incompleto
+        </span>
+      )}
+    </span>
+  );
+
+  return (
+    <div className="mb-4 rounded-lg p-3" style={{ background: TEMA.card, border: `1px solid ${LINE}` }}>
+      <div className="mb-2 flex flex-wrap items-center gap-2 text-[12px]">
+        <span className="font-semibold uppercase tracking-wider text-[11px]" style={{ color: MUTED }}>Destaques</span>
+        <span style={{ color: MUTED }}>
+          CPL {brlDec(d.cplAnterior!)} → <strong style={{ color: TEMA.texto }}>{brlDec(d.cplAtual!)}</strong>
+        </span>
+        <span className="rounded-md px-1.5 py-0.5 font-medium tabular-nums" style={{ background: fundo, color: cor }}>
+          {seta} {d.deltaCpl! > 0 ? "+" : "−"}{brlDec(Math.abs(d.deltaCpl!))}
+        </span>
+        <span style={{ color: MUTED }}>
+          · <strong style={{ color: TEMA.texto }}>{d.contasPara80Pct}</strong>
+          {d.contasPara80Pct === 1 ? " conta explica" : " contas explicam"} 80% do movimento
+        </span>
+      </div>
+
+      {d.aFavor.length > 0 && (
+        <p className="mb-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
+          <span style={{ color: MUTED }}>{d.melhorou ? "Puxaram para baixo:" : "Puxaram para cima:"}</span>
+          {d.aFavor.slice(0, 3).map((c) => <Item key={c.accountId} c={c} />)}
+        </p>
+      )}
+
+      {d.contrarias.length > 0 && (
+        <p className="mb-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
+          <span style={{ color: MUTED }}>Na direção contrária:</span>
+          {d.contrarias.slice(0, 3).map((c) => <Item key={c.accountId} c={c} />)}
+        </p>
+      )}
+
+      {(d.entradas.length > 0 || d.saidas.length > 0) && (
+        <p className="text-[12px]" style={{ color: MUTED }}>
+          {d.entradas.length > 0 && <>Entraram no período: {d.entradas.map((c) => c.cliente).join(", ")}. </>}
+          {d.saidas.length > 0 && <>Pararam: {d.saidas.map((c) => c.cliente).join(", ")}.</>}
+        </p>
+      )}
     </div>
   );
 }
