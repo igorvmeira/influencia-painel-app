@@ -254,3 +254,178 @@ export function ymdParaBR(ymd: string): string {
   const [y, m, d] = ymd.split("-");
   return `${d}/${m}/${y}`;
 }
+
+// ===========================================================================
+// MÊS FECHADO vs MÊS FECHADO — base da tela "Análise de Gestores"
+// ===========================================================================
+//
+// Diferente do Modo Mês (janelaMes), que compara 1..D vs 1..D ancorado no último
+// dia COM DADO — bom para acompanhar o mês corrente em andamento. Aqui os dois
+// meses estão FECHADOS e são comparados INTEIROS (ex.: julho 1–31 vs junho 1–30),
+// que é o recorte usado para avaliar o mês do gestor.
+//
+// As duas convivem: janelaMes segue intacta e continua servindo o botão "Mês" do
+// Dashboard. Tudo o que consome JanelaMes (montarPainel, montarKpisMes,
+// serieGraficoMes) é genérico sobre offsets e funciona com as duas sem alteração.
+
+// Dias de um mês (mes = 1..12). O dia 0 do mês seguinte é o último do mês pedido.
+const diasNoMes = (ano: number, mes: number) => new Date(Date.UTC(ano, mes, 0)).getUTCDate();
+// Mês anterior a (ano, mes), tratando a virada de ano.
+const mesAnteriorDe = (ano: number, mes: number) => (mes === 1 ? { ano: ano - 1, mes: 12 } : { ano, mes: mes - 1 });
+const rotuloMes = (ano: number, mes: number) => `${MESES[mes - 1]}/${ano}`;
+
+/**
+ * Janela de um mês FECHADO inteiro vs o mês fechado anterior inteiro.
+ * `mes` é 1..12. Devolve o MESMO formato do modo mês (JanelaMes), então
+ * montarPainel/montarKpisMes/serieGraficoMes funcionam sem nenhuma mudança.
+ *
+ * Meses de tamanhos diferentes são tratados: o fantasma alinha POR DIA DO MÊS e
+ * vira null quando o dia não existe no mês anterior (ex.: 31 de julho vs junho).
+ *
+ * `parcial` = a série disponível não cobre o mês anterior inteiro OU o mês pedido
+ * ainda não terminou de ser sincronizado. A tela deve avisar em vez de mostrar
+ * número limpo — a cobertura fina, por conta, sai de coberturaMes().
+ */
+export function janelaMesFechado(
+  daily: MetricaDiaria[],
+  contas: ContaMap[],
+  ano: number,
+  mes: number
+): JanelaMes | null {
+  if (!(mes >= 1 && mes <= 12)) return null;
+  const { ancoraMs, minMs } = ancoraMin(daily, contas);
+  if (minMs === null) return null;
+
+  const D = diasNoMes(ano, mes);
+  const ant = mesAnteriorDe(ano, mes);
+  const Dprev = diasNoMes(ant.ano, ant.mes);
+
+  const primeiroAtualMs = Date.UTC(ano, mes - 1, 1);
+  const ultimoAtualMs = Date.UTC(ano, mes - 1, D);
+  const primeiroAntMs = Date.UTC(ant.ano, ant.mes - 1, 1);
+  const ultimoAntMs = Date.UTC(ant.ano, ant.mes - 1, Dprev);
+
+  const off = (ms: number) => Math.round((ancoraMs - ms) / DIA_MS);
+
+  const offsetsAtual: number[] = [];
+  const offsetsAnterior: (number | null)[] = [];
+  for (let dia = 1; dia <= D; dia++) {
+    offsetsAtual.push(off(Date.UTC(ano, mes - 1, dia)));
+    // Alinhamento por dia do mês; null quando o mês anterior não tem esse dia.
+    offsetsAnterior.push(dia <= Dprev ? off(Date.UTC(ant.ano, ant.mes - 1, dia)) : null);
+  }
+
+  const labelAtual = rotuloMes(ano, mes);
+  const labelAnterior = rotuloMes(ant.ano, ant.mes);
+
+  const espec: EspecJanela = {
+    atualIni: off(ultimoAtualMs),   // offset do dia MAIS RECENTE da janela
+    atualFim: off(primeiroAtualMs), // offset do dia MAIS ANTIGO
+    antIni: off(ultimoAntMs),
+    antFim: off(primeiroAntMs),
+    semanas: Math.max(1, Math.round(D / 7)),
+    periodoLabel: `${labelAtual} vs ${labelAnterior}`,
+  };
+
+  // Parcial se a série começa depois do dia 1 do mês anterior, ou se ainda não há
+  // dado até o último dia do mês analisado (mês não fechou / sync atrasado).
+  const parcial = primeiroAntMs < minMs || ultimoAtualMs > ancoraMs;
+
+  return { espec, ancoraMs, D, Dprev, offsetsAtual, offsetsAnterior, labelAtual, labelAnterior, parcial };
+}
+
+/** Cobertura de UMA conta num mês — o detector de "mês incompleto". */
+export interface CoberturaMes {
+  completo: boolean;        // a série da conta alcança o dia 1 do mês?
+  primeiroDiaSerie: string | null; // primeiro dia COM DADO da conta (série inteira)
+  primeiroDiaMes: string;   // "YYYY-MM-01"
+  diasComDado: number;      // dias do mês com registro
+  diasNoMes: number;
+}
+
+/**
+ * A conta tem o mês INTEIRO disponível, ou a série dela começa no meio dele?
+ *
+ * O teste é contra o primeiro dia da série INTEIRA da conta, não contra a presença
+ * do dia 1: dia sem registro pode ser simplesmente dia sem veiculação (a API não
+ * devolve linha para dia sem entrega), o que é um dado legítimo. Já uma série que
+ * COMEÇA depois do dia 1 significa que não temos o começo do mês — aí o total do
+ * mês fica subestimado e não pode ser apresentado como fechado.
+ *
+ * Caso real medido em 02/08/2026: 9 contas com série começando em 05/06 ou 19/06,
+ * que apareceriam com "junho completo" falso.
+ */
+export function coberturaMes(
+  daily: MetricaDiaria[],
+  accountId: string,
+  ano: number,
+  mes: number
+): CoberturaMes {
+  const D = diasNoMes(ano, mes);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const primeiroDiaMes = `${ano}-${pad(mes)}-01`;
+  const ultimoDiaMes = `${ano}-${pad(mes)}-${pad(D)}`;
+
+  let primeiroDaSerie = "";
+  let diasComDado = 0;
+  for (const m of daily) {
+    if (m.accountId !== accountId || !m.data) continue;
+    if (primeiroDaSerie === "" || m.data < primeiroDaSerie) primeiroDaSerie = m.data;
+    if (m.data >= primeiroDiaMes && m.data <= ultimoDiaMes) diasComDado++;
+  }
+
+  return {
+    completo: primeiroDaSerie !== "" && primeiroDaSerie <= primeiroDiaMes,
+    primeiroDiaSerie: primeiroDaSerie || null,
+    primeiroDiaMes,
+    diasComDado,
+    diasNoMes: D,
+  };
+}
+
+/** Um mês fechado que a janela de retenção alcança. */
+export interface MesDisponivel {
+  ano: number;
+  mes: number;               // 1..12
+  label: string;             // "Julho/2026"
+  cobreInicio: boolean;      // a série alcança o dia 1 deste mês?
+  cobreMesAnterior: boolean; // ...e o dia 1 do mês ANTERIOR (necessário p/ comparar)?
+}
+
+/**
+ * Meses FECHADOS que dá para analisar hoje, do mais recente para o mais antigo.
+ * "Fechado" = o mês já terminou em relação ao último dia com dado (âncora).
+ *
+ * `cobreMesAnterior` é o que a tela precisa olhar antes de oferecer o mês no
+ * seletor: sem o mês anterior inteiro não há comparação, só número solto.
+ * Com RETENCAO_DIAS = 95 isso sempre cabe (pior caso do calendário = 91 dias),
+ * mas a folga é de 4 dias — ver o piso em lib/agregadas.ts.
+ */
+export function mesesDisponiveis(daily: MetricaDiaria[], contas: ContaMap[]): MesDisponivel[] {
+  const { ancoraMs, minMs } = ancoraMin(daily, contas);
+  if (minMs === null) return [];
+
+  const A = new Date(ancoraMs);
+  // Último mês FECHADO em relação à âncora: se a âncora ainda está dentro do mês,
+  // o mês corrente não conta.
+  let ano = A.getUTCFullYear();
+  let mes = A.getUTCMonth() + 1;
+  const ultimoDoMesDaAncora = Date.UTC(ano, mes - 1, diasNoMes(ano, mes));
+  if (ancoraMs < ultimoDoMesDaAncora) ({ ano, mes } = mesAnteriorDe(ano, mes));
+
+  const out: MesDisponivel[] = [];
+  // Limite de 6 iterações: a retenção nunca alcança mais que ~3 meses fechados.
+  for (let i = 0; i < 6; i++) {
+    const primeiroMs = Date.UTC(ano, mes - 1, 1);
+    if (primeiroMs < minMs) break; // o mês nem começa dentro da série
+    const ant = mesAnteriorDe(ano, mes);
+    out.push({
+      ano, mes,
+      label: rotuloMes(ano, mes),
+      cobreInicio: primeiroMs >= minMs,
+      cobreMesAnterior: Date.UTC(ant.ano, ant.mes - 1, 1) >= minMs,
+    });
+    ({ ano, mes } = ant);
+  }
+  return out;
+}

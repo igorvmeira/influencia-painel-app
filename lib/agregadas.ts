@@ -9,6 +9,26 @@ export const COL_AGREGADAS = "metricasAgregadas";
 // comparação "2 meses atrás", lib/painel.ts) — 95 dá margem, igual ao cutoff do getDadosDiarios.
 export const RETENCAO_DIAS = 95;
 
+// ⚠️ PISO DA RETENÇÃO — NÃO BAIXAR DE 91.
+// A tela "Análise de Gestores" compara MÊS FECHADO vs MÊS FECHADO, então a janela
+// precisa alcançar o dia 1 do mês RETRASADO. Pior caso do calendário (último dia de
+// um mês, com dois meses de 31 dias antes): (31-1) + 31 + 30 = 91 dias. Acontece em
+// jan, mai, jul, ago, set, out e dez — 7 meses do ano.
+// Com RETENCAO_DIAS = 95 a folga é de apenas 4 dias. Baixar para 90 quebraria a
+// comparação em silêncio: a tela mostraria um mês retrasado truncado.
+// Se precisar mesmo reduzir, ajuste antes a tela (lib/periodo.ts: mesesDisponiveis
+// já avisa quando a janela não cobre, mas a comparação simplesmente deixa de existir).
+export const RETENCAO_MINIMA = 91;
+if (RETENCAO_DIAS < RETENCAO_MINIMA) {
+  // Lançar no carregamento do módulo é proposital: quebra o `next build`, que é o
+  // lugar mais barato para descobrir. Comentário protege quem lê; isto protege quem não lê.
+  throw new Error(
+    `RETENCAO_DIAS=${RETENCAO_DIAS} é menor que o piso ${RETENCAO_MINIMA}. ` +
+    "A comparação mês-fechado vs mês-fechado da Análise de Gestores exige alcançar " +
+    "o dia 1 do mês retrasado (pior caso do calendário = 91 dias). Ver lib/agregadas.ts."
+  );
+}
+
 const DIA_MS = 86400000;
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
 

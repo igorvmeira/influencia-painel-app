@@ -43,6 +43,31 @@ function gestorTravado(existente: Record<string, unknown>): boolean {
   return !!existente.gestorEditadoEm;
 }
 
+// Teto defensivo do histórico — mesmo valor usado no POST /api/contas.
+const MAX_HISTORICO_GESTOR = 50;
+
+// Registro datado da troca de gestor, no MESMO formato que a tela /carteira grava
+// (EntradaGestor em lib/types.ts). Antes, só a tela registrava: troca feita pelo JSON
+// passava sem deixar rastro, e como a carteira é atualizada pelo JSON justamente para
+// não carimbar contas, na prática o histórico não via quase nada. Isso fechava a porta
+// da detecção de "conta trocou de gestor no meio do mês" na Análise de Gestores.
+//
+// IMPORTANTE: registrar histórico NÃO carimba a conta. `gestorEditadoEm` continua
+// sendo escrito apenas pela tela — é ele que faz o import parar de gerenciar o gestor.
+// Aqui só se acrescenta ao histórico; o import segue mandando no campo `gestor`.
+function historicoComTroca(
+  existente: Record<string, unknown> | null,
+  gestorAtual: string,
+  gestorNovo: string,
+  agoraISO: string
+): unknown[] {
+  const anterior = Array.isArray(existente?.gestorHistorico) ? (existente!.gestorHistorico as unknown[]) : null;
+  // 1ª vez: semeia o dono atual como "desde sempre" (desde: null), igual ao POST.
+  const base = anterior ?? [{ gestor: gestorAtual, desde: null, por: "sistema", em: agoraISO }];
+  const entrada = { gestor: gestorNovo, desde: agoraISO, por: "import-contas", em: agoraISO };
+  return [entrada, ...base].slice(0, MAX_HISTORICO_GESTOR);
+}
+
 // Timestamp do Firestore (ou ISO) → "DD/MM" para o relatório da prévia.
 function dataBR(v: unknown): string {
   const d =
@@ -99,8 +124,12 @@ export async function GET(req: Request) {
   const inalteradas: { accountId: string; cliente: string }[] = [];
   // Contas cujo gestor foi editado na tela e diverge do JSON — não são alteradas.
   const gestorEditados: { accountId: string; cliente: string; gestorJson: string; gestorTela: string; por: string; em: string }[] = [];
+  // Trocas de gestor que serão REGISTRADAS no gestorHistorico (append-only).
+  const trocasGestor: { accountId: string; cliente: string; de: string; para: string; primeiroRegistro: boolean }[] = [];
+  // Instante único desta execução — todas as entradas do histórico levam a mesma data.
+  const agoraISO = new Date().toISOString();
   // Fila de gravações (aplicada só no modo aplicar).
-  const gravacoes: { docId: string; dados: ReturnType<typeof payloadDe> }[] = [];
+  const gravacoes: { docId: string; dados: Record<string, unknown> }[] = [];
 
   for (const c of itens) {
     const existente = porAccountId.get(c.accountId);
@@ -132,8 +161,24 @@ export async function GET(req: Request) {
       atualizadas.push({ accountId: c.accountId, cliente: c.cliente ?? "", campos });
       // Atualiza o doc existente (qualquer que seja o docId dele). Se o gestor está
       // travado pela tela, remove-o do payload para o merge não sobrescrevê-lo.
-      const dados = payloadDe(c);
+      const dados = payloadDe(c) as ReturnType<typeof payloadDe> & { gestorHistorico?: unknown[] };
       if (travado) delete (dados as { gestor?: string }).gestor;
+
+      // TROCA DE GESTOR pelo JSON: registra no histórico datado (append-only).
+      // Só quando o gestor REALMENTE muda e a conta não está travada pela tela.
+      if (!travado && campos.includes("gestor")) {
+        const de = gestorTela;
+        const para = c.gestor ?? "";
+        dados.gestorHistorico = historicoComTroca(existente.data, de, para, agoraISO);
+        trocasGestor.push({
+          accountId: c.accountId,
+          cliente: c.cliente ?? "",
+          de,
+          para,
+          primeiroRegistro: !Array.isArray(existente.data.gestorHistorico),
+        });
+      }
+
       gravacoes.push({ docId: existente.id, dados });
     }
   }
@@ -168,7 +213,17 @@ export async function GET(req: Request) {
       inalteradas: inalteradas.length,
       orfas: orfas.length,
       gestorEditados: gestorEditados.length, // gestor editado na tela — não alterados
+      // Trocas que entram no gestorHistorico. Só REGISTRO: não carimba a conta,
+      // o import continua mandando no campo `gestor` dela.
+      trocasDeGestor: trocasGestor.length,
       gravadas: aplicar ? gravadas : 0,
+    },
+    trocasDeGestor: {
+      mensagem: trocasGestor.length
+        ? `${trocasGestor.length} troca(s) de gestor ${aplicar ? "registrada(s)" : "serão registradas"} no histórico (gestorHistorico).`
+        : "Nenhuma troca de gestor nesta execução.",
+      registradoEm: agoraISO,
+      contas: trocasGestor,
     },
     criadas,
     atualizadas,
