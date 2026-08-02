@@ -223,6 +223,76 @@ export async function buscarCriativos(accountId: string, dias: number): Promise<
   });
 }
 
+/**
+ * Criativos de um PERÍODO EXPLÍCITO (mês fechado), SEM miniaturas.
+ *
+ * Separado de buscarCriativos (que é relativo a hoje e já traz thumbnail) por dois
+ * motivos ligados ao cache permanente da Análise de Gestores:
+ *
+ * 1. O período precisa ser explícito — mês fechado, não "últimos N dias".
+ * 2. As miniaturas NÃO entram aqui de propósito. As URLs do Meta são assinadas e
+ *    expiram; guardá-las num doc que nunca é reescrito daria imagem quebrada meses
+ *    depois, num relatório de bonificação. Elas são buscadas à parte, sob demanda.
+ *
+ * A API retroage até 37 meses (erro #3018 além disso) — mais que suficiente para
+ * uso mensal, e é justamente por esse limite que o resultado vale ser guardado:
+ * passado esse prazo, o dado não é mais recuperável.
+ */
+export async function buscarCriativosPeriodo(
+  accountId: string,
+  since: string,
+  until: string
+): Promise<Criativo[]> {
+  const p = new URLSearchParams({
+    level: "ad",
+    fields: "ad_id,ad_name,spend,actions",
+    time_range: JSON.stringify({ since, until }),
+    limit: "500",
+    access_token: TOKEN,
+  });
+  const res = await fetch(`https://graph.facebook.com/${API}/${accountId}/insights?${p}`, { cache: "no-store" });
+  if (!res.ok) {
+    throw new Error(`Meta API ${res.status} (criativos do mês) para ${accountId}: ${(await res.text()).slice(0, 200)}`);
+  }
+  const rows: any[] = (await res.json())?.data ?? [];
+  return rows
+    .map((r) => {
+      const gasto = Number(r.spend || 0);
+      const conversas =
+        somaActions(r.actions, FORM_LEAD_ACTIONS) + somaActions(r.actions, WHATS_ACTIONS);
+      return {
+        adId: r.ad_id,
+        adName: r.ad_name || r.ad_id,
+        gasto: Math.round(gasto * 100) / 100,
+        conversas,
+        cpl: conversas > 0 ? Math.round((gasto / conversas) * 100) / 100 : 0,
+        thumbnailUrl: null, // nunca persistido — ver comentário acima
+      };
+    })
+    .filter((c) => c.gasto > 0);
+}
+
+/**
+ * Miniaturas por adId — BEST-EFFORT e sempre AO VIVO.
+ * Falha aqui nunca derruba o bloco: anúncio excluído depois do mês simplesmente
+ * não tem thumbnail, e a tela cai no ícone de reserva.
+ */
+export async function buscarThumbnails(accountId: string): Promise<Record<string, string>> {
+  const out: Record<string, string> = {};
+  try {
+    const p = new URLSearchParams({ fields: "creative{thumbnail_url}", limit: "200", access_token: TOKEN });
+    const res = await fetch(`https://graph.facebook.com/${API}/${accountId}/ads?${p}`, { cache: "no-store" });
+    if (!res.ok) return out;
+    for (const a of ((await res.json())?.data ?? []) as any[]) {
+      const t = a?.creative?.thumbnail_url;
+      if (a?.id && t) out[a.id] = t;
+    }
+  } catch {
+    // silencioso de propósito: miniatura é enfeite, não pode quebrar o relatório
+  }
+  return out;
+}
+
 export async function buscarTodas(
   contas: ContaMap[],
   since: string,
