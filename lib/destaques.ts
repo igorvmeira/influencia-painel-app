@@ -1,4 +1,5 @@
-import { LinhaCliente } from "./types";
+import { ContaMap, LinhaCliente, MetricaDiaria } from "./types";
+import { JanelaMes } from "./periodo";
 
 // ===========================================================================
 // DESTAQUES CALCULADOS POR REGRA — Análise de Gestores
@@ -15,6 +16,14 @@ import { LinhaCliente } from "./types";
 // Conta com 1 ou 2 conversões produz variação percentual gigante e sem
 // significado. Ela continua no total (o gasto é real), mas não vira "destaque".
 export const PISO_CONVERSOES_DESTAQUE = 5;
+
+/** Piso de conversões para um GESTOR concorrer ao selo de melhor evolução. */
+// Calibrado com a distribuição real de julho/2026: o menor gestor tinha 5
+// conversões no mês inteiro e o penúltimo tinha 919 — qualquer corte entre 10 e
+// 900 separava os dois, e 100 é redondo sem excluir ninguém legítimo.
+// REVER se entrar gestor novo com carteira pequena porém legítima: hoje o piso
+// existe para barrar ruído estatístico, não para punir carteira enxuta.
+export const PISO_CONVERSOES_GESTOR = 100;
 
 export interface ContribuicaoConta {
   accountId: string;
@@ -57,6 +66,92 @@ export interface Destaques {
 }
 
 const cplDe = (gasto: number, conv: number): number | null => (conv > 0 ? gasto / conv : null);
+
+const DIA_MS = 86400000;
+
+/**
+ * Série do CPL DIÁRIO de um gestor no mês — forma da tendência para o sparkline.
+ *
+ * Duas decisões de honestidade, ambas visíveis no tooltip do card:
+ *
+ * 1. DIAS SEM CONVERSÃO SAEM DA SÉRIE. CPL de um dia sem conversão não é zero,
+ *    é indefinido — desenhar zero criaria um mergulho que não aconteceu.
+ * 2. PICOS SUAVIZADOS no percentil 90. Um dia com 1 conversão e R$ 200 de gasto
+ *    vira um CPL de R$ 200 que achata todo o resto da linha. O clamp preserva a
+ *    FORMA da tendência, que é o que o sparkline comunica; o número exibido no
+ *    card continua sendo o CPL real do mês, sem suavização nenhuma.
+ */
+export function serieCplDiaria(
+  daily: MetricaDiaria[],
+  contasDoGestor: ContaMap[],
+  janela: JanelaMes
+): number[] {
+  const ids = new Set(contasDoGestor.map((c) => c.accountId));
+  const porData = new Map<string, { g: number; c: number }>();
+  for (const m of daily) {
+    if (!ids.has(m.accountId) || !m.data) continue;
+    const a = porData.get(m.data) ?? { g: 0, c: 0 };
+    a.g += Number(m.gasto || 0);
+    a.c += Number(m.leadsForm || 0) + Number(m.convWhats || 0);
+    porData.set(m.data, a);
+  }
+
+  const serie: number[] = [];
+  for (const off of janela.offsetsAtual) {
+    const ymd = new Date(janela.ancoraMs - off * DIA_MS).toISOString().slice(0, 10);
+    const a = porData.get(ymd);
+    if (!a || a.c === 0) continue; // dia sem conversão: CPL indefinido, não é zero
+    serie.push(a.g / a.c);
+  }
+  if (serie.length < 3) return serie; // curta demais para valer o clamp
+
+  // Clamp no percentil 90 (só para o desenho).
+  const ord = [...serie].sort((x, y) => x - y);
+  const p90 = ord[Math.min(ord.length - 1, Math.floor(ord.length * 0.9))];
+  return serie.map((v) => Math.min(v, p90));
+}
+
+/** Resultado da checagem de elegibilidade ao selo de melhor evolução. */
+export interface Elegibilidade {
+  elegivel: boolean;
+  motivo: string | null; // preenchido só quando inelegível
+}
+
+/**
+ * O gestor pode receber o selo "melhor evolução"?
+ *
+ * O troféu não pode ir para quem tem base furada — numa tela que embasa
+ * bonificação, premiar evolução calculada sobre mês incompleto seria pior que
+ * não premiar ninguém. Duas barreiras:
+ *
+ * 1. VOLUME: abaixo de PISO_CONVERSOES_GESTOR a variação é ruído.
+ * 2. BASE ÍNTEGRA: nenhuma conta com mês incompleto pode estar PESANDO na
+ *    variação. Ter conta incompleta irrelevante (abaixo do piso de conversões)
+ *    não desqualifica — ela não move o número.
+ *
+ * Quando o 1º em evolução é inelegível, o selo passa para o próximo elegível e
+ * ele exibe o aviso âmbar no lugar (a tela cuida dessa parte).
+ */
+export function elegibilidadeDestaque(
+  conversoesDoGestor: number,
+  destaques: Destaques | null
+): Elegibilidade {
+  if (conversoesDoGestor < PISO_CONVERSOES_GESTOR) {
+    return {
+      elegivel: false,
+      motivo: `Volume baixo no mês (${conversoesDoGestor} conversões) — variação sem significado estatístico.`,
+    };
+  }
+  const furadas = (destaques?.contribuicoes ?? []).filter((c) => c.incompleta && c.relevante);
+  if (furadas.length) {
+    const nomes = furadas.slice(0, 3).map((c) => c.cliente).join(", ");
+    return {
+      elegivel: false,
+      motivo: `Base de comparação incompleta em ${furadas.length} conta(s) que pesam na variação: ${nomes}.`,
+    };
+  }
+  return { elegivel: true, motivo: null };
+}
 
 /**
  * Decomposição EXATA da variação do CPL do gestor, conta a conta (shift-share).

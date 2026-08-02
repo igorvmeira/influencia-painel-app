@@ -1,15 +1,33 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { useDadosPainel } from "@/lib/useDadosPainel";
 import { montarPainel } from "@/lib/painel";
 import { janelaMesFechado, mesesDisponiveis, coberturaMes, ymdParaBR } from "@/lib/periodo";
 import { brl, brlDec, num } from "@/lib/format";
 import { TEMA } from "@/lib/brand";
 import { ContaMap, LinhaCliente } from "@/lib/types";
-import { calcularDestaques, ContribuicaoConta } from "@/lib/destaques";
+import {
+  calcularDestaques, ContribuicaoConta, Destaques,
+  serieCplDiaria, elegibilidadeDestaque, PISO_CONVERSOES_DESTAQUE,
+} from "@/lib/destaques";
+import { buscarCriativosMes, CriativoMes } from "@/lib/useCriativosMes";
+import MiniCardCriativo from "./MiniCardCriativo";
 import IndicadorFrescor from "./IndicadorFrescor";
 import DeltaChip from "./DeltaChip";
+import CardGestor from "./CardGestor";
+import SlopeCpl from "./SlopeCpl";
+import BarraSplit from "./BarraSplit";
+
+// O waterfall é o ÚNICO ponto desta tela que usa recharts, e só aparece quando o
+// usuário expande um gestor. Importado estaticamente, ele levava o First Load de
+// 128 kB para 232 kB — quem só olha os cards pagava por um gráfico que não viu.
+// Com dynamic, o recharts só desce na primeira expansão.
+const Waterfall = dynamic(() => import("./Waterfall"), {
+  ssr: false,
+  loading: () => <div style={{ height: 220 }} aria-hidden="true" />,
+});
 
 const CARD = TEMA.card;
 const LINE = TEMA.borda;
@@ -155,10 +173,75 @@ export default function Gestores() {
     return m;
   }, [daily, contasAtivas, sel]);
 
+  // ---- Cálculo POR GESTOR, elevado para cá ----
+  // Fica no topo por dois motivos: o premiado só se decide olhando todos, e assim
+  // os destaques são computados UMA vez (a expansão recebe pronto, não recalcula).
+  const porGestor = useMemo(() => {
+    const m = new Map<string, {
+      destaques: Destaques | null;
+      elegivel: boolean;
+      motivoInelegivel: string | null;
+      serieCpl: number[];
+      incompletasIds: Set<string>;
+    }>();
+    if (!sel || !painel || !janela) return m;
+
+    for (const g of painel.gestores) {
+      const contasG = contasAtivas.filter((c) => c.gestor === g.nome);
+      const incompletasIds = new Set<string>();
+      for (const c of contasG) {
+        if (coberturaPorConta.get(c.accountId)?.incompleta) incompletasIds.add(c.accountId);
+      }
+      const detA = painel.detalhes.find((d) => d.gestor === g.nome);
+      const anteriores = new Map<string, { gasto: number; conversas: number }>();
+      for (const c of painelAnterior?.detalhes.find((d) => d.gestor === g.nome)?.clientes ?? []) {
+        anteriores.set(c.accountId, { gasto: c.gasto, conversas: c.conversas });
+      }
+      const destaques = calcularDestaques(detA?.clientes ?? [], anteriores, incompletasIds);
+      const el = elegibilidadeDestaque(g.conversas, destaques);
+      m.set(g.nome, {
+        destaques,
+        elegivel: el.elegivel,
+        motivoInelegivel: el.motivo,
+        serieCpl: serieCplDiaria(daily, contasG, janela),
+        incompletasIds,
+      });
+    }
+    return m;
+  }, [sel, painel, painelAnterior, janela, contasAtivas, coberturaPorConta, daily]);
+
+  // O selo vai para o melhor em evolução ENTRE OS ELEGÍVEIS. Se o 1º do ranking é
+  // inelegível, ele é pulado (e mostra o aviso no card) e o selo desce para o próximo.
+  const premiado = useMemo(() => {
+    if (!painel) return null;
+    const ord = [...painel.gestores]
+      .filter((g) => g.conversas > 0)
+      .sort((a, b) => a.cplVar - b.cplVar); // menor variação = melhor evolução
+    return ord.find((g) => porGestor.get(g.nome)?.elegivel)?.nome ?? null;
+  }, [painel, porGestor]);
+
+  // Pontos do slope. Gestor abaixo do piso de conversões fica FORA da escala:
+  // com 5 conversões no mês, o CPL vira ruído e achataria todas as outras linhas.
+  const pontosSlope = useMemo(() => {
+    if (!painel) return [];
+    return painel.gestores.map((g) => {
+      const ant = painelAnterior?.gestores.find((x) => x.nome === g.nome);
+      return {
+        nome: g.nome,
+        cplAnterior: ant?.cpl ?? 0,
+        cplAtual: g.cpl,
+        elegivelNaEscala: g.conversas >= 100 && (ant?.conversas ?? 0) >= 100,
+      };
+    });
+  }, [painel, painelAnterior]);
+
+  const [visao, setVisao] = useState<"cards" | "tabela">("cards");
   const carregando = !dados && !erro;
   const mesSelecionado = sel ? meses.find((m) => m.ano === sel.ano && m.mes === sel.mes) : null;
   // Meses fechados que existem mas NÃO podem ser comparados (mês anterior fora da janela).
   const semComparacao = meses.filter((m) => !m.cobreMesAnterior);
+  const labelAnterior = janela?.labelAnterior ?? "";
+  const labelAtual = janela?.labelAtual ?? "";
 
   return (
     <div>
@@ -232,6 +315,82 @@ export default function Gestores() {
             )}
           </div>
 
+          {/* Slope: a evolução dos 8 num relance, antes do detalhe. */}
+          <div className="mb-6 p-4" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[13px] uppercase tracking-wider" style={{ color: MUTED }}>Evolução do CPL</p>
+              <p className="text-[11px]" style={{ color: MUTED }}>
+                verde = caiu (bom) · vermelho = subiu
+                {pontosSlope.some((p) => !p.elegivelNaEscala) && " · gestores com volume baixo ficam fora da escala"}
+              </p>
+            </div>
+            <SlopeCpl pontos={pontosSlope} labelAnterior={labelAnterior} labelAtual={labelAtual} />
+          </div>
+
+          {/* Toggle de visão: cards para varredura, tabela densa para conferência. */}
+          <div className="mb-4 flex items-center gap-1 rounded-full p-1"
+            style={{ background: CARD, border: `1px solid ${LINE}`, width: "fit-content" }}>
+            {(["cards", "tabela"] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => setVisao(v)}
+                className="rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors"
+                style={visao === v
+                  ? { background: TEMA.destaque, color: TEMA.texto }
+                  : { background: "transparent", color: MUTED }}
+              >
+                {v === "cards" ? "Cards" : "Tabela"}
+              </button>
+            ))}
+          </div>
+
+          {visao === "cards" ? (
+            <div className="mb-6 grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>
+              {painel.gestores.map((g) => {
+                const info = porGestor.get(g.nome);
+                const cob = incompletasPorGestor.get(g.nome);
+                const aberto = expandido === g.nome;
+                return (
+                  <Fragment key={g.nome}>
+                    <CardGestor
+                      nome={g.nome}
+                      cpl={g.cpl}
+                      cplVar={g.cplVar}
+                      conversas={g.conversas}
+                      gasto={g.gasto}
+                      serieCpl={info?.serieCpl ?? []}
+                      premiado={premiado === g.nome}
+                      motivoInelegivel={info?.motivoInelegivel ?? null}
+                      contasTotal={cob?.total ?? 0}
+                      contasIncompletas={cob?.incompletas ?? 0}
+                      aberto={aberto}
+                      onClick={() => setExpandido(aberto ? null : g.nome)}
+                    />
+                    {aberto && (
+                      // Ocupa a linha inteira do grid para o detalhe respirar.
+                      <div style={{ gridColumn: "1 / -1" }}>
+                        <div className="p-4" style={{ background: TEMA.zebra, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard }}>
+                          <DetalheGestor
+                            clientes={painel.detalhes.find((d) => d.gestor === g.nome)?.clientes ?? []}
+                            anteriorPorConta={anteriorPorConta}
+                            coberturaPorConta={coberturaPorConta}
+                            contaPorId={contaPorId}
+                            ano={sel!.ano}
+                            mes={sel!.mes}
+                            destaques={info?.destaques ?? null}
+                            b2b={g.b2b}
+                            b2c={g.b2c}
+                            labelAnterior={labelAnterior}
+                            labelAtual={labelAtual}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </div>
+          ) : (
           <div className="overflow-x-auto rounded-xl" style={{ background: CARD, boxShadow: TEMA.sombraCard }}>
             <table className="w-full border-collapse text-[13px]">
               <thead>
@@ -301,6 +460,11 @@ export default function Gestores() {
                             contaPorId={contaPorId}
                             ano={sel!.ano}
                             mes={sel!.mes}
+                            destaques={porGestor.get(g.nome)?.destaques ?? null}
+                            b2b={g.b2b}
+                            b2c={g.b2c}
+                            labelAnterior={labelAnterior}
+                            labelAtual={labelAtual}
                           />
                         </td>
                       </tr>
@@ -311,10 +475,10 @@ export default function Gestores() {
               </tbody>
             </table>
           </div>
+          )}
 
           <p className="mt-4 text-[12px]" style={{ color: MUTED }}>
-            Clique num gestor para ver a carteira conta a conta. Destaques calculados e criativos
-            do mês entram nas próximas etapas.
+            Clique num gestor para ver a carteira conta a conta. Criativos do mês entram na próxima etapa.
             {dados?.ultimaSync && ` Dados até ${ymdParaBR(dados.ultimaSync.slice(0, 10))}.`}
           </p>
         </>
@@ -328,6 +492,7 @@ export default function Gestores() {
 // ---------------------------------------------------------------------------
 function DetalheGestor({
   clientes, anteriorPorConta, coberturaPorConta, contaPorId, ano, mes,
+  destaques, b2b, b2c, labelAnterior, labelAtual,
 }: {
   clientes: LinhaCliente[];
   anteriorPorConta: Map<string, { gasto: number; conversas: number; cpl: number }>;
@@ -335,23 +500,18 @@ function DetalheGestor({
   contaPorId: Map<string, ContaMap>;
   ano: number;
   mes: number;
+  /** Já calculado no topo — a expansão não recalcula. */
+  destaques: Destaques | null;
+  b2b: number;
+  b2c: number;
+  labelAnterior: string;
+  labelAtual: string;
 }) {
   const todas = [...clientes].sort((a, b) => b.gasto - a.gasto);
   // Quanto do gasto do gestor vem de contas com base de comparação quebrada.
   const gastoTotal = todas.reduce((s, c) => s + c.gasto, 0);
   const gastoIncompleto = todas.reduce(
     (s, c) => s + (coberturaPorConta.get(c.accountId)?.incompleta ? c.gasto : 0), 0
-  );
-
-  // Destaques calculados por regra (lib/destaques.ts) — a decomposição do ΔCPL.
-  const incompletas = useMemo(() => {
-    const s = new Set<string>();
-    for (const [id, c] of coberturaPorConta) if (c.incompleta) s.add(id);
-    return s;
-  }, [coberturaPorConta]);
-  const destaques = useMemo(
-    () => calcularDestaques(clientes, anteriorPorConta, incompletas),
-    [clientes, anteriorPorConta, incompletas]
   );
 
   // Contas sem veiculação nos DOIS meses saem da tabela e viram um rodapé discreto:
@@ -367,8 +527,34 @@ function DetalheGestor({
   return (
     <div className="pt-2">
       {destaques && destaques.deltaCpl !== null && (
-        <BlocoDestaques d={destaques} />
+        <>
+          <BlocoDestaques d={destaques} />
+          {/* Waterfall: a mesma decomposição do bloco acima, desenhada. Do CPL do mês
+              anterior ao atual, uma barra por conta — fecha exatamente porque o
+              shift-share é exato (ver lib/destaques.ts). */}
+          <div className="mb-4 rounded-lg p-3" style={{ background: TEMA.card, border: `1px solid ${LINE}` }}>
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider" style={{ color: MUTED }}>
+              Como o CPL saiu de {brlDec(destaques.cplAnterior!)} para {brlDec(destaques.cplAtual!)}
+            </p>
+            <Waterfall
+              cplAnterior={destaques.cplAnterior!}
+              cplAtual={destaques.cplAtual!}
+              contribuicoes={destaques.contribuicoes}
+              labelAnterior={labelAnterior}
+              labelAtual={labelAtual}
+            />
+          </div>
+        </>
       )}
+
+      <div className="mb-4 rounded-lg p-3" style={{ background: TEMA.card, border: `1px solid ${LINE}` }}>
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider" style={{ color: MUTED }}>
+          Origem das conversões
+        </p>
+        <BarraSplit b2b={b2b} b2c={b2c} />
+      </div>
+
+      <BlocoCriativos contas={todas} ano={ano} mes={mes} />
       {gastoIncompleto > 0 && (
         <p className="mb-3 rounded-lg px-3 py-1.5 text-[12px]" style={{ background: TEMA.limiteFundo, color: AMBAR }}>
           {brl(gastoIncompleto)} de {brl(gastoTotal)} ({Math.round((gastoIncompleto / gastoTotal) * 100)}%)
@@ -445,6 +631,101 @@ function DetalheGestor({
           {nomesSemVeiculacao.length} conta{nomesSemVeiculacao.length > 1 ? "s" : ""} sem veiculação no período
           (gasto zero nos dois meses): {nomesSemVeiculacao.join(", ")}.
         </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Melhor e pior criativo do mês — SOB DEMANDA.
+ *
+ * Não carrega junto com a tela: são ~9 chamadas para um gestor médio, e a maioria
+ * das visitas nem abre este bloco. A partir da segunda vez o servidor responde do
+ * cache permanente, sem custar chamada de insights.
+ */
+function BlocoCriativos({
+  contas, ano, mes,
+}: {
+  contas: LinhaCliente[];
+  ano: number;
+  mes: number;
+}) {
+  const [estado, setEstado] = useState<"inicial" | "carregando" | "pronto" | "erro">("inicial");
+  const [dados, setDados] = useState<{ criativos: CriativoMes[]; falhas: number; deCache: number } | null>(null);
+  const [erroMsg, setErroMsg] = useState<string | null>(null);
+
+  async function carregar() {
+    setEstado("carregando");
+    setErroMsg(null);
+    try {
+      const alvo = contas.map((c) => ({ accountId: c.accountId, cliente: c.cliente }));
+      setDados(await buscarCriativosMes(alvo, ano, mes));
+      setEstado("pronto");
+    } catch (e) {
+      setErroMsg((e as Error).message);
+      setEstado("erro");
+    }
+  }
+
+  // Mesmo piso do ranking de criativos do Dashboard: anúncio com 1 conversão
+  // produz CPL extremo sem significado, e numa tela de bonificação isso viraria
+  // "pior criativo" injustamente.
+  const elegiveis = (dados?.criativos ?? [])
+    .filter((c) => c.conversas >= PISO_CONVERSOES_DESTAQUE)
+    .sort((a, b) => a.cpl - b.cpl);
+  const melhor = elegiveis[0] ?? null;
+  const pior = elegiveis.length > 1 ? elegiveis[elegiveis.length - 1] : null;
+
+  return (
+    <div className="rounded-lg p-3" style={{ background: TEMA.card, border: `1px solid ${LINE}` }}>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: MUTED }}>
+          Criativos do mês
+        </p>
+        {estado === "inicial" && (
+          <button
+            onClick={carregar}
+            className="rounded-full px-3 py-1 text-[12px] font-medium"
+            style={{ background: TEMA.destaque, color: TEMA.texto }}
+          >
+            Carregar
+          </button>
+        )}
+        {estado === "pronto" && dados && (
+          <span className="text-[11px]" style={{ color: MUTED }}>
+            {dados.criativos.length} anúncios · {elegiveis.length} com ≥{PISO_CONVERSOES_DESTAQUE} conversões
+            {dados.deCache > 0 && ` · ${dados.deCache} conta(s) do cache`}
+            {dados.falhas > 0 && ` · ${dados.falhas} conta(s) falharam`}
+          </span>
+        )}
+      </div>
+
+      {estado === "inicial" && (
+        <p className="text-[12px]" style={{ color: MUTED }}>
+          Consulta a Meta na primeira vez; depois vem do cache (mês fechado não muda).
+        </p>
+      )}
+      {estado === "carregando" && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[0, 1].map((i) => (
+            <div key={i} className="h-20 animate-pulse rounded-xl motion-reduce:animate-none" style={{ background: TEMA.chip }} />
+          ))}
+        </div>
+      )}
+      {estado === "erro" && (
+        <p className="text-[12px]" style={{ color: RED }}>{erroMsg}</p>
+      )}
+      {estado === "pronto" && (
+        elegiveis.length === 0 ? (
+          <p className="text-[12px]" style={{ color: MUTED }}>
+            Nenhum anúncio com pelo menos {PISO_CONVERSOES_DESTAQUE} conversões no mês.
+          </p>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <MiniCardCriativo c={melhor!} rotulo="melhor CPL" bom />
+            {pior && <MiniCardCriativo c={pior} rotulo="pior CPL" bom={false} />}
+          </div>
+        )
       )}
     </div>
   );
