@@ -342,8 +342,7 @@ export default function Gestores() {
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <p className="text-[13px] uppercase tracking-wider" style={{ color: MUTED }}>Evolução do CPL</p>
               <p className="text-[11px]" style={{ color: MUTED }}>
-                verde = caiu (bom) · vermelho = subiu · escala logarítmica
-                {pontosSlope.some((p) => p.volumeBaixo) && " · ⚠ tracejado = volume baixo"}
+                verde = caiu (bom) · vermelho = subiu · passe o mouse para isolar uma linha
               </p>
             </div>
             <SlopeCpl pontos={pontosSlope} labelAnterior={labelAnterior} labelAtual={labelAtual} />
