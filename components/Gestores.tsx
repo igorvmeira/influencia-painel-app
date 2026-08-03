@@ -10,7 +10,7 @@ import { TEMA } from "@/lib/brand";
 import { ContaMap, LinhaCliente } from "@/lib/types";
 import {
   calcularDestaques, ContribuicaoConta, Destaques,
-  serieCplDiaria, elegibilidadeDestaque, PISO_CONVERSOES_DESTAQUE,
+  serieCplDiaria, elegibilidadeDestaque, PISO_CONVERSOES_DESTAQUE, PISO_CONVERSOES_GESTOR,
 } from "@/lib/destaques";
 import { buscarCriativosMes, CriativoMes } from "@/lib/useCriativosMes";
 import MiniCardCriativo from "./MiniCardCriativo";
@@ -65,6 +65,10 @@ function desdeParaYmd(v: unknown): string | null {
  * cada conta tem um dono só e o campo `gestor` atual vale. Isto aqui é a DEFESA
  * contra o furo dessa regra: se alguém trocar no meio do mês, os números do mês
  * inteiro vão para o dono atual, e o mês do outro gestor some sem aviso.
+ *
+ * A regra passou a valer A PARTIR DE AGOSTO/2026 (decisão da agência). JULHO/2026
+ * fica como está: mês inteiro atribuído ao gestor atual, inclusive nas contas que
+ * trocaram de dono no dia 27 — por isso o selo aparece nelas, e é assim que deve ser.
  *
  * LIMITE CONHECIDO: o histórico só existe a partir de 29/07/2026 (quando a tela
  * /carteira entrou), e o import só passou a registrar na Etapa A. Trocas anteriores
@@ -220,8 +224,11 @@ export default function Gestores() {
     return ord.find((g) => porGestor.get(g.nome)?.elegivel)?.nome ?? null;
   }, [painel, porGestor]);
 
-  // Pontos do slope. Gestor abaixo do piso de conversões fica FORA da escala:
-  // com 5 conversões no mês, o CPL vira ruído e achataria todas as outras linhas.
+  // Pontos do slope. TODOS os gestores entram, inclusive os de volume baixo — o piso
+  // de conversões vale só para a elegibilidade do SELO, não para a exibição aqui.
+  // Quem está abaixo do piso vai marcado (linha tracejada + ⚠ + motivo no tooltip),
+  // e a escala logarítmica do gráfico é o que mantém as linhas normais legíveis
+  // mesmo com um CPL uma ordem de grandeza acima.
   const pontosSlope = useMemo(() => {
     if (!painel) return [];
     return painel.gestores.map((g) => {
@@ -230,10 +237,25 @@ export default function Gestores() {
         nome: g.nome,
         cplAnterior: ant?.cpl ?? 0,
         cplAtual: g.cpl,
-        elegivelNaEscala: g.conversas >= 100 && (ant?.conversas ?? 0) >= 100,
+        volumeBaixo: g.conversas < PISO_CONVERSOES_GESTOR,
+        conversas: g.conversas,
       };
     });
   }, [painel, painelAnterior]);
+
+  // ORDEM DOS CARDS: por EVOLUÇÃO (maior queda de CPL primeiro), não por gasto.
+  // A métrica do bônus é a evolução do CPL contra o mês anterior, então a ordem da
+  // tela espelha o critério da premiação. Gestor sem conversão no mês não tem
+  // evolução definida e vai para o fim.
+  const gestoresPorEvolucao = useMemo(() => {
+    if (!painel) return [];
+    return [...painel.gestores].sort((a, b) => {
+      if (a.conversas === 0 && b.conversas === 0) return b.gasto - a.gasto;
+      if (a.conversas === 0) return 1;
+      if (b.conversas === 0) return -1;
+      return a.cplVar - b.cplVar; // menor variação = maior queda = melhor
+    });
+  }, [painel]);
 
   const [visao, setVisao] = useState<"cards" | "tabela">("cards");
   const carregando = !dados && !erro;
@@ -320,8 +342,8 @@ export default function Gestores() {
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <p className="text-[13px] uppercase tracking-wider" style={{ color: MUTED }}>Evolução do CPL</p>
               <p className="text-[11px]" style={{ color: MUTED }}>
-                verde = caiu (bom) · vermelho = subiu
-                {pontosSlope.some((p) => !p.elegivelNaEscala) && " · gestores com volume baixo ficam fora da escala"}
+                verde = caiu (bom) · vermelho = subiu · escala logarítmica
+                {pontosSlope.some((p) => p.volumeBaixo) && " · ⚠ tracejado = volume baixo"}
               </p>
             </div>
             <SlopeCpl pontos={pontosSlope} labelAnterior={labelAnterior} labelAtual={labelAtual} />
@@ -346,7 +368,7 @@ export default function Gestores() {
 
           {visao === "cards" ? (
             <div className="mb-6 grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>
-              {painel.gestores.map((g) => {
+              {gestoresPorEvolucao.map((g) => {
                 const info = porGestor.get(g.nome);
                 const cob = incompletasPorGestor.get(g.nome);
                 const aberto = expandido === g.nome;
