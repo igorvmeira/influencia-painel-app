@@ -79,16 +79,29 @@ export default function Orientacoes() {
           </div>
 
           <div className="space-y-8">
-            {gruposFiltrados.map(([gestor, contas]) => (
-              <div key={gestor}>
-                <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-wider" style={{ color: MUTED }}>{gestor}</h2>
-                <div className="space-y-2">
-                  {contas.map((c) => (
-                    <LinhaOrientacao key={c.accountId} conta={c} atual={mapa![c.accountId] ?? null} aoSalvar={recarregar} />
-                  ))}
+            {gruposFiltrados.map(([gestor, contas]) => {
+              // "Sem orientação" é o número acionável desta tela — é o que sobrou
+              // para preencher. Vem junto da contagem para o grupo se explicar sozinho.
+              const semOrientacao = contas.filter((c) => !mapa![c.accountId]).length;
+              return (
+                <div key={gestor}>
+                  <h2 className="mb-3 flex flex-wrap items-baseline gap-x-2 text-[13px] font-semibold uppercase tracking-wider" style={{ color: MUTED }}>
+                    {gestor}
+                    <span className="font-normal normal-case tracking-normal">
+                      · <span className="tabular-nums">{contas.length}</span> conta{contas.length === 1 ? "" : "s"}
+                      {semOrientacao > 0 && (
+                        <> · <span className="tabular-nums">{semOrientacao}</span> sem orientação</>
+                      )}
+                    </span>
+                  </h2>
+                  <div className="space-y-2">
+                    {contas.map((c, i) => (
+                      <LinhaOrientacao key={c.accountId} conta={c} atual={mapa![c.accountId] ?? null} ordem={i + 1} aoSalvar={recarregar} />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {gruposFiltrados.length === 0 && (
               <p className="text-[13px]" style={{ color: MUTED }}>Nenhuma conta encontrada.</p>
             )}
@@ -99,8 +112,11 @@ export default function Orientacoes() {
   );
 }
 
-function LinhaOrientacao({ conta, atual, aoSalvar }: {
-  conta: ContaMap; atual: EntradaOrientacao | null; aoSalvar: () => Promise<void>;
+// `ordem` é contador de LISTA, não posição de ranking: numera dentro do grupo do
+// gestor, na ordem alfabética em que o grupo aparece, e a busca renumera. Mesma regra
+// da /carteira e da tabela de clientes do Dashboard.
+function LinhaOrientacao({ conta, atual, ordem, aoSalvar }: {
+  conta: ContaMap; atual: EntradaOrientacao | null; ordem: number; aoSalvar: () => Promise<void>;
 }) {
   const [editando, setEditando] = useState(false);
   const [texto, setTexto] = useState("");
@@ -155,14 +171,18 @@ function LinhaOrientacao({ conta, atual, aoSalvar }: {
     <div className="p-4" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-brand-ink">{conta.cliente}</p>
+          <p className="flex items-center gap-2 text-sm font-medium text-brand-ink">
+            <span className="w-6 shrink-0 text-right text-[11px] font-normal tabular-nums" style={{ color: MUTED }}>{ordem}</span>
+            <span className="truncate">{conta.cliente}</span>
+          </p>
+          {/* ml-8 = largura do número (w-6) + gap-2: alinha o texto com o nome. */}
           {!editando && (
-            <p className="mt-1 whitespace-pre-wrap text-[13px]" style={{ color: atual ? TEMA.texto : MUTED }}>
+            <p className="ml-8 mt-1 whitespace-pre-wrap text-[13px]" style={{ color: atual ? TEMA.texto : MUTED }}>
               {atual ? atual.texto : "—"}
             </p>
           )}
           {!editando && atual && (
-            <p className="mt-1 text-[11px]" style={{ color: MUTED }}>
+            <p className="ml-8 mt-1 text-[11px]" style={{ color: MUTED }}>
               atualizada {haQuanto(atual.em)}{atual.autor ? ` por ${atual.autor}` : ""}
             </p>
           )}

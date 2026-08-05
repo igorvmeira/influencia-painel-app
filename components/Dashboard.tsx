@@ -751,7 +751,20 @@ export default function Dashboard(
               const corBarra = acimaDoTeto ? RED : melhor ? YELLOW : TEMA.barraNeutra;
               return (
                 <div key={g.nome} className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                  <div className="flex w-28 shrink-0 items-center gap-2 sm:w-44">
+                  <div className="flex w-36 shrink-0 items-center gap-2 sm:w-52">
+                    {/* POSIÇÃO no ranking — não é o mesmo número das listas.
+                        Aqui a ordem significa alguma coisa (menor CPL primeiro), então
+                        o número vem com peso, igual ao ranking de Criativos, que já
+                        fazia isso. Nas listas de conferência (/carteira, tabela de
+                        clientes) ele é só contador e vai discreto.
+                        O 1º NÃO vai em dourado: o selo "melhor" ao lado já é o dourado
+                        da linha, e a casa não usa a cor de destaque como texto. */}
+                    <span
+                      className="w-5 shrink-0 text-sm font-medium tabular-nums"
+                      style={{ color: melhor ? TEMA.texto : MUTED }}
+                    >
+                      {i + 1}
+                    </span>
                     <Iniciais nome={g.nome} />
                     <span className="truncate text-sm" style={{ color: TEMA.texto }}>{g.nome}</span>
                     {melhor && (
@@ -869,6 +882,12 @@ export default function Dashboard(
             <table className="w-full border-collapse text-[13px]">
               <thead>
                 <tr style={{ color: MUTED }} className="text-left">
+                  {/* Numeração (Roberto, 05/08/2026): posição NA LISTA COMO ESTÁ NA TELA
+                      — depois da busca e da ordenação. Serve para contar e localizar a
+                      linha, não para identificar a conta; reordenar renumera. Não é
+                      clicável de propósito: ordenar por "posição" não significa nada.
+                      Mesma regra em /carteira e /gestores. */}
+                  <th className="w-10 px-4 py-3 text-right font-medium" style={{ borderBottom: `1px solid ${LINE}` }}>#</th>
                   <Th onClick={() => ordenar("cliente")}>Cliente{seta("cliente")}</Th>
                   <Th onClick={() => ordenar("tipo")}>Tipo{seta("tipo")}</Th>
                   <Th right onClick={() => ordenar("gasto")}>Gasto{seta("gasto")}</Th>
@@ -886,13 +905,13 @@ export default function Dashboard(
               <tbody>
                 {clientes.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-6 text-center" style={{ color: MUTED }}>
+                    <td colSpan={7} className="px-4 py-6 text-center" style={{ color: MUTED }}>
                       Nenhum cliente encontrado.
                     </td>
                   </tr>
                 ) : (
                   clientes.map((c, i) => (
-                    <LinhaClienteRow key={c.accountId} c={c} limite={limitesPorConta.get(c.accountId)} orientacao={orientacoes?.[c.accountId] ?? null} par={i % 2 === 1} />
+                    <LinhaClienteRow key={c.accountId} c={c} ordem={i + 1} limite={limitesPorConta.get(c.accountId)} orientacao={orientacoes?.[c.accountId] ?? null} par={i % 2 === 1} />
                   ))
                 )}
               </tbody>
@@ -1056,13 +1075,14 @@ function Th({ children, right, onClick }: { children: React.ReactNode; right?: b
   );
 }
 
-function LinhaClienteRow({ c, limite, orientacao, par }: {
-  c: LinhaCliente; limite?: LimiteConta; orientacao: EntradaOrientacao | null; par?: boolean;
+function LinhaClienteRow({ c, ordem, limite, orientacao, par }: {
+  c: LinhaCliente; ordem: number; limite?: LimiteConta; orientacao: EntradaOrientacao | null; par?: boolean;
 }) {
   return (
     // Zebra sutil (linhas alternadas) melhora a leitura horizontal em tabela densa;
     // hover:bg-brand-hover = TEMA.hover (classe Tailwind, ver tailwind.config).
     <tr className="transition-colors hover:bg-brand-hover" style={par ? { background: TEMA.zebra } : undefined}>
+      <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: MUTED }}>{ordem}</td>
       <td className="px-4 py-3" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>
         <span className="inline-flex items-center gap-1.5">
           {c.cliente}

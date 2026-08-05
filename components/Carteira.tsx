@@ -85,8 +85,8 @@ export default function Carteira() {
           </div>
 
           <div className="space-y-2">
-            {listaFiltrada.map((c) => (
-              <LinhaConta key={c.accountId} conta={c} />
+            {listaFiltrada.map((c, i) => (
+              <LinhaConta key={c.accountId} conta={c} ordem={i + 1} />
             ))}
             {listaFiltrada.length === 0 && (
               <p className="text-[13px]" style={{ color: MUTED }}>Nenhuma conta encontrada.</p>
@@ -98,7 +98,12 @@ export default function Carteira() {
   );
 }
 
-function LinhaConta({ conta }: { conta: ContaMap }) {
+// NUMERAÇÃO (pedido do Roberto, 05/08/2026). Mesma regra nas três telas que numeram
+// (/carteira, /gestores e a tabela de clientes do Dashboard): o número é a POSIÇÃO NA
+// LISTA COMO ELA ESTÁ NA TELA — depois da busca, do filtro e da ordenação. Serve para
+// contar e para achar a linha ("a 12ª"), não para identificar a conta: filtrar por um
+// gestor renumera de 1 a N. O identificador estável continua sendo o accountId.
+function LinhaConta({ conta, ordem }: { conta: ContaMap; ordem: number }) {
   // Gestor "vivo": estado local que reflete a última edição sem esperar re-render do cache.
   const [gestorAtual, setGestorAtual] = useState(conta.gestor);
   const [sel, setSel] = useState(conta.gestor);
@@ -139,6 +144,8 @@ function LinhaConta({ conta }: { conta: ContaMap }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
+            {/* Largura fixa para os nomes alinharem mesmo com 1, 2 ou 3 dígitos. */}
+            <span className="w-6 shrink-0 text-right text-[11px] tabular-nums" style={{ color: MUTED }}>{ordem}</span>
             <p className="truncate text-sm font-medium text-brand-ink">{conta.cliente}</p>
             <span
               className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase"
@@ -149,12 +156,13 @@ function LinhaConta({ conta }: { conta: ContaMap }) {
               {pausada ? "Pausada" : "Ativa"}
             </span>
           </div>
-          <p className="mt-1 text-[12px]" style={{ color: MUTED }}>
+          {/* ml-8 = largura do número (w-6) + gap-2: alinha as sublinhas com o nome. */}
+          <p className="ml-8 mt-1 text-[12px]" style={{ color: MUTED }}>
             {(conta.nicho && conta.nicho.trim()) || "Sem nicho"}
             {carimbo ? ` · ${carimbo}` : ""}
           </p>
           {divergente && (
-            <p className="mt-1 text-[11px]" style={{ color: AMBER }}>
+            <p className="ml-8 mt-1 text-[11px]" style={{ color: AMBER }}>
               ⚠ gestor {gestorAtual === PAUSADO ? "= PAUSADO, mas a conta segue ATIVA" : "definido, mas a conta está PAUSADA"} — ajuste a flag no import/Console se preciso.
             </p>
           )}

@@ -582,9 +582,21 @@ function DetalheGestor({
           vêm de contas sem mês completo — a evolução delas não é comparável.
         </p>
       )}
+      {/* A tabela ESCONDE as contas sem veiculação (viram rodapé), então contar as
+          linhas não bate com o total do card do gestor. Esta linha fecha a conta —
+          sem ela, numerar convidaria justamente à conferência que dá errado. */}
+      <p className="mb-1.5 text-[11px]" style={{ color: MUTED }}>
+        <span className="tabular-nums">{linhas.length}</span> conta{linhas.length === 1 ? "" : "s"} com veiculação
+        {nomesSemVeiculacao.length > 0 && (
+          <> · <span className="tabular-nums">{nomesSemVeiculacao.length}</span> sem veiculação (no rodapé)</>
+        )}
+        {" · "}<span className="tabular-nums">{todas.length}</span> no total
+      </p>
       <table className="w-full border-collapse text-[12px]">
         <thead>
           <tr style={{ color: MUTED }} className="text-left">
+            {/* Mesma regra das outras telas: posição na lista como está na tela. */}
+            <th className="w-8 py-2 pr-3 text-right font-medium">#</th>
             <th className="py-2 pr-3 font-medium">Conta</th>
             <th className="py-2 pr-3 text-right font-medium">Gasto</th>
             <th className="py-2 pr-3 text-right font-medium">Conv.</th>
@@ -594,7 +606,7 @@ function DetalheGestor({
           </tr>
         </thead>
         <tbody>
-          {linhas.map((c) => {
+          {linhas.map((c, i) => {
             const ant = anteriorPorConta.get(c.accountId);
             const cob = coberturaPorConta.get(c.accountId);
             const conta = contaPorId.get(c.accountId);
@@ -615,6 +627,7 @@ function DetalheGestor({
 
             return (
               <tr key={c.accountId}>
+                <td className="py-2 pr-3 text-right tabular-nums" style={{ color: MUTED }}>{i + 1}</td>
                 <td className="py-2 pr-3" style={{ color: TEMA.texto }}>{c.cliente}</td>
                 <td className="py-2 pr-3 text-right tabular-nums" style={{ color: TEMA.texto }}>{brl(c.gasto)}</td>
                 <td className="py-2 pr-3 text-right tabular-nums" style={{ color: TEMA.texto }}>{num(c.conversas)}</td>

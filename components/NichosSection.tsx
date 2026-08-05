@@ -47,7 +47,16 @@ export default function NichosSection({ nichos }: { nichos: LinhaNicho[] }) {
             const corBarra = pior ? RED : melhor ? YELLOW : TEMA.barraNeutra;
             return (
               <div key={n.nicho} className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                <div className="flex w-32 shrink-0 items-center gap-2 sm:w-44">
+                <div className="flex w-36 shrink-0 items-center gap-2 sm:w-52">
+                  {/* Posição no ranking, mesma receita do ranking de gestores e do de
+                      criativos: peso forte porque a ordem significa algo (menor CPL
+                      primeiro). Os selos "melhor"/"pior" continuam carregando a cor. */}
+                  <span
+                    className="w-5 shrink-0 text-sm font-medium tabular-nums"
+                    style={{ color: melhor ? TEMA.texto : MUTED }}
+                  >
+                    {i + 1}
+                  </span>
                   <span className="truncate text-sm text-brand-ink">{n.nicho}</span>
                   {melhor && (
                     <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase" style={{ background: YELLOW, color: TEMA.texto }}>
