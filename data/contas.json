@@ -18,10 +18,10 @@
   {
     "accountId": "act_25425826590367592",
     "cliente": "Ricardo Alckmin",
-    "gestor": "LUCAS",
+    "gestor": "PAUSADO",
     "tipo": "B2B",
     "nicho": "Propaganda",
-    "pausado": false
+    "pausado": true
   },
   {
     "accountId": "act_1313209170491744",
@@ -314,10 +314,10 @@
   {
     "accountId": "act_487888250698890",
     "cliente": "NORTELINE",
-    "gestor": "ANDRÉ",
+    "gestor": "PAUSADO",
     "tipo": "B2C",
     "nicho": "Provedor (ISP)",
-    "pausado": false
+    "pausado": true
   },
   {
     "accountId": "act_1258872095312487",
@@ -410,10 +410,10 @@
   {
     "accountId": "act_570867842438179",
     "cliente": "STARTX",
-    "gestor": "LUCAS",
+    "gestor": "PAUSADO",
     "tipo": "",
     "nicho": "Provedor (ISP)",
-    "pausado": false
+    "pausado": true
   },
   {
     "accountId": "act_1014818350796748",
@@ -458,10 +458,10 @@
   {
     "accountId": "act_602747946019033",
     "cliente": "BRASTURBO (PROVEDOR)",
-    "gestor": "DANIEL",
+    "gestor": "PAUSADO",
     "tipo": "B2C",
     "nicho": "Provedor (ISP)",
-    "pausado": false
+    "pausado": true
   },
   {
     "accountId": "act_1381711309605032",
@@ -554,10 +554,10 @@
   {
     "accountId": "act_1806079820282103",
     "cliente": "YNOVA NET (PROVEDOR)",
-    "gestor": "JOÃO PEDRO",
+    "gestor": "PAUSADO",
     "tipo": "",
     "nicho": "Provedor (ISP)",
-    "pausado": false
+    "pausado": true
   },
   {
     "accountId": "act_1164653018911640",
@@ -730,10 +730,10 @@
   {
     "accountId": "act_2030710527729327",
     "cliente": "Guará Net",
-    "gestor": "JOÃO PEDRO",
+    "gestor": "PAUSADO",
     "tipo": "",
     "nicho": "Provedor (ISP)",
-    "pausado": false
+    "pausado": true
   },
   {
     "accountId": "act_830495511608627",
@@ -754,10 +754,10 @@
   {
     "accountId": "act_1670450540519360",
     "cliente": "Zay Sushi",
-    "gestor": "VINÍCIUS",
+    "gestor": "PAUSADO",
     "tipo": "",
     "nicho": "Comida Japonesa",
-    "pausado": false
+    "pausado": true
   },
   {
     "accountId": "act_1282472920705306",
