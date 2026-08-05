@@ -23,8 +23,23 @@ const fmtEixoRS = new Intl.NumberFormat("pt-BR", { notation: "compact", maximumF
 const eixoRS = (v: number) => `R$ ${fmtEixoRS.format(v)}`;
 const eixoNum = (v: number) => new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 0 }).format(v);
 
-function TooltipGrafico({ active, payload, label }: {
+/**
+ * Linha-fantasma (período de comparação). Quando ausente, a linha não é desenhada
+ * — é o caso do modo dia e do personalizado com comparação automática, iguais a
+ * como sempre foram.
+ *
+ * `nota` explica por que a fantasma pode acabar antes da linha principal: com
+ * períodos de tamanhos diferentes (julho 31 vs junho 30), o último dia do período
+ * atual não tem par. Sem essa explicação o fim da linha parece corte de dado.
+ */
+export interface Fantasma {
+  rotulo: string;
+  nota?: string;
+}
+
+function TooltipGrafico({ active, payload, label, fantasma }: {
   active?: boolean; payload?: { payload: PontoGrafico }[]; label?: string;
+  fantasma?: Fantasma | null;
 }) {
   if (!active || !payload || !payload.length) return null;
   const p = payload[0].payload;
@@ -43,7 +58,14 @@ function TooltipGrafico({ active, payload, label }: {
       )}
       {p.ghost != null && (
         <div className="mt-1 flex justify-between gap-4 border-t pt-1 tabular-nums" style={{ borderColor: LINE, color: MUTED }}>
-          <span>Leads · mês anterior</span><span>{num(p.ghost)}</span>
+          <span>{fantasma?.rotulo ?? "Leads · período anterior"}</span><span>{num(p.ghost)}</span>
+        </div>
+      )}
+      {/* Dia sem par no período de comparação: aparece exatamente onde a linha
+          pontilhada terminou, que é onde alguém desconfiaria de dado faltando. */}
+      {p.ghost == null && fantasma?.nota && (
+        <div className="mt-1 border-t pt-1 text-[11px]" style={{ borderColor: LINE, color: MUTED }}>
+          Sem par na comparação — {fantasma.nota}.
         </div>
       )}
     </div>
@@ -63,8 +85,8 @@ function ItemLegenda({ cor, tracejado = false, barra = false, texto }: { cor: st
 
 // Gráfico-herói: gasto (barras, eixo R$ à esquerda), leads totais (linha amarela,
 // eixo contagem à direita) e CPL (linha vermelha tracejada, eixo oculto próprio).
-export default function HeroChart({ pontos, periodoLabel, mesAnterior = false }: {
-  pontos: PontoGrafico[]; periodoLabel: string; mesAnterior?: boolean;
+export default function HeroChart({ pontos, periodoLabel, fantasma = null }: {
+  pontos: PontoGrafico[]; periodoLabel: string; fantasma?: Fantasma | null;
 }) {
   return (
     <div className="mb-10 p-5" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}>
@@ -74,7 +96,7 @@ export default function HeroChart({ pontos, periodoLabel, mesAnterior = false }:
           <ItemLegenda cor={BARRA} barra texto="Gasto (R$, esq.)" />
           <ItemLegenda cor={LINHA_LEADS} texto="Leads totais (dir.)" />
           <ItemLegenda cor={RED} tracejado texto="CPL do dia" />
-          {mesAnterior && <ItemLegenda cor={MUTED} tracejado texto="Leads · mês anterior" />}
+          {fantasma && <ItemLegenda cor={MUTED} tracejado texto={fantasma.rotulo} />}
           <span className="text-[11px]" style={{ color: MUTED }}>· {periodoLabel}</span>
         </div>
       </div>
@@ -115,11 +137,13 @@ export default function HeroChart({ pontos, periodoLabel, mesAnterior = false }:
             <YAxis yAxisId="cpl" hide domain={["auto", "auto"]} />
 
             {/* Realce sob o cursor: escuro-sobre-claro (no dark era branco translúcido). */}
-            <Tooltip content={<TooltipGrafico />} cursor={{ fill: "rgba(28,27,23,0.05)" }} />
+            <Tooltip content={<TooltipGrafico fantasma={fantasma} />} cursor={{ fill: "rgba(28,27,23,0.05)" }} />
 
             <Bar yAxisId="gasto" dataKey="gasto" name="Gasto" fill={BARRA} radius={[2, 2, 0, 0]} maxBarSize={26} />
-            {mesAnterior && (
-              <Line yAxisId="leads" type="monotone" dataKey="ghost" name="Leads · mês anterior" stroke={MUTED} strokeWidth={1.25} strokeDasharray="3 3" dot={false} connectNulls={false} opacity={0.7} />
+            {fantasma && (
+              // connectNulls={false} é o que faz a fantasma PARAR onde o período de
+              // comparação acaba, em vez de emendar por cima do buraco.
+              <Line yAxisId="leads" type="monotone" dataKey="ghost" name={fantasma.rotulo} stroke={MUTED} strokeWidth={1.25} strokeDasharray="3 3" dot={false} connectNulls={false} opacity={0.7} />
             )}
             <Line yAxisId="leads" type="monotone" dataKey="total" name="Leads totais" stroke={LINHA_LEADS} strokeWidth={2.5} dot={false} connectNulls={false} />
             <Line yAxisId="cpl" type="monotone" dataKey="cpl" name="CPL" stroke={RED} strokeWidth={1.5} strokeDasharray="4 3" dot={false} connectNulls={false} />

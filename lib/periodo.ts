@@ -176,17 +176,38 @@ function faixaLabel(iniMs: number, fimMs: number): string {
  * mês (JanelaMes), para reaproveitar montarPainel/montarKpisMes/serieGraficoMes —
  * sem criar um caminho de cálculo paralelo.
  *
- * A comparação é o intervalo EQUIVALENTE imediatamente anterior, de mesmo tamanho
- * (ex.: 20–26/07 compara com 13–19/07), alinhado dia a dia na linha-fantasma.
+ * DOIS MODOS DE COMPARAÇÃO:
  *
- * `parcial` = o intervalo de comparação começa antes do primeiro dia disponível;
+ * - AUTOMÁTICO (compIniYmd/compFimYmd ausentes): o intervalo EQUIVALENTE
+ *   imediatamente anterior, de mesmo tamanho (ex.: 20–26/07 compara com 13–19/07).
+ *   É o comportamento original e continua sendo o padrão.
+ *
+ * - EXPLÍCITO (os dois informados): o usuário escolhe os DOIS lados da comparação
+ *   (pedido do Roberto, 05/08/2026 — ex.: julho inteiro contra junho inteiro).
+ *   Os dois parâmetros são OPCIONAIS de propósito: sem eles o caminho de código é
+ *   exatamente o de antes, então quem não usa o segundo período não muda de
+ *   comportamento por construção, não por sorte.
+ *
+ * TAMANHOS DIFERENTES são permitidos (junho tem 30 dias, julho 31). O fantasma
+ * alinha PELO INÍCIO — dia 1 do período atual com dia 1 do de comparação — e vira
+ * null quando o de comparação acaba antes (o dia 31 de julho não tem par em junho).
+ * É o mesmo tratamento que janelaMesFechado já dá ao mês curto.
+ * ATENÇÃO ao ler os números: o CPL é RAZÃO e continua justo entre tamanhos
+ * diferentes; gasto e conversões são SOMAS e carregam o dia a mais. Por isso o
+ * periodoLabel leva o tamanho de cada lado — ver o "(Nd)" abaixo — e o Dashboard
+ * levanta um aviso quando diferem. Não normalizamos por dia: mudaria em silêncio
+ * o significado do número na tela.
+ *
+ * `parcial` = algum dos dois intervalos começa antes do primeiro dia disponível;
  * nesse caso o Dashboard mostra "—" no delta em vez de número subestimado.
  */
 export function janelaPersonalizada(
   daily: MetricaDiaria[],
   contas: ContaMap[],
   inicioYmd: string,
-  fimYmd: string
+  fimYmd: string,
+  compIniYmd?: string,
+  compFimYmd?: string
 ): JanelaMes | null {
   const { ancoraMs } = ancoraMin(daily, contas);
   const primeiro = primeiroDiaDisponivel(daily, contas);
@@ -202,15 +223,32 @@ export function janelaPersonalizada(
   const N = Math.round((fimMs - iniMs) / DIA_MS) + 1;
   const off = (ms: number) => Math.round((ancoraMs - ms) / DIA_MS);
 
-  // Intervalo anterior equivalente: termina 1 dia antes do início, mesmo tamanho.
-  const fimAntMs = iniMs - DIA_MS;
-  const iniAntMs = iniMs - N * DIA_MS;
+  // Intervalo de comparação: o escolhido, ou o equivalente imediatamente anterior.
+  let iniAntMs: number;
+  let fimAntMs: number;
+  const explicito = !!compIniYmd && !!compFimYmd;
+  if (explicito) {
+    let a = Date.parse(compIniYmd + "T00:00:00Z");
+    let b = Date.parse(compFimYmd + "T00:00:00Z");
+    if (Number.isNaN(a) || Number.isNaN(b)) return null;
+    if (a > b) [a, b] = [b, a];                       // tolera inversão, igual ao atual
+    b = Math.min(b, ancoraMs);
+    if (b < a) return null;
+    iniAntMs = a;
+    fimAntMs = b;
+  } else {
+    fimAntMs = iniMs - DIA_MS;                        // termina 1 dia antes do início
+    iniAntMs = iniMs - N * DIA_MS;                    // mesmo tamanho
+  }
+  const Nprev = Math.round((fimAntMs - iniAntMs) / DIA_MS) + 1;
 
   const offsetsAtual: number[] = [];
   const offsetsAnterior: (number | null)[] = [];
   for (let i = 0; i < N; i++) {
     offsetsAtual.push(off(iniMs + i * DIA_MS));       // mais antigo → mais recente
-    offsetsAnterior.push(off(iniAntMs + i * DIA_MS));
+    // Alinhado pelo início; null quando o período de comparação já acabou.
+    // Com Nprev === N (modo automático) nenhum vira null — idêntico ao original.
+    offsetsAnterior.push(i < Nprev ? off(iniAntMs + i * DIA_MS) : null);
   }
 
   const labelAtual = faixaLabel(iniMs, fimMs);
@@ -222,13 +260,40 @@ export function janelaPersonalizada(
     antIni: off(fimAntMs),
     antFim: off(iniAntMs),
     semanas: Math.max(1, Math.round(N / 7)),
-    periodoLabel: `${labelAtual} vs ${labelAnterior}`,
+    // O tamanho de cada lado entra no rótulo que a tela inteira já exibe (cabeçalho
+    // da visão de liderança e legenda do gráfico). Sem elemento novo: com tamanhos
+    // diferentes, quem lê o Δ de gasto precisa saber que um lado tem um dia a mais.
+    periodoLabel: `${labelAtual} (${N}d) vs ${labelAnterior} (${Nprev}d)`,
   };
 
-  // Comparação não cabe no histórico disponível?
-  const parcial = primeiro != null && iniAntMs < Date.parse(primeiro + "T00:00:00Z");
+  // Algum dos dois intervalos começa antes do histórico disponível?
+  const primeiroMs = primeiro != null ? Date.parse(primeiro + "T00:00:00Z") : null;
+  const parcial = primeiroMs != null && (iniAntMs < primeiroMs || iniMs < primeiroMs);
 
-  return { espec, ancoraMs, D: N, Dprev: N, offsetsAtual, offsetsAnterior, labelAtual, labelAnterior, parcial };
+  return { espec, ancoraMs, D: N, Dprev: Nprev, offsetsAtual, offsetsAnterior, labelAtual, labelAnterior, parcial };
+}
+
+/**
+ * Dias em que dois intervalos [iniA,fimA] e [iniB,fimB] se sobrepõem (0 = disjuntos).
+ *
+ * Sobreposição é PERMITIDA no período personalizado — só avisada. É o padrão da
+ * casa (dia parcial, mês incompleto e comparação indisponível também avisam em vez
+ * de bloquear), e existe leitura legítima para intervalos que se cruzam. Mas os
+ * dias em comum contam dos DOIS lados do Δ, e isso precisa estar na tela.
+ *
+ * Só faz sentido no modo de comparação EXPLÍCITO: no automático o intervalo
+ * anterior termina um dia antes do início, então nunca há sobreposição.
+ */
+export function diasSobrepostos(
+  iniA: string, fimA: string, iniB: string, fimB: string
+): number {
+  const p = (s: string) => Date.parse(s + "T00:00:00Z");
+  const [a0, a1] = [p(iniA), p(fimA)].sort((x, y) => x - y);
+  const [b0, b1] = [p(iniB), p(fimB)].sort((x, y) => x - y);
+  if ([a0, a1, b0, b1].some(Number.isNaN)) return 0;
+  const ini = Math.max(a0, b0);
+  const fim = Math.min(a1, b1);
+  return fim < ini ? 0 : Math.round((fim - ini) / DIA_MS) + 1;
 }
 
 /**

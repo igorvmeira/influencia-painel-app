@@ -14,7 +14,7 @@ import { brl, brlDec, num, pct } from "@/lib/format";
 import { montarKpis, montarKpisMes, moedaCard, numCard, serieGrafico, serieGraficoMes } from "@/lib/kpis";
 import {
   janelaMes, intervaloLabel, janelaPersonalizada, primeiroDiaDisponivel,
-  ultimoDiaDisponivel, comparacaoExigeDesde, ymdParaBR,
+  ultimoDiaDisponivel, comparacaoExigeDesde, ymdParaBR, diasSobrepostos,
 } from "@/lib/periodo";
 import { MARCA, TEMA } from "@/lib/brand";
 import NichosSection from "./NichosSection";
@@ -104,7 +104,17 @@ function Trend({ v, menorMelhor = false }: { v: number; menorMelhor?: boolean })
 
 // Badge de variação para os KPIs. delta null → "—" (sem base suficiente).
 // `motivo` explica o "—" no tooltip com o motivo CONCRETO (datas), quando houver.
-function DeltaBadge({ delta, menorMelhor = false, motivo }: { delta: number | null; menorMelhor?: boolean; motivo?: string | null }) {
+// `contexto` diz CONTRA O QUÊ o número está variando (o periodoLabel, com o
+// tamanho de cada lado). Sem isso, um Δ de gasto entre períodos de tamanhos
+// diferentes é um número sem régua — quem passa o mouse tem que ver a régua.
+// `neutralizar` tira a COR semântica sem tirar o número: o Δ continua lá, mas
+// para de afirmar "bom" ou "ruim". Usado quando os dois períodos têm tamanhos
+// muito diferentes (ver TOLERANCIA_TAMANHO_PCT) — aí boa parte da variação de
+// gasto/conversões é calendário, e verde/vermelho seria uma conclusão errada.
+function DeltaBadge({ delta, menorMelhor = false, motivo, contexto, neutralizar }: {
+  delta: number | null; menorMelhor?: boolean; motivo?: string | null;
+  contexto?: string | null; neutralizar?: string | null;
+}) {
   // Chip com fundo tingido: o delta é o sinal que se lê de longe no KPI.
   const base = "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium";
   if (delta === null) {
@@ -112,12 +122,19 @@ function DeltaBadge({ delta, menorMelhor = false, motivo }: { delta: number | nu
       <span className={base} style={{ background: TEMA.neutroFundo, color: MUTED, cursor: "help" }} title={motivo ?? "sem período anterior comparável"}>—</span>
     );
   }
-  const cor = corVar(delta, menorMelhor);
+  const cor = neutralizar ? MUTED : corVar(delta, menorMelhor);
   const seta = delta > 0 ? "▲" : delta < 0 ? "▼" : "•";
   // O tint acompanha a SEMÂNTICA (cor), não o sinal do número: em CPL, subir é ruim.
-  const fundo = cor === GREEN ? TEMA.positivoFundo : cor === RED ? TEMA.negativoFundo : TEMA.neutroFundo;
+  const fundo = neutralizar
+    ? TEMA.neutroFundo
+    : cor === GREEN ? TEMA.positivoFundo : cor === RED ? TEMA.negativoFundo : TEMA.neutroFundo;
+  const dica = neutralizar ?? (contexto ? `Variação — ${contexto}` : null);
   return (
-    <span className={`${base} tabular-nums`} style={{ background: fundo, color: cor }}>
+    <span
+      className={`${base} tabular-nums`}
+      style={{ background: fundo, color: cor, cursor: dica ? "help" : undefined }}
+      title={dica ?? undefined}
+    >
       <span style={{ fontSize: 9 }}>{seta}</span>
       {pct(delta)}
     </span>
@@ -174,7 +191,7 @@ function Iniciais({ nome }: { nome: string }) {
 
 // Card de KPI: rótulo + subtítulo, número grande tabular (com count-up), delta
 // semântico e sparkline. O número anima ao trocar de período (respeita reduced-motion).
-function KpiCard({ label, sub, valorNum, formatar, title, delta, menorMelhor = false, destaque = false, serie, semComparacao, info }: {
+function KpiCard({ label, sub, valorNum, formatar, title, delta, menorMelhor = false, destaque = false, serie, semComparacao, info, contexto, neutralizar }: {
   label: string; sub?: string; valorNum: number; formatar: (n: number) => string; title: string;
   delta: number | null; menorMelhor?: boolean; destaque?: boolean; serie: number[];
   // Quando preenchido: o período anterior não cabe no histórico → força "—" e
@@ -182,6 +199,11 @@ function KpiCard({ label, sub, valorNum, formatar, title, delta, menorMelhor = f
   semComparacao?: string | null;
   // Texto do ⓘ ao lado do rótulo (o que a métrica conta / ressalvas).
   info?: string;
+  // Contra o quê o Δ está variando (periodoLabel) — vira tooltip do chip.
+  contexto?: string | null;
+  // Preenchido = o Δ perde a cor semântica (soma contra períodos de tamanhos
+  // muito diferentes). O texto vira o tooltip. Não se aplica ao CPL.
+  neutralizar?: string | null;
 }) {
   return (
     <div className="p-5" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}>
@@ -205,7 +227,7 @@ function KpiCard({ label, sub, valorNum, formatar, title, delta, menorMelhor = f
         style={{ color: destaque ? OURO : TEXTO, fontVariantNumeric: "tabular-nums" }}
       />
       <div className="mt-2 flex items-center gap-2">
-        <DeltaBadge delta={semComparacao ? null : delta} menorMelhor={menorMelhor} motivo={semComparacao} />
+        <DeltaBadge delta={semComparacao ? null : delta} menorMelhor={menorMelhor} motivo={semComparacao} contexto={contexto} neutralizar={neutralizar} />
         <span className="text-[11px]" style={{ color: MUTED }}>vs período anterior</span>
       </div>
     </div>
@@ -221,6 +243,36 @@ const ROTULO_CURTO: Record<Periodo, string> = {
   "7 dias": "7d", "15 dias": "15d", "30 dias": "30d", "60 dias": "60d",
   "Mês": "Mês", "Personalizado": "Personalizado",
 };
+
+// Até que ponto dois períodos de tamanhos diferentes ainda comparam de forma justa
+// em GASTO e CONVERSÕES (que são somas — o período mais longo tem mais dias
+// somando). Acima disto, o Δ dessas duas métricas perde a cor semântica e vira
+// cinza: continua sendo exibido, mas para de parecer bom/ruim.
+//
+// Decisão da agência (05/08/2026): 31 vs 30 dias (~3%) é efeito de calendário e
+// não merece perder a cor — o chip âmbar já avisa. Já 7 vs 31 dias (~77%) produz
+// um Δ de gasto de −75% que é quase todo tamanho, não desempenho.
+//
+// O Δ de CPL NUNCA é neutralizado: é uma RAZÃO (gasto ÷ conversões), sobrevive à
+// diferença de tamanho, e é o número que a agência usa para avaliar o mês.
+//
+// PISO MEDIDO — cuidado ao baixar: 10% foi escolhido para que QUALQUER par de
+// meses do calendário mantenha a cor, e a folga é pequena.
+//     31 vs 30 = 3,23%   31 vs 29 = 6,45%   30 vs 28 = 6,67%
+//     31 vs 28 = 9,68%  <- pior caso (janeiro vs fevereiro), a 0,32 ponto do teto
+// Abaixo de ~9,7 a comparação mês contra mês passa a perder a cor em fevereiro,
+// que é justamente o caso que a agência quis preservar.
+const TOLERANCIA_TAMANHO_PCT = 10;
+
+/**
+ * Diferença proporcional entre dois períodos, em % do MAIOR — assim o resultado
+ * fica entre 0 e 100% e não explode quando o menor é muito pequeno
+ * (7 vs 31 dias dá 77%, não 343%).
+ */
+function difTamanhoPct(a: number, b: number): number {
+  const maior = Math.max(a, b);
+  return maior > 0 ? (Math.abs(a - b) / maior) * 100 : 0;
+}
 
 // Dia de hoje (YYYY-MM-DD) no fuso do cliente — para saber se o último dia com
 // dado ainda está "em andamento" (o sync roda de manhã, então ele é parcial).
@@ -302,13 +354,44 @@ export default function Dashboard(
     setCustIni(ymd(Math.max(iniMs, piso)));
   }, [ultimoDia, primeiroDia, custIni, custFim]);
 
+  // ---- Período de comparação ESCOLHIDO (pedido do Roberto, 05/08/2026) ----
+  // Desligado por padrão: quem só quer a janela atual não vê complexidade a mais,
+  // e o comportamento é o de sempre (mesmo nº de dias imediatamente antes).
+  const [compAtivo, setCompAtivo] = useState(false);
+  const [compIni, setCompIni] = useState("");
+  const [compFim, setCompFim] = useState("");
+
+  // Ao LIGAR, os campos vêm preenchidos com a janela automática que já estava
+  // valendo — abrir o painel não pode mexer em nenhum número; só editar deve.
+  // Ao desligar, os valores ficam guardados: religar não perde o que foi digitado.
+  useEffect(() => {
+    if (!compAtivo || compIni || compFim || !custIni || !custFim) return;
+    const iniMs = Date.parse(custIni + "T00:00:00Z");
+    const fimMs = Date.parse(custFim + "T00:00:00Z");
+    if (Number.isNaN(iniMs) || Number.isNaN(fimMs)) return;
+    const n = Math.round((fimMs - iniMs) / 86400000) + 1;
+    const ymd = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+    setCompIni(ymd(iniMs - n * 86400000));
+    setCompFim(ymd(iniMs - 86400000));
+  }, [compAtivo, compIni, compFim, custIni, custFim]);
+
+  // Só vale quando ligado E com os dois campos preenchidos — meio preenchido cai
+  // no automático em vez de produzir janela torta.
+  const compValido = compAtivo && !!compIni && !!compFim;
+
   // Modo mês (mês corrente 1..D vs mês anterior 1..D). No modo dia, jm é null.
   const modoMes = periodo === "Mês";
   const modoCustom = periodo === "Personalizado";
   const jmMes = useMemo(() => (modoMes ? janelaMes(daily, contasAtivas) : null), [modoMes, daily, contasAtivas]);
   const jmCustom = useMemo(
-    () => (modoCustom ? janelaPersonalizada(daily, contasAtivas, custIni, custFim) : null),
-    [modoCustom, daily, contasAtivas, custIni, custFim]
+    () => (modoCustom
+      ? janelaPersonalizada(
+          daily, contasAtivas, custIni, custFim,
+          compValido ? compIni : undefined,
+          compValido ? compFim : undefined
+        )
+      : null),
+    [modoCustom, daily, contasAtivas, custIni, custFim, compValido, compIni, compFim]
   );
   // Janela explícita ativa (mês OU personalizado). No modo dia, é null.
   const jm = modoCustom ? jmCustom : jmMes;
@@ -350,14 +433,63 @@ export default function Dashboard(
     const desdeBR = (ymd: string) => ymdParaBR(ymd);
     if (modoCustom) {
       if (!jmCustom?.parcial) return null;
-      const exigidoMs = Date.parse(custIni + "T00:00:00Z") - jmCustom.D * 86400000;
-      return `comparação indisponível: exigiria dados desde ${desdeBR(new Date(exigidoMs).toISOString().slice(0, 10))}, o histórico do painel começa em ${desdeBR(primeiroDia)}`;
+      // Com período de comparação ESCOLHIDO, a data exigida é o próprio início dele
+      // — não precisa recalcular. No automático, segue sendo início − D dias.
+      const exigidoYmd = compValido
+        ? compIni
+        : new Date(Date.parse(custIni + "T00:00:00Z") - jmCustom.D * 86400000).toISOString().slice(0, 10);
+      return `comparação indisponível: exigiria dados desde ${desdeBR(exigidoYmd)}, o histórico do painel começa em ${desdeBR(primeiroDia)}`;
     }
     if (modoMes) return null; // o modo mês já tem o selo "dados parciais" próprio
     const exigido = comparacaoExigeDesde(daily, contasAtivas, diasEfetivos);
     if (!exigido) return null;
     return `comparação indisponível: exigiria dados desde ${desdeBR(exigido)}, o histórico do painel começa em ${desdeBR(primeiroDia)}`;
-  }, [primeiroDia, modoCustom, modoMes, jmCustom, custIni, daily, contasAtivas, diasEfetivos]);
+  }, [primeiroDia, modoCustom, modoMes, jmCustom, custIni, compValido, compIni, daily, contasAtivas, diasEfetivos]);
+
+  // ---- Tamanhos diferentes: o Δ de gasto/conversões carrega o dia a mais ----
+  // CPL é RAZÃO e continua justo; gasto e conversões são SOMAS. Avisamos em vez de
+  // normalizar por dia — normalizar mudaria em silêncio o significado do número.
+  const avisoTamanhos = useMemo(() => {
+    if (!modoCustom || !compValido || !jmCustom) return null;
+    if (jmCustom.D === jmCustom.Dprev) return null;
+    return `períodos de tamanhos diferentes (${jmCustom.D} vs ${jmCustom.Dprev} dias)`;
+  }, [modoCustom, compValido, jmCustom]);
+
+  // Diferença GRANDE o bastante para o Δ de gasto/conversões perder a cor.
+  // Preenchido = neutraliza (o texto vira o tooltip do chip); null = mantém a cor.
+  // O CPL não passa por aqui de propósito — razão sobrevive a tamanhos diferentes.
+  const neutralizarSomas = useMemo(() => {
+    if (!modoCustom || !compValido || !jmCustom) return null;
+    if (difTamanhoPct(jmCustom.D, jmCustom.Dprev) <= TOLERANCIA_TAMANHO_PCT) return null;
+    return `variação afetada por períodos de tamanhos muito diferentes (${jmCustom.D} vs ${jmCustom.Dprev} dias)`;
+  }, [modoCustom, compValido, jmCustom]);
+
+  // ---- Linha-fantasma do gráfico (período de comparação) ----
+  // Modo Mês: exatamente como antes. Personalizado com comparação ESCOLHIDA: a
+  // fantasma passa a aparecer, com o rótulo do período real. Personalizado
+  // automático e modo dia seguem SEM fantasma, como sempre foram.
+  const fantasmaGrafico = useMemo(() => {
+    if (modoMes) return { rotulo: "Leads · mês anterior" };
+    if (modoCustom && compValido && jmCustom) {
+      return {
+        rotulo: `Leads · ${jmCustom.labelAnterior}`,
+        // Só quando os tamanhos diferem: é o único caso em que a linha acaba antes.
+        nota: jmCustom.D !== jmCustom.Dprev
+          ? `o período de comparação tem ${jmCustom.Dprev} dias`
+          : undefined,
+      };
+    }
+    return null;
+  }, [modoMes, modoCustom, compValido, jmCustom]);
+
+  // ---- Sobreposição: permitida, nunca bloqueada — mas precisa estar na tela ----
+  // Só existe no modo explícito; no automático o anterior termina antes do início.
+  const diasEmComum = useMemo(
+    () => (modoCustom && compValido && custIni && custFim
+      ? diasSobrepostos(custIni, custFim, compIni, compFim)
+      : 0),
+    [modoCustom, compValido, custIni, custFim, compIni, compFim]
+  );
 
   // ---- Aviso de dia parcial: a janela inclui o último dia sincronizado? ----
   // O sync roda de manhã, então o dia corrente entra incompleto.
@@ -365,11 +497,15 @@ export default function Dashboard(
     if (!ultimoDia) return null;
     const ultimoEhHoje = ultimoDia === hojeNoFuso();
     if (!ultimoEhHoje) return null;             // último dia já fechou: nada a avisar
-    const incluiUltimo = modoCustom ? custFim >= ultimoDia : true; // dia/mês sempre terminam na âncora
+    // Vale para os DOIS períodos: o de comparação também pode alcançar a âncora
+    // quando é escolhido à mão (no automático ele termina antes, por definição).
+    const incluiUltimo = modoCustom
+      ? custFim >= ultimoDia || (compValido && compFim >= ultimoDia)
+      : true;                                       // dia/mês sempre terminam na âncora
     if (!incluiUltimo) return null;
     const hora = horaSync(ultimaSync);
     return hora ? `inclui dia parcial — última sincronização às ${hora}` : "inclui dia parcial (ainda em andamento)";
-  }, [ultimoDia, modoCustom, custFim, ultimaSync]);
+  }, [ultimoDia, modoCustom, custFim, compValido, compFim, ultimaSync]);
 
   // NOTA (29/07/2026): existia aqui um `tooltipSemDado`, que calculava a data em que a
   // coleta de reach/impressions começou para explicar o "—" dessas duas colunas.
@@ -507,45 +643,115 @@ export default function Dashboard(
       {/* Campos de data do período personalizado (travados na janela disponível) */}
       {modoCustom && (
         <div
-          className="mb-5 flex flex-wrap items-end gap-3 px-4 py-3"
+          className="mb-5 px-4 py-3"
           style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}
         >
-          <label className="text-[12px]" style={{ color: MUTED }}>
-            Início
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="text-[12px]" style={{ color: MUTED }}>
+              Início
+              <input
+                type="date"
+                value={custIni}
+                min={primeiroDia ?? undefined}
+                max={custFim || ultimoDia || undefined}
+                onChange={(e) => setCustIni(e.target.value)}
+                className="mt-1 block rounded-lg px-3 py-2 text-sm outline-none tabular-nums"
+                style={{ background: INK, color: TEXTO, border: `1px solid ${LINE}` }}
+              />
+            </label>
+            <label className="text-[12px]" style={{ color: MUTED }}>
+              Fim
+              <input
+                type="date"
+                value={custFim}
+                min={custIni || primeiroDia || undefined}
+                max={ultimoDia ?? undefined}
+                onChange={(e) => setCustFim(e.target.value)}
+                className="mt-1 block rounded-lg px-3 py-2 text-sm outline-none tabular-nums"
+                style={{ background: INK, color: TEXTO, border: `1px solid ${LINE}` }}
+              />
+            </label>
+            <p className="pb-2 text-[11px]" style={{ color: MUTED }}>
+              {primeiroDia && `Dados disponíveis a partir de ${ymdParaBR(primeiroDia)}`}
+              {ultimoDia && ` até ${ymdParaBR(ultimoDia)}.`}
+              {!compAtivo && (
+                <>
+                  <br />
+                  Comparação: mesmo nº de dias imediatamente antes do início.
+                </>
+              )}
+            </p>
+          </div>
+
+          {/* Segundo período: fechado por padrão. Quem só quer a janela atual não
+              vê os campos; quem precisa comparar julho com junho abre e escolhe. */}
+          <label className="mt-3 flex w-fit cursor-pointer items-center gap-2 text-[12px]" style={{ color: TEXTO }}>
             <input
-              type="date"
-              value={custIni}
-              min={primeiroDia ?? undefined}
-              max={custFim || ultimoDia || undefined}
-              onChange={(e) => setCustIni(e.target.value)}
-              className="mt-1 block rounded-lg px-3 py-2 text-sm outline-none tabular-nums"
-              style={{ background: INK, color: TEXTO, border: `1px solid ${LINE}` }}
+              type="checkbox"
+              checked={compAtivo}
+              onChange={(e) => setCompAtivo(e.target.checked)}
+              className="h-3.5 w-3.5 cursor-pointer"
+              style={{ accentColor: YELLOW }}
             />
+            Comparar com outro período
           </label>
-          <label className="text-[12px]" style={{ color: MUTED }}>
-            Fim
-            <input
-              type="date"
-              value={custFim}
-              min={custIni || primeiroDia || undefined}
-              max={ultimoDia ?? undefined}
-              onChange={(e) => setCustFim(e.target.value)}
-              className="mt-1 block rounded-lg px-3 py-2 text-sm outline-none tabular-nums"
-              style={{ background: INK, color: TEXTO, border: `1px solid ${LINE}` }}
-            />
-          </label>
-          <p className="pb-2 text-[11px]" style={{ color: MUTED }}>
-            {primeiroDia && `Dados disponíveis a partir de ${ymdParaBR(primeiroDia)}`}
-            {ultimoDia && ` até ${ymdParaBR(ultimoDia)}.`}
-            <br />
-            Comparação: mesmo nº de dias imediatamente antes do início.
-          </p>
+
+          {compAtivo && (
+            <div className="mt-3 flex flex-wrap items-end gap-3 border-t pt-3" style={{ borderColor: LINE }}>
+              <label className="text-[12px]" style={{ color: MUTED }}>
+                Comparar com — Início
+                <input
+                  type="date"
+                  value={compIni}
+                  min={primeiroDia ?? undefined}
+                  max={compFim || ultimoDia || undefined}
+                  onChange={(e) => setCompIni(e.target.value)}
+                  className="mt-1 block rounded-lg px-3 py-2 text-sm outline-none tabular-nums"
+                  style={{ background: INK, color: TEXTO, border: `1px solid ${LINE}` }}
+                />
+              </label>
+              <label className="text-[12px]" style={{ color: MUTED }}>
+                Fim
+                <input
+                  type="date"
+                  value={compFim}
+                  min={compIni || primeiroDia || undefined}
+                  max={ultimoDia ?? undefined}
+                  onChange={(e) => setCompFim(e.target.value)}
+                  className="mt-1 block rounded-lg px-3 py-2 text-sm outline-none tabular-nums"
+                  style={{ background: INK, color: TEXTO, border: `1px solid ${LINE}` }}
+                />
+              </label>
+              <p className="pb-2 text-[11px]" style={{ color: MUTED }}>
+                O Δ compara o período de cima com este.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Avisos honestos da janela ativa (dia parcial / comparação impossível) */}
-      {(avisoParcial || motivoSemComparacao) && (
+      {/* Avisos honestos da janela ativa (dia parcial / comparação impossível /
+          tamanhos diferentes / sobreposição). Todos são AVISO, nunca bloqueio. */}
+      {(avisoParcial || motivoSemComparacao || avisoTamanhos || diasEmComum > 0) && (
         <div className="mb-5 flex flex-wrap gap-2">
+          {avisoTamanhos && (
+            <span
+              className="rounded-lg px-3 py-1.5 text-[12px]"
+              style={{ background: TEMA.limiteFundo, color: AMBAR }}
+              title="O CPL é uma razão (gasto ÷ conversões) e continua justo entre períodos de tamanhos diferentes. Já gasto e conversões são somas: o período mais longo tem um dia a mais somando. O painel não normaliza por dia — isso mudaria o significado do número."
+            >
+              ⚠ {avisoTamanhos} — o Δ de CPL segue justo; os de gasto e conversões carregam o dia a mais
+            </span>
+          )}
+          {diasEmComum > 0 && (
+            <span
+              className="rounded-lg px-3 py-1.5 text-[12px]"
+              style={{ background: TEMA.limiteFundo, color: AMBAR }}
+              title="Os dois períodos escolhidos têm dias em comum. Esses dias entram no lado atual E no lado de comparação do Δ, o que aproxima artificialmente os dois números. Não é bloqueado — só precisa ser lido com isso em mente."
+            >
+              ⚠ os dois períodos se sobrepõem em {diasEmComum} {diasEmComum === 1 ? "dia" : "dias"} — os mesmos dias contam dos dois lados do Δ
+            </span>
+          )}
           {avisoParcial && (
             <span
               className="rounded-lg px-3 py-1.5 text-[12px]"
@@ -589,6 +795,8 @@ export default function Dashboard(
           )}
         </div>
       </div>
+      {/* Gasto, Leads e Conversas são SOMAS: recebem `neutralizar`. O CPL médio é
+          RAZÃO e fica de fora — ele mantém a cor mesmo com tamanhos diferentes. */}
       <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
         <KpiCard
           label="Gasto"
@@ -598,6 +806,8 @@ export default function Dashboard(
           delta={kpis.gasto.delta}
           serie={kpis.gasto.serie}
           semComparacao={motivoSemComparacao}
+          contexto={data.periodoLabel}
+          neutralizar={neutralizarSomas}
         />
         <KpiCard
           label="Leads"
@@ -608,6 +818,8 @@ export default function Dashboard(
           delta={kpis.leads.delta}
           serie={kpis.leads.serie}
           semComparacao={motivoSemComparacao}
+          contexto={data.periodoLabel}
+          neutralizar={neutralizarSomas}
         />
         <KpiCard
           label="CPL médio"
@@ -619,6 +831,7 @@ export default function Dashboard(
           destaque
           serie={kpis.cpl.serie}
           semComparacao={motivoSemComparacao}
+          contexto={data.periodoLabel}
         />
         <KpiCard
           label="Conversas"
@@ -629,6 +842,8 @@ export default function Dashboard(
           delta={kpis.conversas.delta}
           serie={kpis.conversas.serie}
           semComparacao={motivoSemComparacao}
+          contexto={data.periodoLabel}
+          neutralizar={neutralizarSomas}
           info={TOOLTIP_CONVERSOES}
         />
       </div>
@@ -689,7 +904,7 @@ export default function Dashboard(
       </div>
 
       {/* Gráfico-herói: tendência diária do período (fantasma do mês anterior no modo mês). */}
-      <HeroChart pontos={serieDoGrafico} periodoLabel={data.periodoLabel} mesAnterior={modoMes} />
+      <HeroChart pontos={serieDoGrafico} periodoLabel={data.periodoLabel} fantasma={fantasmaGrafico} />
 
       {/* Toggle de abas: rankings (por CPL) + central de alertas */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
