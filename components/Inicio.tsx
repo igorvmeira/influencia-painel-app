@@ -2,10 +2,8 @@
 
 import Link from "next/link";
 import { useDadosPainel } from "@/lib/useDadosPainel";
-import { useAgenda } from "@/lib/useAgenda";
 import { useOrientacoes } from "@/lib/useOrientacoes";
 import { resumoAtencao, CPL_ALERTA } from "@/lib/alertas";
-import { chaveDia, hhmm, chavesHojeAmanha } from "@/lib/formatAgenda";
 import { haQuanto } from "@/lib/tempo";
 import { MENU_EM_BREVE } from "@/lib/menu";
 import { brlDec } from "@/lib/format";
@@ -39,7 +37,6 @@ function ChipIcone({ fundo, cor, children }: { fundo: string; cor: string; child
 
 export default function Inicio() {
   const { dados, erro } = useDadosPainel();
-  const { reunioes, erro: erroAgenda } = useAgenda();
   const { mapa: orientacoes, erro: erroOri } = useOrientacoes();
 
   // Pausadas ficam FORA de tudo, igual ao Dashboard.
@@ -60,25 +57,6 @@ export default function Inicio() {
   }
   const resumo = dados ? resumoAtencao(dados.daily, contasAtivas, dados.limites, DIAS_RESUMO) : null;
   const tudoOk = resumo ? resumo.cplAltoCount === 0 && resumo.pertoCount === 0 : false;
-
-  // Resumo da agenda: nº de reuniões hoje + próxima (que ainda não terminou).
-  let resumoReunioes: string | null = null;
-  if (reunioes) {
-    if (reunioes.length === 0) {
-      resumoReunioes = "Nenhuma reunião nos próximos dias.";
-    } else {
-      const { hoje } = chavesHojeAmanha();
-      const agora = Date.now();
-      const hojeN = reunioes.filter((r) => chaveDia(r.inicio) === hoje).length;
-      const proxima = reunioes.find((r) => new Date(r.fim).getTime() > agora);
-      const quando = proxima
-        ? new Date(proxima.inicio).getTime() <= agora ? "agora" : hhmm(proxima.inicio)
-        : null;
-      resumoReunioes =
-        `${hojeN} ${hojeN === 1 ? "reunião" : "reuniões"} hoje` +
-        (proxima ? ` · próxima ${quando} — ${proxima.titulo}` : "");
-    }
-  }
 
   return (
     <div>
@@ -150,27 +128,17 @@ export default function Inicio() {
           )}
         </Link>
 
-        {/* Card de Pautas e Reuniões — resumo real da agenda */}
-        <Link
-          href="/reunioes"
-          className="block p-5 transition-colors hover:bg-brand-hover"
-          style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}
-        >
-          <div className="flex items-center justify-between gap-2">
-            <span className="flex items-center gap-2.5">
-              <ChipIcone fundo={TEMA.chipTerra} cor={TEMA.terraTexto}>▤</ChipIcone>
-              <span className="text-sm font-medium text-brand-ink">Pautas e Reuniões</span>
-            </span>
-            <span className="text-[11px]" style={{ color: MUTED }}>agenda →</span>
-          </div>
-          {erroAgenda ? (
-            <p className="mt-3 text-[13px]" style={{ color: MUTED }}>Não foi possível carregar a agenda.</p>
-          ) : !reunioes ? (
-            <div className="mt-3 h-4 w-48 animate-pulse rounded motion-reduce:animate-none" style={{ background: LINE }} />
-          ) : (
-            <p className="mt-3 text-[13px]" style={{ color: TEMA.texto }}>{resumoReunioes}</p>
-          )}
-        </Link>
+        {/* ESCONDIDO a pedido do Roberto (05/08/2026): o card de "Pautas e Reuniões"
+            saiu daqui e do menu (ver lib/menu.ts) porque a /reunioes mostra a agenda
+            pessoal do Thiago, não a da equipe. Nada do Google Agenda foi mexido: a
+            rota, o componente, /api/agenda e as envs GOOGLE_* seguem funcionando, e
+            /reunioes abre para quem souber a URL.
+
+            REEXIBIR = devolver o <Link href="/reunioes"> com o ChipIcone terra (▤) e
+            o resumo da agenda, mais o hook useAgenda() e os helpers de formatAgenda
+            (chaveDia, hhmm, chavesHojeAmanha) que vinham com ele. O commit que
+            escondeu tem o bloco inteiro. Com o card fora, a Início deixou de chamar
+            /api/agenda — uma ida ao Google a menos por carregamento. */}
 
         {/* Card de Orientações — resumo real */}
         <Link

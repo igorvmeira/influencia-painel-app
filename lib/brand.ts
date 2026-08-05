@@ -70,6 +70,9 @@ export const TEMA = {
   // Família quente, deliberadamente dessaturada para NÃO competir com
   // positivo/negativo (que só aparecem em número e status, com significado).
   chipDourado: "#FCF0CE", // chip do card Dashboard (ícone em ouroTexto)
+  // Terra está SEM USO desde 05/08/2026: era o chip do card "Pautas e Reuniões",
+  // escondido a pedido do Roberto (ver lib/menu.ts). Mantido de propósito — o par
+  // já passou pela conferência de contraste e volta pronto se o card voltar.
   chipTerra: "#F6E7DC",   // chip do card Reuniões (ícone em terraTexto)
   terraTexto: "#8A4A22",  // terracota escuro — 6,1:1 sobre chipTerra [PROVISÓRIO]
   chipOliva: "#EDF0DE",   // chip do card Orientações (ícone em olivaTexto)
