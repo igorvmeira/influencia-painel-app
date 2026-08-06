@@ -47,6 +47,31 @@ Meta expõe). Conta que o token não vê nunca sincroniza: apareceria na tela e 
 permanentemente zerada. Nesses casos, o caminho é pedir o compartilhamento via
 parceria de Business Manager — não cadastrar e esperar.
 
-Conta **nova** também nasce sem histórico para o `mesclarDias` acumular: sincronize-a
-com janela ampla (`/api/sync-meta?accountId=act_...&dias=117`), senão ela entra com
-apenas 30 dias e aparece truncada em períodos maiores, sem aviso.
+Conta **nova** nasce sem histórico para o `mesclarDias` acumular. O sync já resolve
+isso sozinho: conta sem documento em `metricasAgregadas` é detectada como nova e
+recebe a **janela cheia** (`RETENCAO_DIAS`) automaticamente.
+
+```
+/api/sync-meta?key=<CRON_SECRET>&accountId=act_1,act_2,act_3
+```
+
+**Não passe `?dias`.** (A instrução anterior aqui mandava usar `&dias=117`; ficou
+obsoleta.) Com `dias` explícito, dois mecanismos são desligados de uma vez: a janela
+cheia automática e — pior — o teto de `MAX_NOVAS_POR_CHAMADA`, que existe para muitas
+contas novas não estourarem o tempo da função puxando ~95 dias cada.
+
+Com o teto ativo, entrando **N contas novas de uma vez, o sync leva `ceil(N/3)`
+chamadas**: as três primeiras sincronizam com janela cheia e as demais são **adiadas**
+(puladas por inteiro, nunca com janela curta — sincronizar com 30 criaria o agregado e
+travaria a conta como truncada em definitivo). Repita a mesma chamada até
+`adiadas` voltar vazio, conferindo `novasComJanelaCheia` no retorno.
+
+## Pendências de cadastro
+
+Contas identificadas na conciliação de 06/08/2026 que **não** foram cadastradas, com
+o motivo e o gatilho para revisar:
+
+| Conta | accountId | Por que não entrou | Gatilho |
+|---|---|---|---|
+| NEXA TELECOM | `act_3943992782574535` | `account_status` UNSETTLED na Meta (pendência de cobrança). Entraria zerada e pareceria bug para o gestor. | Cadastrar quando a agência regularizar a cobrança e o status virar ACTIVE. |
+| TRAJETO | `act_2622092654889646` | Cadastrada, mas com **nicho vazio**: a planilha diz "Provedor" e o nome na Meta é "CA 01 - TRAJETO MÓVEIS". Divergência real — nicho errado contamina a média do nicho inteiro. | Preencher quando a agência confirmar qual é o ramo. |

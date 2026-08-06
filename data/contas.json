@@ -1,5 +1,53 @@
 [
   {
+    "accountId": "act_1220757691928493",
+    "cliente": "ER TELECOM",
+    "gestor": "ANDRÉ",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
+    "accountId": "act_950182572681439",
+    "cliente": "AZM",
+    "gestor": "WEDER",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1826856318002728",
+    "cliente": "MINAS ONLINE",
+    "gestor": "WEDER",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
+    "accountId": "act_795243809081299",
+    "cliente": "PAIM INTERNET",
+    "gestor": "WEDER",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
+    "accountId": "act_2622092654889646",
+    "cliente": "TRAJETO",
+    "gestor": "VINÍCIUS",
+    "tipo": "",
+    "nicho": "",
+    "pausado": false
+  },
+  {
+    "accountId": "act_399858847975633",
+    "cliente": "PLANET TELECOM",
+    "gestor": "DANIEL",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
     "accountId": "act_1389467714612017",
     "cliente": "Hotel Oscar",
     "gestor": "JOÃO PEDRO",
@@ -213,14 +261,6 @@
     "gestor": "JOÃO PEDRO",
     "tipo": "B2C",
     "nicho": "Lounge Bar",
-    "pausado": false
-  },
-  {
-    "accountId": "act_191616327202757",
-    "cliente": "CONSTRUMINAS FERRO E AÇO",
-    "gestor": "JOÃO PEDRO",
-    "tipo": "B2C",
-    "nicho": "Ferragens",
     "pausado": false
   },
   {
