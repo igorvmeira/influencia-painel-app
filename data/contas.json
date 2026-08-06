@@ -34,10 +34,10 @@
   {
     "accountId": "act_2622092654889646",
     "cliente": "TRAJETO",
-    "gestor": "VINÍCIUS",
+    "gestor": "PAUSADO",
     "tipo": "",
     "nicho": "",
-    "pausado": false
+    "pausado": true
   },
   {
     "accountId": "act_399858847975633",
