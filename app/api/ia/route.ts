@@ -15,6 +15,33 @@ const MAX_CHARS_MSG = 2000;     // teto por mensagem
 
 interface Mensagem { role: "user" | "assistant"; content: string }
 
+// ===========================================================================
+// TRAVA TEMPORÁRIA DE ACESSO — allowlist de e-mails
+// ===========================================================================
+// POR QUE EXISTE: o contexto enviado à Claude (lib/iaContexto.ts) inclui o bloco
+// "== POR GESTOR ==" com gasto, conversas e CPL de TODOS os gestores — os mesmos
+// números que a /gestores usa para o bônus. Enquanto as rotas só verificam SE o
+// usuário está autenticado e não QUEM é, qualquer login novo consegue esses dados
+// com uma pergunta em português ("qual o CPL do Weder?"), sem passar por nenhuma
+// tela. É a porta que ninguém audita, porque não parece uma tela de dados.
+//
+// Hoje existe UM usuário no Firebase Auth, então na prática nada muda. Isto é uma
+// tranca posta ANTES de o primeiro gestor existir, não uma correção de incidente.
+//
+// TEMPORÁRIO: sai quando o sistema de papéis entrar (claim no token + filtro por
+// papel nas rotas). Aí o certo é o CONTEXTO ser montado no escopo do papel — um
+// gestor podendo perguntar sobre a carteira dele — em vez de a rota inteira ser
+// negada. Esta lista é o remendo até lá, não o desenho final.
+//
+// FALHA FECHADO: sem a env, ninguém passa. Preferi arriscar "a IA parou de
+// responder para o Igor" a arriscar "a IA responde para todo mundo".
+function emailsPermitidos(): string[] {
+  return (process.env.IA_EMAILS_PERMITIDOS || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
+
 export async function POST(req: Request) {
   // 1) DESLIGADO por padrão: sem ANTHROPIC_API_KEY não chama a Claude (custo zero).
   const chave = process.env.ANTHROPIC_API_KEY;
@@ -29,10 +56,24 @@ export async function POST(req: Request) {
   if (!adminAuth) {
     return NextResponse.json({ ok: false, erro: "autenticação não configurada" }, { status: 500 });
   }
+  let email = "";
   try {
-    await adminAuth.verifyIdToken(token);
+    const dec = await adminAuth.verifyIdToken(token);
+    email = (dec.email || "").trim().toLowerCase();
   } catch {
     return NextResponse.json({ ok: false, erro: "não autenticado" }, { status: 401 });
+  }
+
+  // 2b) TRAVA TEMPORÁRIA (ver comentário no topo). Vem ANTES de montar o contexto
+  // de propósito: quem não passa daqui não dispara leitura do Firestore nem chamada
+  // à Claude — nega sem custo. 403 e não 401: a sessão é válida, o acesso é que não.
+  const permitidos = emailsPermitidos();
+  if (!email || !permitidos.includes(email)) {
+    console.warn(`[/api/ia] acesso negado para "${email || "(sem e-mail no token)"}"`);
+    return NextResponse.json(
+      { ok: false, erro: "Assistente de IA disponível apenas para a liderança." },
+      { status: 403 }
+    );
   }
 
   // 3) Entrada.
