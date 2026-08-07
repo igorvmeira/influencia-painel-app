@@ -31,6 +31,22 @@ Regras que o import respeita:
 
 - **Join sempre por `accountId`**, nunca por nome — nomes de cliente se repetem
   (há pares como CONSTRUMINAS e NORTELINE com duas contas cada).
+
+### Nomes que NÃO batem com a planilha — de propósito
+
+Quatro contas têm nome diferente do que a planilha de Monitoramento usa. A agência
+pediu para **não alinhar** ("os nomes não importam, nós sabemos quem são"), então
+**isto não é pendência e não deve ser 'corrigido' na próxima conciliação**:
+
+| no painel | na planilha | accountId | nome na Meta (desempate) |
+|---|---|---|---|
+| TAC NET | TAC TELECOM | `act_1145473760827134` | CA 01 - Tac Net |
+| Hotel Oscar | OLT HOTEL | `act_1389467714612017` | CA 01 - REDE OLT HOTÉIS + INFLUÊNCIA |
+| Líder | LÍDER ASSESSORIA | `act_1666070498074676` | CA O1 \| Líder Telecom |
+| IFALEI | IFALEI - ZIEVO | `act_640604454939758` | CA 01 \| iFalei |
+
+Toda conciliação por nome vai marcá-las como divergência. São estes quatro pares,
+já investigados e confirmados por `accountId` e pelo nome da Meta em 06/08/2026.
 - **Não destrutivo**: conta que sai da lista NÃO é apagada; vira "órfã" no relatório
   e o painel a mantém. Para tirar de operação, use `pausado: true`.
 - **Idempotente**: rodar de novo faz merge, não duplica.
@@ -40,12 +56,45 @@ Regras que o import respeita:
   a seguir este arquivo, apague `gestorEditadoEm` e `gestorEditadoPor` no Console do
   Firebase.
 
+## O que `pausado` significa (regra da carteira)
+
+**`pausado` = a conta NÃO VEICULA.** Não é "contrato encerrado".
+
+A carteira do painel responde **"quem está rodando"**. Quem é **cliente** é a planilha
+de Monitoramento da agência. São perguntas diferentes, e misturá-las quebra os números:
+
+- Cliente com contrato ativo mas **sem veiculação** fica `pausado: true`. Ativa, ela
+  entraria zerada, contaria na carteira do gestor e puxaria o **CPL de carteira** dele
+  para baixo sem representar trabalho nenhum.
+- Conta que a agência diz que **saiu** mas **ainda está gastando** fica ATIVA. Pausá-la
+  tiraria gasto real dos totais da agência e da carteira do gestor.
+
+O teste é sempre **gasto > 0 no período**, consultado dia a dia — nunca
+`account_status`, que descreve o cadastro e não o comportamento.
+
+Casos reais que fixaram a regra (06–07/08/2026): ZAY SUSHI e GUARÁ NET seguem pausadas
+apesar de a agência as listar como clientes ativos (zero em 120 dias); JS FIBRA segue
+ativa apesar de a agência a listar como saída (R$ 2.460,62 nos últimos 30 dias).
+
 ## Antes de cadastrar uma conta nova
 
-Confirme que o **token enxerga** a conta (`/api/diagnostico-contas` lista as que o
-Meta expõe). Conta que o token não vê nunca sincroniza: apareceria na tela e ficaria
-permanentemente zerada. Nesses casos, o caminho é pedir o compartilhamento via
-parceria de Business Manager — não cadastrar e esperar.
+Duas conferências, não uma:
+
+**1. O token enxerga?** (`/api/diagnostico-contas` lista as que o Meta expõe.) Conta que
+o token não vê nunca sincroniza: apareceria na tela e ficaria permanentemente zerada.
+Nesses casos, o caminho é pedir o compartilhamento via parceria de Business Manager —
+não cadastrar e esperar.
+
+**2. Qual é a MOEDA da conta?** Consulte `?fields=currency` na Graph API.
+
+> O painel **soma `gasto` cru e formata tudo com `brl()`** (`lib/format.ts`). **Não há
+> conversão de moeda em lugar nenhum do código.** Uma conta em moeda estrangeira
+> injetaria valores de outra escala no total, no CPL e no ranking de gestores — em
+> silêncio, sem nada na tela indicando o problema.
+
+Auditadas em 07/08/2026: das 103 cadastradas, **102 são BRL** e 1 está sem acesso
+(LINK 10, já pausada, não soma nada). A NEXA TELECOM (ARS) teria sido a primeira a
+contaminar — ver a tabela de pendências.
 
 Conta **nova** nasce sem histórico para o `mesclarDias` acumular. O sync já resolve
 isso sozinho: conta sem documento em `metricasAgregadas` é detectada como nova e
@@ -73,5 +122,5 @@ o motivo e o gatilho para revisar:
 
 | Conta | accountId | Por que não entrou | Gatilho |
 |---|---|---|---|
-| NEXA TELECOM | `act_3943992782574535` | `account_status` UNSETTLED na Meta (pendência de cobrança). Entraria zerada e pareceria bug para o gestor. | Cadastrar quando a agência regularizar a cobrança e o status virar ACTIVE. |
+| NEXA TELECOM | `act_3943992782574535` | **Dois motivos independentes.** (1) **Bloqueio da Meta**, confirmado pela agência — `account_status` 3 (UNSETTLED) e veiculação interrompida em 03/08. (2) **Moeda ARS** (fuso Buenos Aires): o painel não converte moeda, então ela contaminaria totais, CPL e ranking. ⚠ Não é o caso de "entraria zerada" — a conta tem 20 dias de veiculação; o problema é a escala dos números. | Só cadastrar quando os **dois** forem resolvidos: bloqueio liberado **e** decisão sobre como o painel trata moeda estrangeira (hoje: não trata). |
 | TRAJETO | `act_2622092654889646` | Cadastrada e **pausada**. Conta criada em 17/07/2026, `account_status` ACTIVE, mas **gasto zero em 120 dias** — nunca veiculou. Ativa, entraria zerada e puxaria o CPL de carteira do gestor para baixo. Está também com **nicho vazio**: a planilha diz "Provedor" e a Meta chama a conta de "CA 01 - TRAJETO MÓVEIS". | **Dois gatilhos independentes.** (1) Reativar (`pausado: false` + `gestor: VINÍCIUS`) quando começar a veicular — confira por **gasto > 0 no período**, não por `account_status`. (2) Preencher o nicho quando a agência disser o ramo. |

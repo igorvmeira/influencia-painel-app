@@ -226,10 +226,10 @@
   {
     "accountId": "act_232199732730201",
     "cliente": "VTL TELECOM",
-    "gestor": "JOÃO PEDRO",
+    "gestor": "PAUSADO",
     "tipo": "B2C",
     "nicho": "Provedor (ISP)",
-    "pausado": false
+    "pausado": true
   },
   {
     "accountId": "act_2775914335882809",
@@ -418,10 +418,10 @@
   {
     "accountId": "act_1987779961633909",
     "cliente": "BORA FIBRA",
-    "gestor": "WEDER",
+    "gestor": "PAUSADO",
     "tipo": "B2C",
     "nicho": "Provedor (ISP)",
-    "pausado": false
+    "pausado": true
   },
   {
     "accountId": "act_436154116204389",
@@ -778,10 +778,10 @@
   {
     "accountId": "act_830495511608627",
     "cliente": "NetSystem",
-    "gestor": "JOÃO PEDRO",
+    "gestor": "PAUSADO",
     "tipo": "",
     "nicho": "Provedor (ISP)",
-    "pausado": false
+    "pausado": true
   },
   {
     "accountId": "act_1972951736630632",
