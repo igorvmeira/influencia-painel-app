@@ -1,5 +1,69 @@
 [
   {
+    "accountId": "act_425113569647633",
+    "cliente": "HIPERCG",
+    "gestor": "DANIEL",
+    "tipo": "",
+    "nicho": "Loja de Equipamentos de Moto",
+    "pausado": false
+  },
+  {
+    "accountId": "act_3343879795698237",
+    "cliente": "VOX SETE LAGOAS",
+    "gestor": "VINÍCIUS",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
+    "accountId": "act_755919241540463",
+    "cliente": "VOX MONTES CLAROS",
+    "gestor": "VINÍCIUS",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
+    "accountId": "act_325509991869940",
+    "cliente": "VOX VITÓRIA DA CONQUISTA",
+    "gestor": "VINÍCIUS",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
+    "accountId": "act_535806937963970",
+    "cliente": "VOX ITAPETINGA",
+    "gestor": "VINÍCIUS",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
+    "accountId": "act_990791790266829",
+    "cliente": "KZ CONEXÕES",
+    "gestor": "JOÃO PEDRO",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1649200399490007",
+    "cliente": "UNIFIQUE",
+    "gestor": "JOÃO PEDRO",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1239380251649918",
+    "cliente": "NORTE CONEXÃO",
+    "gestor": "JOÃO PEDRO",
+    "tipo": "B2B",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
     "accountId": "act_1220757691928493",
     "cliente": "ER TELECOM",
     "gestor": "ANDRÉ",
