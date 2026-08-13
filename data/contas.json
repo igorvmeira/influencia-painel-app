@@ -1,5 +1,21 @@
 [
   {
+    "accountId": "act_1626408402154846",
+    "cliente": "MEGA NET",
+    "gestor": "WEDER",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1004781690939605",
+    "cliente": "JETFIBER",
+    "gestor": "WEDER",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
     "accountId": "act_425113569647633",
     "cliente": "HIPERCG",
     "gestor": "DANIEL",

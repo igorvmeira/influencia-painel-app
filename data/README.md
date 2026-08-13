@@ -44,9 +44,15 @@ pediu para **não alinhar** ("os nomes não importam, nós sabemos quem são"), 
 | Hotel Oscar | OLT HOTEL | `act_1389467714612017` | CA 01 - REDE OLT HOTÉIS + INFLUÊNCIA |
 | Líder | LÍDER ASSESSORIA | `act_1666070498074676` | CA O1 \| Líder Telecom |
 | IFALEI | IFALEI - ZIEVO | `act_640604454939758` | CA 01 \| iFalei |
+| JETFIBER | JETFIBER | `act_1004781690939605` | **JETSUCESSO** |
 
-Toda conciliação por nome vai marcá-las como divergência. São estes quatro pares,
-já investigados e confirmados por `accountId` e pelo nome da Meta em 06/08/2026.
+Toda conciliação por nome vai marcá-las como divergência. São estes cinco pares,
+já investigados e confirmados por `accountId` e pelo nome da Meta em 06–12/08/2026.
+
+Nos quatro primeiros o painel usa um nome e a planilha outro. Na JETFIBER os dois
+concordam — quem diverge é a **Meta**, que chama a conta de "JETSUCESSO". Vale o
+padrão da casa: o campo `cliente` guarda o **nome comercial**, não o rótulo da conta
+de anúncio.
 - **Não destrutivo**: conta que sai da lista NÃO é apagada; vira "órfã" no relatório
   e o painel a mantém. Para tirar de operação, use `pausado: true`.
 - **Idempotente**: rodar de novo faz merge, não duplica.
@@ -123,4 +129,6 @@ o motivo e o gatilho para revisar:
 | Conta | accountId | Por que não entrou | Gatilho |
 |---|---|---|---|
 | NEXA TELECOM | `act_3943992782574535` | **Dois motivos independentes.** (1) **Bloqueio da Meta**, confirmado pela agência — `account_status` 3 (UNSETTLED) e veiculação interrompida em 03/08. (2) **Moeda ARS** (fuso Buenos Aires): o painel não converte moeda, então ela contaminaria totais, CPL e ranking. ⚠ Não é o caso de "entraria zerada" — a conta tem 20 dias de veiculação; o problema é a escala dos números. | Só cadastrar quando os **dois** forem resolvidos: bloqueio liberado **e** decisão sobre como o painel trata moeda estrangeira (hoje: não trata). |
+| WELL | `act_1923893677912522` | Acessível, BRL, veiculando (R$ 548,82 em 10 dias até 12/08). **Mas o nome na Meta é "Inorpel Industria Nordestina de Produtos Eletricos LTDA"** — não compartilha nada com o rótulo "WELL" da planilha. Pode ser a razão social por trás da marca, pode ser accountId errado. É o mesmo padrão do `act_191616327202757`, que virou conta fantasma por ter sido cadastrado com nome digitado. | Cadastrar quando o Roberto confirmar que a Inorpel é a WELL. |
+| SOLUÇÃO EMPRESAS | `act_358502495857953` | Acessível, BRL, veiculando forte (R$ 36.166,09 em 84 dias até 12/08). **Não está na planilha de monitoramento**: o WEDER tem só "SOLUÇÃO NETWORK", e o Roberto mandou dois IDs distintos ("SOLUÇÃO" e "SOLUÇÃO EMPRESAS"). A outra (`act_974158976372768`) está **bloqueada**, então não dá para comparar os nomes da Meta e decidir se são o mesmo cliente. Valor alto o bastante para mudar o CPL de carteira do WEDER com base num vínculo não confirmado. | Cadastrar quando o Roberto disser se "SOLUÇÃO NETWORK" da planilha é esta conta, ou se são dois clientes distintos. |
 | TRAJETO | `act_2622092654889646` | Cadastrada e **pausada**. Conta criada em 17/07/2026, `account_status` ACTIVE, mas **gasto zero em 120 dias** — nunca veiculou. Ativa, entraria zerada e puxaria o CPL de carteira do gestor para baixo. Está também com **nicho vazio**: a planilha diz "Provedor" e a Meta chama a conta de "CA 01 - TRAJETO MÓVEIS". | **Dois gatilhos independentes.** (1) Reativar (`pausado: false` + `gestor: VINÍCIUS`) quando começar a veicular — confira por **gasto > 0 no período**, não por `account_status`. (2) Preencher o nicho quando a agência disser o ramo. |
