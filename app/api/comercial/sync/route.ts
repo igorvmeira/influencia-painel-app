@@ -28,7 +28,7 @@ import {
 } from "@/lib/xmax";
 import {
   FUNIL_CAPTACAO, FUNIL_DESQUALIFICADOS, ordemDeEtapas, normalizarOportunidade,
-  agruparPessoas, ehRecuperacao, ehNegociacao, OportunidadeGravada,
+  agruparPessoas, ehRecuperacao, ehNegociacao, ehEncerrada, OportunidadeGravada,
 } from "@/lib/comercial";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +48,14 @@ interface Funil { id: number; name?: string; stageorders?: number[]; stages?: Et
  * Números do diagnóstico de 15/08/2026. A prévia compara contra eles e ACUSA a
  * divergência — não corrige, não silencia.
  *
+ * ⚠️ TODOS OS CINCO SÃO SOBRE **ABERTAS**, e isso passou a importar depois da
+ * Etapa B. Quando foram medidos, abertas era tudo que existia: a API não lista
+ * encerrada, então "oportunidades do funil 4" e "abertas do funil 4" eram o mesmo
+ * número e o rótulo não distinguia. O backfill trouxe 2.873 encerradas e separou
+ * as duas coisas — comparar o universo (4.529) contra uma referência de abertas
+ * (1.656) acusaria divergência todo dia, por construção, e uma conferência que
+ * está sempre vermelha para de ser lida.
+ *
  * ⚠️ Divergir NÃO é necessariamente defeito: a base é viva e o Marcos mexe nela
  * todo dia. O que a conferência protege é outra coisa — divergência GRANDE ou em
  * direção estranha (pessoas > oportunidades, negociação triplicando) significa
@@ -61,6 +69,7 @@ const REFERENCIA = {
   recuperacao: 838,
   negociacao: 225,
   medidoEm: "2026-08-15",
+  escopo: "abertas do funil de captação",
 };
 
 export async function GET(req: Request) {
@@ -140,19 +149,29 @@ export async function GET(req: Request) {
   const pessoasDoFunil4 = pessoas.filter((p) =>
     p.oportunidadeIds.some((id) => porId.get(id)?.pipelineId === FUNIL_CAPTACAO));
 
+  // ⚠️ A CONFERÊNCIA COMPARA ABERTA COM ABERTA. Ver o comentário de REFERENCIA:
+  // depois do backfill, `doFunil4` é histórico (4.529) e a referência é foto do
+  // funil (1.656). Medir um contra o outro não diz nada.
+  const abertasFunil4 = doFunil4.filter((o) => !ehEncerrada(o.status));
+  const idsAbertos = new Set(abertasFunil4.map((o) => o.id));
+  const pessoasComAberta = pessoasDoFunil4.filter((p) => p.oportunidadeIds.some((id) => idsAbertos.has(id)));
+
   const emCaptacao = pessoasDoFunil4.filter((p) => p.etapaNaCaptacao !== null).length;
   const emRecuperacao = pessoasDoFunil4.filter((p) => p.emRecuperacao).length;
   const emNegociacao = pessoasDoFunil4.filter((p) => p.emNegociacao).length;
 
   const obtido = {
-    oportunidades: doFunil4.length,
-    pessoas: pessoasDoFunil4.length,
+    oportunidades: abertasFunil4.length,
+    pessoas: pessoasComAberta.length,
     captacao: emCaptacao,
     recuperacao: emRecuperacao,
     negociacao: emNegociacao,
   };
+  // Só as chaves NUMÉRICAS entram na comparação — `medidoEm` e `escopo` são
+  // rótulos. Filtrar por nome já deixou o `escopo` virar uma linha com
+  // `diferenca: null`, que sozinha derrubava o `tudoBate`.
   const conferencia = Object.entries(REFERENCIA)
-    .filter(([k]) => k !== "medidoEm")
+    .filter(([, v]) => typeof v === "number")
     .map(([k, esperado]) => {
       const v = obtido[k as keyof typeof obtido];
       return { metrica: k, esperado, obtido: v, diferenca: v - Number(esperado) };
@@ -242,6 +261,7 @@ export async function GET(req: Request) {
 
     conferencia: {
       referencia: `diagnóstico de ${REFERENCIA.medidoEm}`,
+      escopo: REFERENCIA.escopo,
       nota:
         "Divergência não é automaticamente defeito — a base é viva. Preocupa o que for "
         + "grande ou de direção estranha (pessoas > oportunidades, negociação triplicando): "
@@ -254,9 +274,18 @@ export async function GET(req: Request) {
       id: FUNIL_CAPTACAO,
       nome: funil.name ?? null,
       porEtapa,
+      /**
+       * ⚠️ DUAS CONTAGENS, SEMPRE ROTULADAS. `abertas` é a foto (quem está no
+       * funil agora); `historico` inclui as encerradas que a Etapa B trouxe. Um
+       * número solto aqui viraria "oportunidades" na tela e ninguém saberia qual
+       * dos dois está lendo — o mesmo erro que já custou o 631 vs 629.
+       */
       totais: {
-        oportunidades: doFunil4.length,
-        pessoas: pessoasDoFunil4.length,
+        abertas: abertasFunil4.length,
+        pessoasComAberta: pessoasComAberta.length,
+        historico: doFunil4.length,
+        pessoasNoHistorico: pessoasDoFunil4.length,
+        encerradas: doFunil4.length - abertasFunil4.length,
         semTelefone: pessoasDoFunil4.filter((p) => !p.temTelefone).length,
       },
     },

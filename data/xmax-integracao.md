@@ -294,6 +294,57 @@ Três regras dentro disso:
 Como o preenchimento passa a acontecer, o contador **vai a zero sozinho** nos meses
 novos — e a presença dele nos meses antigos vira a marca de onde o dado é fraco.
 
+## ⚠️ O CLIQUE DE "GANHOU" PAROU EM 2025 — e a Etapa E depende disso
+
+Medido em 14/08/2026 sobre a base COMPLETA (4.529 oportunidades do funil 4, já com o
+backfill). O achado saiu de um número que não fechava: 92 abertas paradas na etapa
+**Fechamento** contra ~38 ganhas em dois anos e meio inteiros.
+
+**A contraprova diz que a etapa está certa:** das 38 ganhas do funil, **37 estão em
+Fechamento**. O caminho do CRM funciona — o que parou foi a marcação.
+
+E parou numa data. Ganhas por período, entre as que passaram por Fechamento:
+
+| período | passaram por Fechamento | ganhas | abertas sem desfecho |
+|---|---|---|---|
+| 2024 | 28 | 14 | 8 |
+| 2025 (1º sem.) | 29 | 16 | 13 |
+| 2025 (2º sem.) | 33 | 6 | 27 |
+| 2026 | 47 | **1** | 44 |
+
+**Em 2026 o comercial chegou 47 vezes em Fechamento e clicou "ganhou" uma vez.**
+
+O indício mais forte é o valor: **63 das 92 abertas em Fechamento (68%) já têm
+`recurrentvalue` preenchido, somando R$ 157.560,00/mês** — contra R$ 68.120,00 de MRR
+em TODO o histórico de ganhas clicadas. O time digita o valor negociado; é o clique
+final que não acontece. Valor sem status é venda sem registro.
+
+E o tempo confirma: **48 das 92 (52%) estão paradas na etapa há mais de 180 dias**,
+17 delas há mais de um ano. Negociação de provedor não dura 12 meses.
+
+**⚠️ MAS "está em Fechamento" NÃO é "vendeu".** As 3 que entraram na etapa nos últimos
+30 dias são negociação viva de verdade. A tela **não pode escolher sozinha**: trocar
+`status = 1` por "está em Fechamento" só troca um número errado por outro, para cima.
+
+**Consequência para a Etapa E** — o painel mostra as duas contagens, sempre rotuladas,
+nunca um número solto chamado "vendas":
+
+1. **Vendas confirmadas** — `status = 1`, com o MRR que veio junto. É o número duro.
+2. **Em Fechamento sem desfecho** — com **idade na etapa**, que é o que separa
+   negociação viva de venda não registrada. Isto é uma **fila de trabalho**, não uma
+   métrica de resultado: são R$ 84.630,00/mês em recorrente parado há mais de 180 dias
+   esperando um clique.
+
+A pergunta para o Marcos — *ao fechar negócio, você clica em "ganhar" ou só move o card
+para Fechamento?* — **não bloqueia** nada: os dois números aparecem de qualquer forma.
+A resposta decide se a fila é um alerta de higiene do CRM ou de retrabalho comercial.
+
+**RESSALVA DE MÉTODO, que vale para qualquer leitura futura de etapa:** a API guarda só
+a etapa ATUAL, nunca o histórico. Para encerrada, `fkStage` é onde ela estava ao
+encerrar — isso é "esteve em Fechamento". Para aberta, é onde está agora. **Quem passou
+por Fechamento e voltou atrás continuando aberta é invisível.** Todo número desta seção
+é PISO, nunca total.
+
 ## Perguntas ainda abertas
 
 **Bloqueiam o desenho das coleções** — o modelo não é desenhado antes delas:

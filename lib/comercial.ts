@@ -41,6 +41,17 @@ export const ehRecuperacao = (stageId: unknown): boolean =>
 export const ehNegociacao = (stageId: unknown): boolean =>
   (ETAPAS_NEGOCIACAO as readonly number[]).includes(Number(stageId));
 
+/**
+ * ⚠️ ENCERRADA = ganha (1) ou perdida (2). Qualquer outra coisa — inclusive
+ * status ausente — conta como ABERTA.
+ *
+ * A direção do "não sei" é deliberada: oportunidade sem status vira linha do
+ * funil (visível, conferível) em vez de sumir. Some silenciosamente é o defeito
+ * pior dos dois, porque ninguém procura o que nunca apareceu.
+ */
+export const ehEncerrada = (status: unknown): boolean =>
+  Number(status) === 1 || Number(status) === 2;
+
 // ===========================================================================
 // IDENTIDADE DA PESSOA
 // ===========================================================================
@@ -235,7 +246,11 @@ export interface PessoaGravada {
   /** Todos os nomes já vistos — a mesma pessoa aparece como nome e como empresa. */
   nomes: string[];
   oportunidadeIds: number[];
+  /** Histórico: TODAS as oportunidades, abertas e encerradas. */
   vezesTrabalhado: number;
+  /** Quantas ainda estão abertas — a diferença mostra o que já se encerrou. */
+  abertas: number;
+  /** ⚠️ Os quatro campos abaixo olham só as ABERTAS: são a FOTO do funil. */
   etapaMaisAvancada: number | null;
   /** Etapa mais avançada IGNORANDO recuperação — é a do funil de captação. */
   etapaNaCaptacao: number | null;
@@ -287,10 +302,27 @@ export function agruparPessoas(ops: OportunidadeGravada[], ordem: number[]): Pes
      * presença no funil 23 já é registrada em `desqualificada`.
      */
     const doCaptacao = lista.filter((o) => Number(o.pipelineId) === FUNIL_CAPTACAO);
-    const etapas = doCaptacao.map((o) => Number(o.stageId)).filter(Number.isFinite);
+
+    /**
+     * ⚠️ A FOTO DO FUNIL CONTA SÓ AS ABERTAS. As históricas contam TUDO.
+     *
+     * Encerrada tem `fkStage` como qualquer outra: sem este filtro, quem fechou
+     * em "Fechamento" em 2024 passaria a contar como "está em Fechamento hoje"
+     * assim que o backfill (Etapa B) trouxesse as encerradas. A foto responde
+     * ONDE AS PESSOAS ESTÃO AGORA, e encerrada não está no funil.
+     *
+     * É também o que torna o backfill verificável: com a separação, os cinco
+     * números de conferência (1.656 / 1.455 / 629 / 838 / 225) têm de continuar
+     * IGUAIS depois dele. Se mudarem, é defeito — não é o backfill funcionando.
+     * Sem isso, não haveria como distinguir as duas coisas.
+     */
+    const abertasCaptacao = doCaptacao.filter((o) => !ehEncerrada(o.status));
+    const etapas = abertasCaptacao.map((o) => Number(o.stageId)).filter(Number.isFinite);
     const naCaptacao = etapas.filter((e) => !ehRecuperacao(e));
+
+    // Histórico: TODAS as oportunidades da pessoa, abertas e encerradas.
     const datas = lista.map((o) => o.criadaEm).filter((d): d is string => !!d).sort();
-    const ganhas = lista.filter((o) => o.status === 1);
+    const ganhas = lista.filter((o) => Number(o.status) === 1);
 
     return {
       id: idPessoa(chave),
@@ -300,6 +332,7 @@ export function agruparPessoas(ops: OportunidadeGravada[], ordem: number[]): Pes
       nomes: [...new Set(lista.map((o) => o.titulo).filter((t): t is string => !!t))],
       oportunidadeIds: lista.map((o) => o.id).sort((a, b) => a - b),
       vezesTrabalhado: lista.length,
+      abertas: lista.filter((o) => !ehEncerrada(o.status)).length,
       // Todas as três olham SÓ o funil de captação, pelo motivo acima.
       etapaMaisAvancada: etapas.length ? etapaMaisAvancada(etapas, ordem) : null,
       etapaNaCaptacao: naCaptacao.length ? etapaMaisAvancada(naCaptacao, ordem) : null,
