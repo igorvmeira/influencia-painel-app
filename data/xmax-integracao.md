@@ -89,21 +89,54 @@ Direção: **terceiros → Xmax**. Para Xmax → nós, o mecanismo é a **automa
 
 ---
 
-## Perguntas BLOQUEANTES para a agência
+## Respostas do suporte (15/08/2026) — bloqueios liberados
 
-Nesta ordem — a primeira pode inviabilizar o desenho inteiro:
+| pergunta | resposta |
+|---|---|
+| Instância | `https://influencia40.atenderbem.com` |
+| `queueId` do comercial | **7** |
+| Allowlist de IP? | **Não há.** `AUTH_021` não se aplica; a Vercel funciona |
+| A automação faz POST para URL nossa? | **Sim**, e permite cabeçalho ou campo fixo no corpo — dá para autenticar o que chega (`XMAX_WEBHOOK_SECRET`) |
+| Endpoint que liste fechadas por período? | **Não existe** — confirma o desenho do diff |
 
-1. **A instância tem allowlist de IP?** Existe o erro `AUTH_021 — IP de origem não
-   autorizado`. Funções da Vercel têm IP dinâmico; se houver allowlist, o sync não
-   passa e o desenho muda.
-2. **A automação do Xmax consegue fazer POST para uma URL arbitrária?** A spec não
-   descreve o que uma automação faz — só devolve o ID dela. **Todo o histórico de
-   etapas daqui para frente depende dessa premissa não verificada.** Se a automação
-   só dispara mensagem interna, sobra o polling diário, que perde transições do
-   mesmo dia.
-3. **A chave GLOBAL, a chave da FILA do comercial e a URL base da instância.**
-4. **O mapa de origens, em TEXTO** (ID → nome) — ver riscos.
-5. **A lista de etiquetas**, em especial o ID de "sem perfil".
+⚠ **Correção de uma hipótese minha:** eu havia suposto que o Xmax fosse white-label da
+família **Whaticket**. **Está errado — é do AtenderBem.** A suposição não chegou a
+influenciar o levantamento (tudo aqui saiu da spec, não da hipótese), mas fica o
+registro para ninguém pesquisar na árvore errada.
+
+### As 6 origens (o mapa que a API não devolve)
+
+| ID | nome |
+|---|---|
+| 1 | GOOGLE |
+| 2 | Tráfego Pago - FaceAds |
+| 3 | INOVA SUMMIT |
+| 4 | REMARKETING - WHATSAPP |
+| 5 | Leads ABRINT |
+| 6 | TYPEBOT |
+
+Fonte de verdade para o código: `lib/xmax.ts`. Aqui fica só o registro do que a
+agência informou.
+
+### ⚠ Não existe origem "prospecção de lista"
+
+Era **metade** do funil que responderia à dor do Marcos (anúncio × prospecção). Nenhuma
+das seis origens diz "lista".
+
+**Hipótese a confirmar com ele:** "Leads ABRINT" (a ABRINT é a associação de provedores
+— "leads ABRINT" cheira a lista de associados) e "INOVA SUMMIT" (evento) podem ser
+justamente a prospecção, registrada com outro nome. Se for, a pergunta dele já tem
+resposta sem campo novo.
+
+**Não classificar por conta própria.** O agrupamento origem → categoria vive numa
+constante configurável em `lib/xmax.ts`, com as incertas marcadas como `a_confirmar` —
+nunca chumbado no código nem adivinhado.
+
+## Perguntas ainda abertas
+
+1. **A lista de etiquetas**, em especial o ID de "sem perfil" (o diagnóstico tenta
+   resolver via `getTags`, mas pode ser outro namespace).
+2. **Como o Marcos registra prospecção de lista**, se não é nenhuma das 6 origens.
 
 ---
 
@@ -141,15 +174,21 @@ idempotente, prévia antes de aplicar, pré-agregado para a tela não varrer col
 
 ## Envs necessárias
 
-| variável | segredo? |
-|---|---|
-| `XMAX_BASE_URL` | não (mas só servidor) |
-| `XMAX_API_KEY_GLOBAL` | **SIM** |
-| `XMAX_API_KEY_FILA` | **SIM** |
-| `XMAX_QUEUE_ID` | não |
-| `XMAX_PIPELINE_ID` | não (descobrível) |
-| `XMAX_WEBHOOK_SECRET` | **SIM** — autentica o que a automação nos manda |
-| `CRON_SECRET` | já existe, reaproveitar |
+| variável | valor | segredo? |
+|---|---|---|
+| `XMAX_BASE_URL` | `https://influencia40.atenderbem.com` | não (mas só servidor) |
+| `XMAX_API_KEY_GLOBAL` | — | **SIM** |
+| `XMAX_API_KEY_FILA` | — | **SIM** |
+| `XMAX_QUEUE_ID` | `7` | não |
+| `XMAX_WEBHOOK_SECRET` | — | **SIM** — autentica o POST da automação |
+| `CRON_SECRET` | já existe | reaproveitar |
+
+`XMAX_PIPELINE_ID` **não entra ainda**: o diagnóstico descobre os funis pelo
+`getAllPipelines`. Só vira env quando soubermos qual é o do comercial.
+
+⚠ **As duas chaves foram pedidas REGENERADAS** (a global circulou por print de
+WhatsApp; a da fila tinha valor fraco). Elas dão acesso de **escrita** ao CRM inteiro —
+`removeOpportunity` está na API.
 
 **Nenhuma com `NEXT_PUBLIC_`.** As chaves dão acesso de ESCRITA ao CRM inteiro
 (`removeOpportunity` está na API) — vazar uma delas é grave.
@@ -167,9 +206,10 @@ de interface, por alguém com acesso:
 
 ## Riscos, do mais grave ao menor
 
-1. **`origin` não tem endpoint.** É um ID solto e não há `getOrigins` em lugar nenhum
-   da spec. O funil por origem — o desenho que responde à dor do Marcos — depende
-   inteiramente de um mapa digitado à mão. É o ponto mais frágil do projeto.
+1. **Não existe origem "prospecção de lista".** O funil por origem responde metade da
+   pergunta do Marcos; a outra metade não tem onde ser lida. Ver a hipótese ABRINT /
+   INOVA SUMMIT acima. *(O `origin` continuar sem endpoint é secundário: o mapa das 6
+   já veio da agência e está em `lib/xmax.ts`.)*
 2. **O MRR depende de o comercial preencher `closerecurrentvalue` ao ganhar.** O campo
    é OPCIONAL no `winOpportunity`. Se fecharem sem preencher, o número de manchete do
    Thiago vem **zero** e o painel não tem como saber que está faltando. Medir no
