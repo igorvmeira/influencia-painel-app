@@ -273,6 +273,9 @@ export async function chamarXmax<T = unknown>(
 export interface OportunidadeXmax {
   id: number;
   title?: string;
+  /** Telefone principal. Vem em formatos diferentes: "87992438017" e "+5551974001969". */
+  mainphone?: string;
+  mainmail?: string;
   value?: number;
   recurrentvalue?: number;
   closevalue?: number;
@@ -281,9 +284,12 @@ export interface OportunidadeXmax {
   status?: number;
   fkPipeline?: number;
   fkStage?: number;
+  /** ⚠️ EPOCH em segundos, apesar do nome. Use `naEtapaDesde()`. */
   stagebegintime?: number;
+  /** ISO 8601 de verdade — o único dos três. */
   createdAt?: string;
-  closedat?: string;
+  /** ⚠️ EPOCH em segundos, NÃO a string ISO que a spec promete. Use `fechadaEm()`. */
+  closedat?: number;
   tags?: number[];
   responsableid?: number;
   formsdata?: Record<string, unknown>;
