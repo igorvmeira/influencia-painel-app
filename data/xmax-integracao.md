@@ -178,17 +178,141 @@ Das que têm nome, duas famílias úteis que não estavam no plano:
 acontece de outro jeito (o funil 23 "LEADS NÃO QUALIFICADOS" tem 333 abertas), ou a
 etiqueta é recente.
 
+---
+
+## ⚠️ A AUTOMAÇÃO DE RECUPERAÇÃO CLONA O LEAD
+
+**O funil 4 tem 1.656 oportunidades abertas e 1.443 telefones distintos — 12,9% a
+menos.** Medido em 15/08/2026.
+
+E a duplicação **não é difusa**: 90% dela está em duas etapas.
+
+| etapa | abertas | duplicadas | % da etapa |
+|---|---|---|---|
+| **LEAD RECUPERADO- AUTOMAÇÃO** | 188 | **171** | **91%** |
+| **Recuperação de LEAD** | 830 | 123 | 15% |
+| Fechamento | 92 | 12 | 13% |
+| Follow-up Agendamento | 231 | 9 | 4% |
+| LEADS OUTBOUND | 86 | 1 | 1% |
+| Agendado Reunião | 40 | 0 | 0% |
+
+A etapa "LEAD RECUPERADO- AUTOMAÇÃO" está **91% duplicada**, e há telefones com **11
+oportunidades**, todos alternando entre as etapas 113 e 49. Não é erro de digitação: é a
+automação de recuperação criando uma oportunidade nova a cada disparo. Essas duas etapas
+concentram **61% do funil**.
+
+O Black Friday (funil 15), que era a suspeita inicial, contamina menos: 157 a 248 das
+1.010 batem com alguém do funil 4 (15,5% no match estrito, 24,6% no frouxo), alcançando
+333 oportunidades distintas. **Mas o funil 15 está fora do escopo — o problema mora
+dentro do 4.**
+
+> **Sem isto registrado, alguém defende numa reunião um número de leads 13% maior que a
+> realidade.**
+
+## DECISÃO: o número principal é PESSOA, e a tela sempre diz qual está mostrando
+
+Decidido pelo Igor em 15/08/2026.
+
+- **PESSOA (telefone distinto) é o número principal.** O Thiago pergunta "quantos leads
+  chegaram", e 11 disparos para o mesmo contato não são 11 leads.
+- **OPORTUNIDADE não se perde** — responde outra pergunta legítima ("quanto trabalho o
+  comercial teve"), e a agência de fato trabalhou aquele lead 11 vezes. Fica ao lado,
+  com rótulo explícito.
+- ⚠️ **NUNCA um número solto chamado "leads".** Toda contagem na tela diz se é pessoa ou
+  oportunidade. É a diferença entre 1.443 e 1.656 no mesmo funil.
+
+### O telefone como chave: serve, com margem conhecida
+
+**Qualidade do dado** (funil 4, 1.656 abertas): 93,8% com 11 dígitos, 5,3% com 10.
+Apenas **4 sem telefone** e **3 suspeitos** (curto ou dígito repetido). O campo é
+confiável.
+
+**Mesmo telefone com nomes diferentes** — 110 grupos de telefone repetido:
+
+| | grupos | leitura |
+|---|---|---|
+| nomes legíveis batem | 78 (71%) | clone da mesma pessoa |
+| título é o próprio telefone, ou vazio | 9 (8%) | criada pela automação sem nome — **não é pessoa diferente** |
+| nomes legíveis se contradizem | **23 (21%)** | os ambíguos |
+
+⚠️ **Mas 23 grupos são 1,4% do funil**, e a inspeção mostra que a maioria nem é pessoa
+diferente: são **pessoa × empresa** (`ricardo | techbrasil`, `marcos | itelecom`,
+`luiz | camposnet`) ou **variação do mesmo nome** (`debia | debbie`, `marry | mah`).
+Genuinamente pessoas distintas parecem ser 2 ou 3.
+
+**Veredito: o telefone serve como chave**, com erro máximo conhecido de 1,4% — e o erro
+real é menor. Se um dia passar disso, a chave precisa mudar; até lá, muda-se uma linha.
+
+**Match ESTRITO (número completo normalizado), nunca o frouxo de 8 dígitos.** Há 12
+chaves de 8 dígitos que cobrem mais de um número completo — o frouxo juntaria pessoas
+diferentes só porque o final coincide. É a mesma lição do "GOLD contém OLD", com gente.
+
+## DECISÃO: desqualificação conta AS DUAS formas
+
+O Marcos confirmou que o funil "LEADS NÃO QUALIFICADOS" (id 23) e a etiqueta
+`[38] Sem Perfil` têm **o mesmo papel**, em épocas diferentes:
+
+- **ANTES**: movia o lead para o funil 23
+- **AGORA**: usa a etiqueta `[38]` (criada pelo Thiago — por isso só 14 usos)
+
+**O modelo conta as duas como desqualificação.** Contar só a etiqueta apaga todo o
+histórico; contar só o funil perde os de agora.
+
+### A virada: ~julho/2026 — **INFERIDO, não medido**
+
+| sinal | valor |
+|---|---|
+| primeira oportunidade com a etiqueta `[38]` | createdAt **29/06/2026** |
+| funil 23 por mês | fev 42 · mar 66 · abr 32 · mai 74 · jun 71 · **jul 43** · **ago 4** |
+
+O funil 23 despenca em agosto — 4 em quinze dias contra 43 em julho inteiro (o esperado
+pro-rata seria ~21).
+
+⚠️ **NUNCA tratar como fato.** `createdAt` é a data da **oportunidade**, não da marcação
+da etiqueta nem da mudança de funil — e a API **não guarda** nenhuma das duas. Um lead
+criado em maio pode ter sido desqualificado em agosto. É piso, não a virada.
+
+## DECISÃO: como a tela sinaliza MRR incompleto
+
+O Marcos passa a preencher `closerecurrentvalue` daqui para frente; **as antigas ficam
+como estão**, então os fechamentos anteriores podem estar subestimados.
+
+A tela mostra, **no corpo e não em tooltip**:
+
+> **R$ 42.300 em MRR novo** · 14 fechamentos
+> ⚠ **3 sem valor informado** — o total real é maior
+
+Três regras dentro disso:
+
+1. **Só aparece quando existe.** Zero fechamentos sem valor, zero ruído.
+2. **Diz "o total real é maior"**, não "pode estar incompleto". O sentido do erro é
+   conhecido — MRR ausente só subestima. Dizer apenas "incompleto" deixaria o Thiago sem
+   saber para que lado.
+3. **Não estima o que falta.** Nada de "≈ R$ 45.000 projetado": inventaria número que
+   ninguém digitou.
+
+Como o preenchimento passa a acontecer, o contador **vai a zero sozinho** nos meses
+novos — e a presença dele nos meses antigos vira a marca de onde o dado é fraco.
+
 ## Perguntas ainda abertas
 
 **Bloqueiam o desenho das coleções** — o modelo não é desenhado antes delas:
 
-1. **Como o Marcos desqualifica lead?** Etiqueta `[38] Sem Perfil` (14 usos), funil 23
-   "LEADS NÃO QUALIFICADOS" (333), ou os dois? Muda onde a taxa de desqualificação é
-   lida.
-2. **O MRR vazio:** medido, 1 de 3 ganhas fechou com `closerecurrentvalue = 0`. Ele
-   preenche sempre? Se não, o número de manchete do Thiago nasce menor que a realidade
-   e o painel não tem como saber.
-3. Os nomes das 6 etiquetas mais usadas sem nome (`[17] [34] [6] [8] [7] [44]`).
+✅ ~~Como o Marcos desqualifica lead?~~ — **respondido**: as duas formas, ver a decisão
+acima.
+✅ ~~O MRR vazio~~ — **respondido**: passa a preencher; as antigas ficam, e a tela
+sinaliza.
+✅ ~~Origem 0~~ — **confirmado como ausência**. O Thiago cria campanhas com QR code para
+captação e essas geralmente entram sem origem. Mantida a regra "Sem origem".
+
+**Baixa prioridade, não bloqueia:**
+
+1. **Os nomes das 21 etiquetas sem nome** (`[17]` 211 usos, `[34]` 99, `[6]` 77, `[8]`
+   68, `[7]` 52, `[44]` 46 — 621 usos no total). O Marcos **não consegue rastrear por ID
+   na interface**, então ficam sem resposta por ora.
+   **Tratamento:** balde explícito **"etiqueta não identificada"**, com o ID e a
+   contagem VISÍVEIS na tela. Nunca somem em silêncio — `else` vazio já escondeu coisa
+   demais em projeto deste estúdio.
 
 ---
 
