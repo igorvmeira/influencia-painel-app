@@ -31,14 +31,25 @@ export default function Carteira() {
   const { contas, erro } = useContas();
   const [busca, setBusca] = useState("");
   const [gestorSel, setGestorSel] = useState("todos");
+  // Padrão: só ATIVAS (pedido da agência, 16/08/2026). A carteira tem 39 pausadas
+  // de 117, e elas empurravam para baixo o que se opera todo dia.
+  const [incluirPausadas, setIncluirPausadas] = useState(false);
 
-  const listaFiltrada = useMemo(() => {
-    if (!contas) return [];
+  // Os três filtros compõem: pausadas, gestor e busca. Separado em duas etapas só
+  // para o contador de ocultas ser HONESTO — ele conta as pausadas que sobreviveram
+  // aos OUTROS filtros, não as 39 do total. Com "ANDRÉ" selecionado, "39 pausadas
+  // ocultas" seria mentira: as pausadas dele são outras.
+  const { listaFiltrada, pausadasOcultas } = useMemo(() => {
+    if (!contas) return { listaFiltrada: [], pausadasOcultas: 0 };
     const q = busca.trim().toLowerCase();
-    return contas
+    const semFiltroDePausa = contas
       .filter((c) => (gestorSel === "todos" || c.gestor === gestorSel) && c.cliente.toLowerCase().includes(q))
       .sort((a, b) => a.cliente.localeCompare(b.cliente));
-  }, [contas, busca, gestorSel]);
+    return {
+      listaFiltrada: incluirPausadas ? semFiltroDePausa : semFiltroDePausa.filter((c) => !c.pausado),
+      pausadasOcultas: incluirPausadas ? 0 : semFiltroDePausa.filter((c) => c.pausado).length,
+    };
+  }, [contas, busca, gestorSel, incluirPausadas]);
 
   const carregando = !contas && !erro;
 
@@ -47,8 +58,8 @@ export default function Carteira() {
       <div className="mb-6">
         <h1 className="text-lg font-semibold text-brand-ink">Carteira de Contas</h1>
         <p className="text-[13px]" style={{ color: MUTED }}>
-          Contas por gestor. Edite o responsável; o histórico é datado e nada é apagado. O status
-          (ativa/pausada) é só leitura aqui.
+          Contas ATIVAS por gestor. Edite o responsável; o histórico é datado e nada é apagado.
+          O status (ativa/pausada) é só leitura aqui.
         </p>
       </div>
 
@@ -82,6 +93,29 @@ export default function Carteira() {
               {OPCOES_GESTOR.map((g) => <option key={g} value={g}>{g}</option>)}
             </select>
             <span className="text-[12px]" style={{ color: MUTED }}>{listaFiltrada.length} conta(s)</span>
+
+            {/* O toggle fica VISÍVEL mesmo sem pausadas no recorte: um filtro ligado
+                que não se anuncia faz o usuário procurar uma conta que a tela decidiu
+                esconder. Quando não há o que ocultar, ele aparece sem o contador. */}
+            <label className="ml-auto flex cursor-pointer items-center gap-2 text-[12px]" style={{ color: TEMA.texto }}>
+              <input
+                type="checkbox"
+                checked={incluirPausadas}
+                onChange={(e) => setIncluirPausadas(e.target.checked)}
+                className="h-3.5 w-3.5 cursor-pointer"
+                style={{ accentColor: YELLOW }}
+              />
+              Mostrar pausadas
+              {pausadasOcultas > 0 && (
+                <span
+                  className="rounded-md px-1.5 py-0.5 text-[11px] font-medium tabular-nums"
+                  style={{ background: TEMA.chip, color: MUTED }}
+                  title="Contas pausadas escondidas por este filtro, já considerando o gestor e a busca ativos."
+                >
+                  {pausadasOcultas} oculta{pausadasOcultas === 1 ? "" : "s"}
+                </span>
+              )}
+            </label>
           </div>
 
           <div className="space-y-2">
@@ -89,7 +123,12 @@ export default function Carteira() {
               <LinhaConta key={c.accountId} conta={c} ordem={i + 1} />
             ))}
             {listaFiltrada.length === 0 && (
-              <p className="text-[13px]" style={{ color: MUTED }}>Nenhuma conta encontrada.</p>
+              <p className="text-[13px]" style={{ color: MUTED }}>
+                Nenhuma conta encontrada.
+                {/* "Nada aqui" quando o filtro é que escondeu tudo manda procurar um
+                    problema que não existe. Diz o motivo e o caminho de volta. */}
+                {pausadasOcultas > 0 && ` ${pausadasOcultas} pausada${pausadasOcultas === 1 ? " está oculta" : "s estão ocultas"} — marque "Mostrar pausadas" para vê-la${pausadasOcultas === 1 ? "" : "s"}.`}
+              </p>
             )}
           </div>
         </>
