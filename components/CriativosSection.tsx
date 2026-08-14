@@ -42,6 +42,9 @@ export default function CriativosSection(
   const [nicho, setNicho] = useState("");
   const [dias, setDias] = useState(PERIODOS.some((p) => p.dias === diasInicial) ? diasInicial : 15);
   const [criativos, setCriativos] = useState<Criativo[]>([]);
+  // Padrão: só ATIVOS (pedido da agência, 16/08/2026) — criativo que não roda mais
+  // não é decisão de hoje.
+  const [incluirPausados, setIncluirPausados] = useState(false);
   const [erros, setErros] = useState<{ accountId: string }[]>([]);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -76,13 +79,35 @@ export default function CriativosSection(
     return () => { cancelado = true; };
   }, [modo, accountId, nicho, dias, alvo]);
 
+  /**
+   * Filtro de situação, ANTES do piso de conversas.
+   *
+   * ⚠️ A ORDEM IMPORTA e é esta de propósito: o piso decide "tem volume para
+   * ranquear?", a situação decide "ainda existe?". Aplicar o piso primeiro faria
+   * um criativo pausado ocupar vaga no ranking e empurrar um ativo para o balde de
+   * volume insuficiente.
+   *
+   * ⚠️ SITUAÇÃO DESCONHECIDA (null) FICA VISÍVEL. É o caso da chamada de /ads que
+   * falhou ou do anúncio fora dos 100 — não sabemos se roda, e esconder por
+   * suposição tiraria do ranking um criativo que pode ser o melhor da conta.
+   * Some só o que a Meta AFIRMOU estar pausado.
+   */
+  const visiveis = useMemo(
+    () => (incluirPausados ? criativos : criativos.filter((c) => c.situacao !== "pausado")),
+    [criativos, incluirPausados]
+  );
+  const pausadosOcultos = useMemo(
+    () => (incluirPausados ? 0 : criativos.filter((c) => c.situacao === "pausado").length),
+    [criativos, incluirPausados]
+  );
+
   const ranqueados = useMemo(
-    () => criativos.filter((c) => c.conversas >= PISO_CONVERSAS).sort((a, b) => a.cpl - b.cpl),
-    [criativos]
+    () => visiveis.filter((c) => c.conversas >= PISO_CONVERSAS).sort((a, b) => a.cpl - b.cpl),
+    [visiveis]
   );
   const insuficientes = useMemo(
-    () => criativos.filter((c) => c.conversas < PISO_CONVERSAS).sort((a, b) => b.gasto - a.gasto),
-    [criativos]
+    () => visiveis.filter((c) => c.conversas < PISO_CONVERSAS).sort((a, b) => b.gasto - a.gasto),
+    [visiveis]
   );
 
   const nomeCliente = opcoes.find((c) => c.accountId === accountId)?.cliente;
@@ -147,6 +172,27 @@ export default function CriativosSection(
             );
           })}
         </div>
+
+        {/* Sempre visível, como o da /carteira: filtro ligado precisa se anunciar. */}
+        <label className="flex cursor-pointer items-center gap-2 text-[13px]" style={{ color: TEMA.texto }}>
+          <input
+            type="checkbox"
+            checked={incluirPausados}
+            onChange={(e) => setIncluirPausados(e.target.checked)}
+            className="h-3.5 w-3.5 cursor-pointer"
+            style={{ accentColor: YELLOW }}
+          />
+          Incluir pausados
+          {pausadosOcultos > 0 && (
+            <span
+              className="rounded-md px-1.5 py-0.5 text-[11px] font-medium tabular-nums"
+              style={{ background: TEMA.chip, color: MUTED }}
+              title="Anúncios que a Meta reporta como pausados (inclui campanha ou conjunto pausado). Os de situação desconhecida continuam na lista."
+            >
+              {pausadosOcultos} oculto{pausadosOcultos === 1 ? "" : "s"}
+            </span>
+          )}
+        </label>
 
         {carregando && <span className="text-[13px]" style={{ color: MUTED }}>Carregando ao vivo…</span>}
       </div>
@@ -231,7 +277,10 @@ function LinhaCriativo({ c, pos, melhor }: { c: Criativo; pos?: number; melhor?:
         {c.cliente && (
           <p className="truncate text-[11px] font-medium" style={{ color: MUTED }}>{c.cliente}</p>
         )}
-        <p className="truncate text-sm text-brand-ink" title={c.adName}>{c.adName}</p>
+        <p className="flex items-center gap-1.5 text-sm text-brand-ink">
+          <span className="truncate" title={c.adName}>{c.adName}</span>
+          <SeloSituacao c={c} />
+        </p>
         <p className="text-[11px] tabular-nums" style={{ color: MUTED }}>{num(c.conversas)} conversas · {brl(c.gasto)}</p>
       </div>
       <div className="shrink-0 text-right">
@@ -241,6 +290,36 @@ function LinhaCriativo({ c, pos, melhor }: { c: Criativo; pos?: number; melhor?:
         <p className="text-[11px]" style={{ color: MUTED }}>CPL</p>
       </div>
     </div>
+  );
+}
+
+/**
+ * Situação do anúncio, com TRÊS estados — e o terceiro é o que importa.
+ *
+ * ⚠️ "ativo" não ganha selo: com o filtro padrão mostrando só ativos, carimbar
+ * "ativo" em toda linha é ruído que ninguém lê. O selo aparece onde há informação:
+ * quando está pausado (só visível com o toggle ligado) e quando NÃO SE SABE.
+ *
+ * ⚠️ O selo cinza de "?" existe porque ausência de dado não pode virar afirmação.
+ * A chamada de /ads traz no máximo 100 anúncios e é best-effort — em conta grande
+ * ou com a chamada falhando, o criativo aparece sem situação. Dizer "ativo" ali
+ * seria inventar; omitir o selo faria parecer ativo pelo mesmo motivo.
+ */
+function SeloSituacao({ c }: { c: Criativo }) {
+  if (c.situacao === "ativo") return null;
+  const pausado = c.situacao === "pausado";
+  return (
+    <span
+      className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase"
+      style={pausado
+        ? { background: TEMA.chip, color: MUTED }
+        : { background: TEMA.chip, color: MUTED }}
+      title={pausado
+        ? `Pausado na Meta (${c.statusMeta ?? "sem detalhe"}). Inclui campanha ou conjunto pausado, não só o anúncio.`
+        : "Situação desconhecida: a consulta de anúncios não devolveu esta peça (traz até 100 por conta). Não é o mesmo que pausado."}
+    >
+      {pausado ? "Pausado" : "?"}
+    </span>
   );
 }
 

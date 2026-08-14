@@ -187,11 +187,24 @@ export async function buscarCriativos(accountId: string, dias: number): Promise<
   const jsonIns = await resIns.json();
   const rows: any[] = jsonIns?.data ?? [];
 
-  // 2) Miniaturas por ad_id (best-effort; falha aqui não derruba o ranking).
+  // 2) Miniaturas E SITUAÇÃO por ad_id (best-effort; falha aqui não derruba o ranking).
+  //
+  // ⚠️ `effective_status` PEGA CARONA — nenhuma requisição a mais. Esta chamada já
+  // existia para as miniaturas; o status é só mais um campo no mesmo `fields`.
+  //
+  // ⚠️ EFETIVO, NÃO `status`. O `status` é do anúncio isolado: um anúncio ACTIVE
+  // dentro de campanha pausada não roda, e apareceria como ativo. O efetivo devolve
+  // CAMPAIGN_PAUSED/ADSET_PAUSED nesses casos — é ele que responde "está rodando?".
+  //
+  // ⚠️ E ISTO É CADASTRO, NÃO ENTREGA. Mesma lição do account_status na carteira:
+  // ACTIVE diz que está habilitado, não que entregou. Aqui não distorce, porque o
+  // criativo só entra na lista se teve gasto na janela (vem do insights) — mas o
+  // rótulo na tela diz "ativo", nunca "entregando".
   const thumbs = new Map<string, string>();
+  const statusPorAd = new Map<string, string>();
   try {
     const pAds = new URLSearchParams({
-      fields: "creative{thumbnail_url}",
+      fields: "creative{thumbnail_url},effective_status",
       limit: "100",
       access_token: TOKEN,
     });
@@ -202,6 +215,7 @@ export async function buscarCriativos(accountId: string, dias: number): Promise<
       for (const a of (jsonAds?.data ?? []) as any[]) {
         const t = a?.creative?.thumbnail_url;
         if (a?.id && t) thumbs.set(a.id, t);
+        if (a?.id && a?.effective_status) statusPorAd.set(a.id, String(a.effective_status));
       }
     }
   } catch (e) {
@@ -212,6 +226,7 @@ export async function buscarCriativos(accountId: string, dias: number): Promise<
     const gasto = Number(r.spend || 0);
     const conversas =
       somaActions(r.actions, FORM_LEAD_ACTIONS) + somaActions(r.actions, WHATS_ACTIONS);
+    const bruto = statusPorAd.get(r.ad_id) ?? null;
     return {
       adId: r.ad_id,
       adName: r.ad_name || r.ad_id,
@@ -219,8 +234,29 @@ export async function buscarCriativos(accountId: string, dias: number): Promise<
       conversas,
       cpl: conversas > 0 ? gasto / conversas : 0,
       thumbnailUrl: thumbs.get(r.ad_id) ?? null,
+      situacao: situacaoDoAnuncio(bruto),
+      statusMeta: bruto,
     };
   });
+}
+
+/**
+ * `effective_status` cru → ativo / pausado / desconhecido.
+ *
+ * ⚠️ SÓ "ACTIVE" É ATIVO; todo o resto que a Meta souber dizer é pausado —
+ * PAUSED, CAMPAIGN_PAUSED, ADSET_PAUSED, ARCHIVED, DELETED, DISAPPROVED,
+ * PENDING_REVIEW. A lista de valores possíveis cresce com a plataforma, então a
+ * régua é por igualdade com ACTIVE, nunca por lista de negados: valor novo que
+ * ninguém previu cai em "pausado", que é o lado seguro para o ranking —
+ * anúncio em revisão não está entregando.
+ *
+ * ⚠️ AUSENTE VIRA null, NUNCA "pausado". Sem resposta da chamada de /ads (falha,
+ * ou o anúncio ficou fora dos 100), não sabemos — e chutar pausa esconderia
+ * criativo que está rodando.
+ */
+export function situacaoDoAnuncio(bruto: string | null | undefined): "ativo" | "pausado" | null {
+  if (!bruto) return null;
+  return String(bruto).toUpperCase() === "ACTIVE" ? "ativo" : "pausado";
 }
 
 /**

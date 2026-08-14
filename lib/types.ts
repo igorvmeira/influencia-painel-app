@@ -173,4 +173,16 @@ export interface Criativo {
   cpl: number;
   thumbnailUrl: string | null;
   cliente?: string; // preenchido no ranking por nicho (de qual cliente é o criativo)
+  /**
+   * Situação do anúncio na Meta, vinda de `effective_status` (não de `status`):
+   * o efetivo considera o pai, então anúncio ligado dentro de campanha pausada
+   * aparece como pausado — que é o que "está rodando?" realmente pergunta.
+   *
+   * `null` = NÃO SABEMOS, e nunca "pausado". A chamada de /ads é best-effort e
+   * traz no máximo 100 anúncios; tratar ausência como pausa esconderia criativo
+   * ativo de conta grande. Ausente ≠ zero, a regra de sempre.
+   */
+  situacao?: "ativo" | "pausado" | null;
+  /** O valor cru da Meta (ACTIVE, PAUSED, CAMPAIGN_PAUSED, ADSET_PAUSED...). */
+  statusMeta?: string | null;
 }
