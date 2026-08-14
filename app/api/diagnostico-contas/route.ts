@@ -47,8 +47,11 @@ const TOKEN = process.env.META_ACCESS_TOKEN || "";
 const MAX_SONDAS = 40;
 // Sondas simultâneas — mantém a rota dentro do tempo da função sem serializar tudo.
 const LOTE_SONDA = 8;
-// Janela de gasto do modo ?accountId (veiculação só se afere por gasto > 0).
+// Janela PADRÃO de gasto do modo ?accountId (veiculação só se afere por gasto > 0).
+// Ajustável por chamada com ?dias=N — 30 responde "está rodando AGORA?", 120 responde
+// "rodou em algum momento?". As duas perguntas aparecem em toda conciliação.
 const DIAS_GASTO = 120;
+const DIAS_GASTO_MAX = 365;
 
 interface AdAccount {
   id: string;          // "act_123..."
@@ -110,9 +113,9 @@ async function sondar(accountId: string): Promise<Sonda> {
 }
 
 /** Gasto dia a dia na janela — única prova de VEICULAÇÃO (status não serve). */
-async function sondarGasto(accountId: string) {
+async function sondarGasto(accountId: string, dias: number) {
   const until = new Date();
-  const since = new Date(until.getTime() - (DIAS_GASTO - 1) * 86400000);
+  const since = new Date(until.getTime() - (dias - 1) * 86400000);
   const p = new URLSearchParams({
     fields: "spend",
     time_range: JSON.stringify({ since: ymd(since), until: ymd(until) }),
@@ -209,9 +212,16 @@ export async function GET(req: Request) {
       );
     }
 
+    // ?dias=N — janela do gasto. Fora da faixa, cai no padrão em vez de errar:
+    // o valor só muda o RECORTE de uma métrica, não o significado da resposta.
+    const diasParam = Number(url.searchParams.get("dias"));
+    const dias = Number.isFinite(diasParam) && diasParam >= 1
+      ? Math.min(Math.floor(diasParam), DIAS_GASTO_MAX)
+      : DIAS_GASTO;
+
     const sondados = await emLotes(ids, LOTE_SONDA, async (id) => {
       const s = await sondar(id);
-      const gasto = s.acessivelDireto ? await sondarGasto(id) : null;
+      const gasto = s.acessivelDireto ? await sondarGasto(id, dias) : null;
       const conta = deParaPorId.get(bare(id));
       return {
         accountId: id,
@@ -239,7 +249,8 @@ export async function GET(req: Request) {
       apenasLeitura: true,
       modo: "sondagem",
       criterio: "consulta direta a /{accountId} e /{accountId}/insights — o mesmo caminho do sync",
-      janelaGastoDias: DIAS_GASTO,
+      // Ecoa a janela USADA (não a pedida): quem lê o número sabe de que recorte ele é.
+      janelaGastoDias: dias,
       total: sondados.length,
       passamNasConferencias: sondados.filter((s) => s.passaNasConferencias).length,
       contas: sondados,
@@ -306,7 +317,9 @@ export async function GET(req: Request) {
     criterio:
       "`me/adaccounts` serve para DESCOBRIR contas; quem prova acesso é a consulta "
       + "direta (`acessivelDireto`), que é o caminho do sync. Não listada ≠ inacessível.",
-    dica: "Para testar ids avulsos: ?accountId=act_1,act_2 (traz moeda, status e gasto).",
+    dica: "Para testar ids avulsos: ?accountId=act_1,act_2 (traz moeda, status e gasto). "
+      + `Janela do gasto ajustável com &dias=N (padrão ${DIAS_GASTO}, teto ${DIAS_GASTO_MAX}): `
+      + "30 responde 'está rodando agora?', 120 responde 'rodou em algum momento?'.",
     totalListadasNoMeta: metaContas.length,
     totalNoDePara: snap.size,
     // Contagem honesta do que o corte deixou de fora (0 = nada foi omitido).

@@ -78,9 +78,23 @@ de Monitoramento da agência. São perguntas diferentes, e misturá-las quebra o
 O teste é sempre **gasto > 0 no período**, consultado dia a dia — nunca
 `account_status`, que descreve o cadastro e não o comportamento.
 
-Casos reais que fixaram a regra (06–07/08/2026): ZAY SUSHI e GUARÁ NET seguem pausadas
-apesar de a agência as listar como clientes ativos (zero em 120 dias); JS FIBRA segue
-ativa apesar de a agência a listar como saída (R$ 2.460,62 nos últimos 30 dias).
+### A exceção: saída confirmada
+
+Veiculação é o teste **padrão**. **EXCEÇÃO: saída CONFIRMADA pela agência pausa a
+conta mesmo com gasto** — o que ela gasta depois não é mais trabalho da agência, e
+manter isso no CPL de carteira do gestor credita a ele um resultado que não é dele.
+O motivo fica registrado ao lado, sempre.
+
+Sem esse registro a próxima pessoa lê "veicula → ativa", vê uma conta pausada
+gastando e "corrige" achando que é erro. Por isso os casos concretos ficam escritos:
+
+| conta | estado | por quê |
+|---|---|---|
+| ZAY SUSHI `act_1670450540519360` | pausada | zero em 120 dias, embora a agência liste o cliente como ativo (07/08/2026) |
+| GUARÁ NET `act_2030710527729327` | pausada | idem — reconferido em 14/08: segue **nenhum dia com gasto** em 120 dias |
+| TRAJETO `act_2622092654889646` | pausada | criada em 17/07, `ACTIVE`, **nunca veiculou** |
+| DRA. ANA PAULA `act_2057134961683901` | pausada | cadastrada já pausada: último gasto em **02/05/2026**, zero há 104 dias |
+| **JS FIBRA** `act_1321889532494546` | **pausada pela EXCEÇÃO** | a agência **confirmou a saída em 14/08/2026** e a conta **continuava gastando** (R$ 2.112,17 nos últimos 30 dias, com registro do próprio dia 14/08). Não é erro: é a exceção acima. |
 
 ## Antes de cadastrar uma conta nova
 
@@ -129,6 +143,6 @@ o motivo e o gatilho para revisar:
 | Conta | accountId | Por que não entrou | Gatilho |
 |---|---|---|---|
 | NEXA TELECOM | `act_3943992782574535` | **Dois motivos independentes.** (1) **Bloqueio da Meta**, confirmado pela agência — `account_status` 3 (UNSETTLED) e veiculação interrompida em 03/08. (2) **Moeda ARS** (fuso Buenos Aires): o painel não converte moeda, então ela contaminaria totais, CPL e ranking. ⚠ Não é o caso de "entraria zerada" — a conta tem 20 dias de veiculação; o problema é a escala dos números. | Só cadastrar quando os **dois** forem resolvidos: bloqueio liberado **e** decisão sobre como o painel trata moeda estrangeira (hoje: não trata). |
-| WELL | `act_1923893677912522` | Acessível, BRL, veiculando (R$ 548,82 em 10 dias até 12/08). **Mas o nome na Meta é "Inorpel Industria Nordestina de Produtos Eletricos LTDA"** — não compartilha nada com o rótulo "WELL" da planilha. Pode ser a razão social por trás da marca, pode ser accountId errado. É o mesmo padrão do `act_191616327202757`, que virou conta fantasma por ter sido cadastrado com nome digitado. | Cadastrar quando o Roberto confirmar que a Inorpel é a WELL. |
-| SOLUÇÃO EMPRESAS | `act_358502495857953` | Acessível, BRL, veiculando forte (R$ 36.166,09 em 84 dias até 12/08). **Não está na planilha de monitoramento**: o WEDER tem só "SOLUÇÃO NETWORK", e o Roberto mandou dois IDs distintos ("SOLUÇÃO" e "SOLUÇÃO EMPRESAS"). A outra (`act_974158976372768`) está **bloqueada**, então não dá para comparar os nomes da Meta e decidir se são o mesmo cliente. Valor alto o bastante para mudar o CPL de carteira do WEDER com base num vínculo não confirmado. | Cadastrar quando o Roberto disser se "SOLUÇÃO NETWORK" da planilha é esta conta, ou se são dois clientes distintos. |
+| SOLUÇÃO (2ª conta) | `act_974158976372768` | ⚠ **Os números da SOLUÇÃO no painel estão INCOMPLETOS.** A agência confirmou (14/08/2026) que o cliente roda em **duas** contas; só a `act_358502495857953` ("Solução Empresas") é acessível e foi cadastrada. Esta segue **bloqueada** (`#200 ... NOT grant ads_management`), então o gasto e as conversões dela **não entram no painel** — e nada na tela indica que falta metade. Ao ler os números desse cliente, some mentalmente o que não está aqui. | Cadastrar quando sair a parceria de Business Manager. Aí os números do cliente passam a ser completos. |
+| DRA. ANA PAULA | `act_2057134961683901` | Cadastrada já **pausada** (regra `pausado` = não veicula): último gasto em **02/05/2026**, zero nos últimos 104 dias. Entrou pausada para não diluir o CPL de carteira do ISMAIL com uma conta parada. | Reativar quando voltar a veicular — `pausado: false` **e `gestor: "ISMAIL"`**, que é a dona. ⚠ Como ela nasceu pausada, o `gestorHistorico` NÃO tem o ISMAIL registrado; este é o único lugar onde a titularidade está escrita. |
 | TRAJETO | `act_2622092654889646` | Cadastrada e **pausada**. Conta criada em 17/07/2026, `account_status` ACTIVE, mas **gasto zero em 120 dias** — nunca veiculou. Ativa, entraria zerada e puxaria o CPL de carteira do gestor para baixo. Está também com **nicho vazio**: a planilha diz "Provedor" e a Meta chama a conta de "CA 01 - TRAJETO MÓVEIS". | **Dois gatilhos independentes.** (1) Reativar (`pausado: false` + `gestor: VINÍCIUS`) quando começar a veicular — confira por **gasto > 0 no período**, não por `account_status`. (2) Preencher o nicho quando a agência disser o ramo. |

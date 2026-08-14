@@ -1,5 +1,37 @@
 [
   {
+    "accountId": "act_1208288030135728",
+    "cliente": "PLIQ",
+    "gestor": "ANDRÉ",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
+    "accountId": "act_1923893677912522",
+    "cliente": "WELL",
+    "gestor": "WEDER",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
+    "accountId": "act_358502495857953",
+    "cliente": "SOLUÇÃO EMPRESAS",
+    "gestor": "WEDER",
+    "tipo": "",
+    "nicho": "Provedor (ISP)",
+    "pausado": false
+  },
+  {
+    "accountId": "act_2057134961683901",
+    "cliente": "DRA. ANA PAULA",
+    "gestor": "PAUSADO",
+    "tipo": "",
+    "nicho": "Odontologia",
+    "pausado": true
+  },
+  {
     "accountId": "act_1626408402154846",
     "cliente": "MEGA NET",
     "gestor": "WEDER",
@@ -458,10 +490,10 @@
   {
     "accountId": "act_1321889532494546",
     "cliente": "JS FIBRA",
-    "gestor": "DANIEL",
+    "gestor": "PAUSADO",
     "tipo": "B2C",
     "nicho": "Provedor (ISP)",
-    "pausado": false
+    "pausado": true
   },
   {
     "accountId": "act_467779389026591",
@@ -835,7 +867,7 @@
     "accountId": "act_1141344530820205",
     "cliente": "CIRCULA NET",
     "gestor": "ISMAIL",
-    "tipo": "",
+    "tipo": "B2B/B2C",
     "nicho": "Provedor (ISP)",
     "pausado": false
   },
