@@ -1,5 +1,28 @@
 # `data/` — fontes de carga do painel
 
+## Arquivos
+
+| arquivo | o que é |
+|---|---|
+| `contas.json` | de-para oficial da carteira de tráfego (ver abaixo) |
+| `orientacoes-seed.json` | carga inicial das orientações por conta |
+| `xmax-api.yaml` | spec OpenAPI do **Xmax**, o CRM do comercial — insumo do futuro painel comercial |
+| `xmax-integracao.md` | levantamento e plano dessa integração; **nada implementado ainda** |
+
+### Xmax — correção de expectativa sobre o retroativo
+
+Foi dito à agência que "não há funil retroativo". **Está forte demais.** As
+oportunidades carregam `createdAt`, `closedat` e `stagebegintime`, então **leads por
+mês, fechamentos por mês e MRR por mês são calculáveis para trás**, sem depender de
+nenhuma automação.
+
+O que só começa a existir quando as automações estiverem apontando para o nosso
+endpoint é o **caminho do lead pelas etapas** — a conversão etapa a etapa e o tempo em
+cada etapa anterior à atual. A API guarda só a etapa atual e desde quando ela começou.
+
+Detalhes, riscos e o plano do endpoint de diagnóstico em
+[`xmax-integracao.md`](./xmax-integracao.md).
+
 ## ESCOPO DO PAINEL: apenas Meta Ads
 
 O painel cobre **exclusivamente Meta Ads** (Facebook/Instagram). Todo número da tela
