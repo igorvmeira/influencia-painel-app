@@ -5,6 +5,7 @@ import { ContaMap, EntradaOrientacao } from "@/lib/types";
 import { useContas } from "@/lib/useContas";
 import { useOrientacoes, salvarOrientacao, buscarHistorico } from "@/lib/useOrientacoes";
 import { haQuanto } from "@/lib/tempo";
+import { SEMAFOROS, estiloDe, type Semaforo } from "@/lib/semaforo";
 import { TEMA } from "@/lib/brand";
 
 const CARD = TEMA.card;
@@ -120,6 +121,8 @@ function LinhaOrientacao({ conta, atual, ordem, aoSalvar }: {
 }) {
   const [editando, setEditando] = useState(false);
   const [texto, setTexto] = useState("");
+  // Semáforo da EDIÇÃO em curso. Parte do que já está gravado; null = sem classificar.
+  const [semaforo, setSemaforo] = useState<Semaforo | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [salvo, setSalvo] = useState(false);
   const [erroLocal, setErroLocal] = useState<string | null>(null);
@@ -129,6 +132,9 @@ function LinhaOrientacao({ conta, atual, ordem, aoSalvar }: {
 
   function abrirEdicao() {
     setTexto(atual?.texto ?? "");
+    // Parte do que já está classificado — reeditar o texto não deve zerar o
+    // julgamento em silêncio. Se nunca teve, começa sem cor (cinza).
+    setSemaforo(atual?.semaforo ?? null);
     setErroLocal(null);
     setEditando(true);
   }
@@ -139,7 +145,7 @@ function LinhaOrientacao({ conta, atual, ordem, aoSalvar }: {
     setSalvando(true);
     setErroLocal(null);
     try {
-      await salvarOrientacao(conta.accountId, t);
+      await salvarOrientacao(conta.accountId, t, semaforo);
       setEditando(false);
       setSalvo(true);
       setHist(null); // histórico muda; recarrega sob demanda
@@ -174,6 +180,7 @@ function LinhaOrientacao({ conta, atual, ordem, aoSalvar }: {
           <p className="flex items-center gap-2 text-sm font-medium text-brand-ink">
             <span className="w-6 shrink-0 text-right text-[11px] font-normal tabular-nums" style={{ color: MUTED }}>{ordem}</span>
             <span className="truncate">{conta.cliente}</span>
+            <SeloSemaforo s={atual?.semaforo ?? null} />
           </p>
           {/* ml-8 = largura do número (w-6) + gap-2: alinha o texto com o nome. */}
           {!editando && (
@@ -211,6 +218,7 @@ function LinhaOrientacao({ conta, atual, ordem, aoSalvar }: {
             className="w-full rounded-lg px-3 py-2 text-[13px] outline-none placeholder:text-brand-placeholder"
             style={{ background: INK, color: TEMA.texto, border: `1px solid ${LINE}` }}
           />
+          <SeletorSemaforo valor={semaforo} onChange={setSemaforo} />
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
             <span className="text-[11px]" style={{ color: MUTED }}>{texto.length}/{MAX}</span>
             <div className="flex items-center gap-2">
@@ -241,7 +249,12 @@ function LinhaOrientacao({ conta, atual, ordem, aoSalvar }: {
               {hist.map((h, i) => (
                 <li key={i} className="text-[12px]">
                   <p className="whitespace-pre-wrap" style={{ color: TEMA.muted }}>{h.texto}</p>
-                  <p className="text-[11px]" style={{ color: MUTED }}>{haQuanto(h.em)}{h.autor ? ` · ${h.autor}` : ""}</p>
+                  <p className="flex items-center gap-1.5 text-[11px]" style={{ color: MUTED }}>
+                    {haQuanto(h.em)}{h.autor ? ` · ${h.autor}` : ""}
+                    {/* O histórico guarda o julgamento DA ÉPOCA — é ele que mostra
+                        se a conta melhorou ou piorou entre uma orientação e outra. */}
+                    <SeloSemaforo s={h.semaforo ?? null} />
+                  </p>
                 </li>
               ))}
             </ul>
@@ -250,6 +263,70 @@ function LinhaOrientacao({ conta, atual, ordem, aoSalvar }: {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Selo do julgamento. Cinza = NÃO CLASSIFICADO, e o tooltip diz isso com todas as
+ * letras — a cor sozinha faria "cinza" parecer "desempenho neutro", que é uma
+ * afirmação que ninguém fez.
+ *
+ * ⚠️ NUNCA some. Um selo que desaparece quando não há classificação esconderia
+ * justamente a informação útil: quantas contas ainda faltam ser julgadas.
+ */
+export function SeloSemaforo({ s }: { s: Semaforo | null }) {
+  const e = estiloDe(s);
+  return (
+    <span
+      className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase"
+      style={{ background: e.fundo, color: e.cor, cursor: "help" }}
+      title={e.descricao}
+    >
+      {s ? e.rotulo : "—"}
+    </span>
+  );
+}
+
+/**
+ * Escolha do julgamento na hora de escrever.
+ *
+ * ⚠️ "SEM CLASSIFICAR" É UMA OPÇÃO EXPLÍCITA, não a ausência de clique. Sem ela,
+ * quem abrisse uma orientação já classificada não teria como voltar atrás, e o
+ * julgamento viraria irreversível por acidente de interface.
+ *
+ * ⚠️ O rótulo diz o QUE a cor significa. Cor sozinha não sobrevive a daltonismo
+ * nem a print em preto e branco — os dois acontecem em reunião de agência.
+ */
+function SeletorSemaforo({ valor, onChange }: {
+  valor: Semaforo | null; onChange: (s: Semaforo | null) => void;
+}) {
+  const opcoes: (Semaforo | null)[] = [...SEMAFOROS, null];
+  return (
+    <div className="mt-2">
+      <p className="mb-1 text-[11px]" style={{ color: MUTED }}>
+        Desempenho do cliente — seu julgamento, independente do alerta automático de CPL.
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {opcoes.map((o) => {
+          const e = estiloDe(o);
+          const ativo = valor === o;
+          return (
+            <button
+              key={o ?? "neutro"}
+              type="button"
+              onClick={() => onChange(o)}
+              title={e.descricao}
+              className="rounded-full px-3 py-1 text-[12px] font-medium transition-opacity"
+              style={ativo
+                ? { background: e.fundo, color: e.cor, border: `1.5px solid ${e.cor}` }
+                : { background: "transparent", color: MUTED, border: `1px solid ${LINE}` }}
+            >
+              {o ? e.rotulo : "Sem classificar"}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

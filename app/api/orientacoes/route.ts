@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Timestamp } from "firebase-admin/firestore";
 import { getDb, getAuthAdmin } from "@/lib/firebaseAdmin";
 import { EntradaOrientacao } from "@/lib/types";
+import { normalizarSemaforo } from "@/lib/semaforo";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs"; // firebase-admin
@@ -41,7 +42,14 @@ function emISO(v: unknown): string | null {
 }
 function normalizar(e: any): EntradaOrientacao | null {
   if (!e || typeof e.texto !== "string") return null;
-  return { texto: e.texto, autor: e.autor ?? "", em: emISO(e.em) ?? "" };
+  // ⚠️ `normalizarSemaforo` e não `e.semaforo` cru: entrada antiga não tem o campo
+  // (vira null = cinza) e valor estranho no banco não vaza como cor para a tela.
+  return {
+    texto: e.texto,
+    autor: e.autor ?? "",
+    em: emISO(e.em) ?? "",
+    semaforo: normalizarSemaforo(e.semaforo),
+  };
 }
 
 export async function GET(req: Request) {
@@ -91,7 +99,7 @@ export async function POST(req: Request) {
   const db = getDb();
   if (!db) return NextResponse.json({ ok: false, erro: "Firebase não configurado" }, { status: 500 });
 
-  let corpo: { accountId?: unknown; texto?: unknown };
+  let corpo: { accountId?: unknown; texto?: unknown; semaforo?: unknown };
   try {
     corpo = await req.json();
   } catch {
@@ -100,6 +108,16 @@ export async function POST(req: Request) {
 
   const accountId = typeof corpo.accountId === "string" ? corpo.accountId.trim() : "";
   const texto = sanitizar(typeof corpo.texto === "string" ? corpo.texto : "");
+  /**
+   * ⚠️ OPCIONAL DE PROPÓSITO — quem não escolher grava null (cinza), e a rota NÃO
+   * recusa. Obrigar a classificar transformaria o semáforo em pedágio para
+   * registrar orientação, e a orientação é o que não pode deixar de ser escrita.
+   *
+   * ⚠️ Valor inválido vira null em vez de 400: o campo é acessório, e derrubar a
+   * gravação do TEXTO por causa dele perderia o que importa.
+   * Firestore rejeita `undefined` — por isso null explícito, nunca omissão.
+   */
+  const semaforo = normalizarSemaforo(corpo.semaforo);
 
   if (!accountId) return NextResponse.json({ ok: false, erro: "accountId obrigatório" }, { status: 400 });
   if (!texto) return NextResponse.json({ ok: false, erro: "texto vazio" }, { status: 400 });
@@ -115,7 +133,7 @@ export async function POST(req: Request) {
 
   const ref = db.collection("orientacoes").doc(accountId);
   const agora = Timestamp.now(); // relógio do servidor (serverTimestamp não vale em array)
-  const entrada = { texto, autor: sessao.email, em: agora };
+  const entrada = { texto, autor: sessao.email, em: agora, semaforo };
 
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
@@ -129,6 +147,6 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     ok: true,
-    atual: { texto, autor: sessao.email, em: agora.toDate().toISOString() },
+    atual: { texto, autor: sessao.email, em: agora.toDate().toISOString(), semaforo },
   });
 }

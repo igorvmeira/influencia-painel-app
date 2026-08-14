@@ -10,6 +10,7 @@ import { ContaMap, EntradaOrientacao, LimiteConta, LinhaCliente, MetricaDiaria }
 import { useOrientacoes } from "@/lib/useOrientacoes";
 import { montarNichos, montarPainel } from "@/lib/painel";
 import { CPL_ALERTA, LIMITE_ATENCAO, LIMITE_CRITICO, contasPertoDoLimite } from "@/lib/alertas";
+import { estiloDe } from "@/lib/semaforo";
 import { brl, brlDec, num, pct } from "@/lib/format";
 import { montarKpis, montarKpisMes, moedaCard, numCard, serieGrafico, serieGraficoMes } from "@/lib/kpis";
 import {
@@ -1305,6 +1306,24 @@ function LinhaClienteRow({ c, ordem, limite, orientacao, par }: {
             <Link href="/orientacoes" title={orientacao.texto} className="text-[12px] leading-none hover:opacity-80" style={{ color: TEMA.ouroTexto }} aria-label="Ver orientação">
               💬
             </Link>
+          )}
+          {/* ⚠️ SEMÁFORO ≠ ALERTA DE CPL, e a tela precisa deixar isso claro.
+              O alerta (coluna CPL / central de alertas) é CÁLCULO e muda sozinho a
+              cada sync; este selo é JULGAMENTO do Roberto e só muda quando alguém
+              escreve orientação. Podem discordar — CPL bom com semáforo vermelho é
+              caso legítimo, não erro. Por isso o selo mora ao lado do NOME, longe
+              da coluna de CPL, e o tooltip diz de quem é a opinião.
+              Só aparece quando FOI classificado: um "—" cinza em toda linha viraria
+              ruído numa tabela densa (na /orientacoes ele aparece sempre, porque lá
+              a pergunta é justamente "o que falta classificar?"). */}
+          {orientacao?.semaforo && (
+            <span
+              className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase"
+              style={{ background: estiloDe(orientacao.semaforo).fundo, color: estiloDe(orientacao.semaforo).cor, cursor: "help" }}
+              title={`Desempenho segundo a orientação: ${estiloDe(orientacao.semaforo).rotulo}. É julgamento de quem escreveu — não é o alerta automático de CPL, e pode discordar dele.`}
+            >
+              {estiloDe(orientacao.semaforo).rotulo}
+            </span>
           )}
         </span>
       </td>

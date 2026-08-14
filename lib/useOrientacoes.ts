@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { auth } from "./firebaseClient";
 import { EntradaOrientacao, Orientacao } from "./types";
+import type { Semaforo } from "./semaforo";
 
 async function tokenAtual(): Promise<string> {
   const u = auth?.currentUser;
@@ -40,12 +41,15 @@ export function useOrientacoes(): {
 }
 
 // Salva uma orientação (POST). Retorna a atual gravada.
-export async function salvarOrientacao(accountId: string, texto: string): Promise<EntradaOrientacao> {
+// `semaforo` é OPCIONAL: null = não classificado (cinza). Ver lib/semaforo.ts.
+export async function salvarOrientacao(
+  accountId: string, texto: string, semaforo: Semaforo | null = null
+): Promise<EntradaOrientacao> {
   const token = await tokenAtual();
   const r = await fetch("/api/orientacoes", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ accountId, texto }),
+    body: JSON.stringify({ accountId, texto, semaforo }),
   });
   const j = await r.json();
   if (!r.ok || !j.ok) throw new Error(j?.erro || `Erro ${r.status}`);

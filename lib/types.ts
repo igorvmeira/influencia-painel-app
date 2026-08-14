@@ -5,6 +5,12 @@ export interface EntradaOrientacao {
   texto: string;
   autor: string; // e-mail do usuário (extraído do ID token no servidor)
   em: string;    // ISO
+  /**
+   * Julgamento de desempenho de quem escreveu (ver lib/semaforo.ts).
+   * AUSENTE/null = não classificado (cinza) — é o caso de toda orientação
+   * escrita antes deste campo. Não há migração: ausente já resolve.
+   */
+  semaforo?: "verde" | "amarelo" | "vermelho" | null;
 }
 export interface Orientacao {
   accountId: string;
