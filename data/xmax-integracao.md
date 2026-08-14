@@ -347,15 +347,173 @@ nunca um número solto chamado "vendas":
    métrica de resultado: são R$ 84.630,00/mês em recorrente parado há mais de 180 dias
    esperando um clique.
 
-A pergunta para o Marcos — *ao fechar negócio, você clica em "ganhar" ou só move o card
-para Fechamento?* — **não bloqueia** nada: os dois números aparecem de qualquer forma.
-A resposta decide se a fila é um alerta de higiene do CRM ou de retrabalho comercial.
-
 **RESSALVA DE MÉTODO, que vale para qualquer leitura futura de etapa:** a API guarda só
 a etapa ATUAL, nunca o histórico. Para encerrada, `fkStage` é onde ela estava ao
 encerrar — isso é "esteve em Fechamento". Para aberta, é onde está agora. **Quem passou
 por Fechamento e voltou atrás continuando aberta é invisível.** Todo número desta seção
 é PISO, nunca total.
+
+### 🚫 BLOQUEIO DE PROCESSO (não técnico) — a ETAPA E não é desenhada até resolver
+
+A pergunta foi feita ao Marcos em 15/08/2026, e a resposta **não foi "clico" nem "não
+clico"** — foi que a regra não existe:
+
+> "precisa estabelecer melhor quando realmente dar ganho, se é quando fecha e manda os
+> dados ou só quando assina o contrato. Falta esse alinhamento ainda."
+
+Ou seja: o `status = 1` é ação manual **e ninguém definiu quando tomá-la**. É exatamente
+o que a medição acima encontrou, dito pelo lado de dentro. O Thiago já definiu que
+fechamento é *"envio dos dados para contrato"*, mas isso **nunca chegou ao comercial como
+regra** — o Igor escalou para o Thiago acertar com o Marcos em 15/08/2026.
+
+⚠️ **Nada da Etapa E se desenha antes disso.** Não é preciosismo: sem a regra, "vendas do
+mês" não tem definição, e um painel que responde uma pergunta mal definida produz um
+número que parece oficial. Pior que não ter tela.
+
+Quando destravar, o desenho já está decidido — as **duas contagens rotuladas** dos itens 1
+e 2 acima. A regra que o Thiago fixar só decide qual das duas vira o número principal;
+as duas aparecem de qualquer forma, e a fila continua sendo fila.
+
+## O FUNIL É DEFINIDO PELO DONO, não pelo `stageorders`
+
+Definido pelo Thiago em 15/08/2026. Ele não só filtrou etapas: **agrupou duas entradas no
+mesmo nível.**
+
+| nível | etapas | |
+|---|---|---|
+| 1 | **[15] Novo Lead - TRÁFEGO** + **[114] LEADS OUTBOUND** | ⚠️ **empate** — as duas são "lead novo" |
+| 2 | [21] Follow-up Agendamento | |
+| 3 | [17] Agendado Reunião | |
+| 4 | [27] NEGOCIAÇÃO | |
+| 5 | [20] Fechamento | |
+
+**Saem do funil**, com os motivos dele: `[118] LEADS FUTUROS` ("não faz sentido estar
+aí"), `[61] Nutrição Negociação` ("não precisa constar"), `[138] PROSPECÇÃO M&A` e
+`[134] COMPRA E VENDA` (**outro produto** — ver a seção de ideias futuras),
+`[49] LEAD RECUPERADO- AUTOMAÇÃO` (o lead recuperado **volta para lead novo**: é estado
+transitório, não estágio) e `[113] Recuperação de LEAD` (vai para a visão de recuperação
+— o Thiago descreveu como *"lead que não conseguiu trabalhar por agendamento, tipo um
+lead perdido tentando ser recuperado"*, o que confirma a Variante B).
+
+⚠️ **A ORDEM DE NEGÓCIO É CONSTANTE NO CÓDIGO; o `stageorders` continua sendo lido e
+mostrado.** As duas ficam visíveis no retorno do sync e o conflito é explícito se
+divergirem — porque agora existem duas verdades, e a que manda é a do dono. Medido em
+15/08/2026: o `stageorders` é `[15,118,114,138,134,21,113,49,17,27,61,20]` e, removidas
+as excluídas, **a ordem relativa das 6 é a mesma** — hoje não há conflito, só recorte.
+
+⚠️ **O empate do nível 1 muda o `etapaMaisAvancada`.** Pela ordem do Xmax, [15] é a
+posição 1 e [114] a posição 3 — o código atual faria OUTBOUND "mais avançado" que
+TRÁFEGO. Não é: são a mesma coisa por dois caminhos. A comparação passa a ser por
+**nível**, não por posição.
+
+### O que os números viram (medido em 14/08/2026, ANTES de mexer no código)
+
+| métrica | hoje | com o funil do Thiago | |
+|---|---|---|---|
+| oportunidades abertas (funil 4) | 1.656 | **1.656** | não muda |
+| pessoas com aberta | 1.455 | **1.455** | não muda |
+| **em captação** | 629 | **472** | −157 |
+| **em recuperação** | 838 | 838 ou **803** | depende do [49] |
+| **em negociação** | 225 | 150 ou **110** | depende do [61] |
+
+Pessoas por nível, na foto nova: **91** no nível 1 · **231** no 2 · **40** no 3 · **22**
+no 4 · **88** no 5.
+
+Dois fatos que saltam dessa coluna e valem para o desenho da tela:
+
+- **O nível 1 quase não existe pelo tráfego: 5 oportunidades abertas em [15] contra 86 em
+  [114].** A entrada do funil hoje é outbound, não anúncio — e isso contradiz a intuição
+  de quem só olha o investimento em mídia.
+- **O nível 5 (88) é maior que o 3 (40) e o 4 (22) somados.** Não é funil, é ampulheta —
+  e é o entulho de Fechamento medido na seção anterior.
+
+⚠️ **156 pessoas somem do funil de captação** (75 em [61], 44 em [118], 30 em [134], 9 em
+[138]). Elas **não podem simplesmente desaparecer da tela**: é literalmente a queixa do
+Thiago sobre o BI, cometida por nós. Precisam de destino explícito antes da Etapa C
+codificar o recorte.
+
+## A PERDA — o que dá e o que NÃO dá para mostrar (requisito do Thiago, Etapa C)
+
+A queixa: *"quando dá a perda, ele some do funil e do BI"*. **O painel resolve a parte
+principal** — uma vez sincronizada, a perdida fica no Firestore com `status 2`, `closedat`
+e a etapa; não some mais de lugar nenhum. O backfill já trouxe **2.835 perdidas** do
+funil 4, de mai/2024 a ago/2026.
+
+Mas três coisas foram medidas em 14/08/2026 e mudam o que a tela pode prometer.
+
+### ❌ `closereason` NÃO EXISTE no retorno — o "por quê" não dá para mostrar
+
+A spec documenta `closereason` e `closeobs` no `loseOpportunity`, e isso é enganoso:
+são parâmetros de **escrita**. Sondadas as **2.835 perdidas uma a uma** no
+`getOpportunity`, os dois campos **não aparecem entre os 50 que a API devolve** — não é
+"vem vazio", é que a chave não vem.
+
+⚠️ **O que isso NÃO prova:** não dá para distinguir *"a API nunca devolve"* de *"ninguém
+nunca preencheu, e a API omite chave vazia"*. As duas dão o mesmo resultado hoje, mas só
+a segunda é consertável por processo. **Descobrir isso é olhar a tela do Xmax** — ela
+oferece campo de motivo ao marcar perda? Pergunta para o Marcos; não vale testar
+escrevendo, porque seria escrita no CRM de produção.
+
+Também não está em outro lugar: `description` tem conteúdo em 36% das perdidas, mas é
+**dado de formulário** ("Nome: … Dono da empresa: … Email: …"), não motivo. Uma ou outra
+traz nota de vendedor ("Cliente analisando proposta, pediu retorno") — texto livre
+ocasional, nunca categoria. `products` e `username` vêm vazios em 100%.
+
+**Consequência: a tela mostra ONDE o lead morreu, nunca POR QUÊ.** Prometer "motivo da
+perda" com este dado seria inventar categoria.
+
+### ⚠️ 1.444 PERDAS NUM ÚNICO DIA — 27/05/2025
+
+Metade de tudo. A série mensal:
+
+| mês | perdas | em etapa apagada |
+|---|---|---|
+| … | | |
+| 2025-04 | 23 | 1 |
+| **2025-05** | **1.456** | **1.446** |
+| 2025-06 | 28 | 4 |
+
+**1.444 fecharam em 27/05/2025** e 99% delas estão em etapas que não existem mais. Isso é
+**reorganização de funil**, não perda comercial. Menor, mas do mesmo tipo: 96 em
+28/08/2024 e 61 em 20/01/2025.
+
+⚠️ **O gráfico de perdas por mês NÃO pode sair cru.** Sem tratamento, 51% de todas as
+perdas caem numa barra de maio/2025 e o gráfico responde "a empresa quebrou em maio" —
+sobre um dia em que alguém arrumou o CRM. **Regra: dia com volume anômalo aparece
+separado e rotulado como limpeza de base, nunca somado à série.** Fora esses picos, a
+perda real roda entre 5 e 64 por mês.
+
+### ✅ A ETAPA da perda existe — mas o nome, só de 2026 em diante
+
+`fkStage` de uma encerrada é onde ela estava ao encerrar, e são **22 etapas distintas** —
+não há limbo, o dado é real. O problema é outro: **13 dessas etapas foram APAGADAS do
+Xmax** e a API não devolve nome para elas em funil nenhum. A maior, `[28]`, tem 1.641
+perdas concentradas entre ago/2024 e mai/2025 — é o fóssil do funil antigo.
+
+| ano | perdas em etapa apagada | em etapa viva |
+|---|---|---|
+| 2024 | 76 (16%) | 410 |
+| 2025 | 1.669 (76%) | 525 |
+| **2026** | **0 (0%)** | **155** |
+
+**Leitura: de 2026 em diante o "onde morreu" é 100% legível.** No histórico, o ID fica e o
+nome não — e a tela mostra `etapa 28 (apagada)`, com a contagem visível, nunca somindo
+num balde "outros".
+
+### O que a Etapa C então entrega sobre a perda
+
+1. **Perdidas por mês** — com os dias de limpeza em massa separados e rotulados.
+2. **Onde morreu** — por etapa, com nível do funil novo; etapa apagada aparece com o ID.
+3. **Quem encerrou** — `closedby` vem preenchido em 42% (usuário 23 concentra 60% delas).
+4. **Não entrega o porquê** — e diz na tela que não tem o dado, em vez de omitir a coluna.
+
+## IDEIA FUTURA: M&A é outro produto, merece funil próprio
+
+`[138] PROSPECÇÃO M&A` e `[134] COMPRA E VENDA` saem do funil de captação porque **não são
+o mesmo negócio**: este funil é de assessoria de marketing. São 39 oportunidades abertas
+hoje — pouco para uma tela, suficiente para não jogar fora. Quando a agência quiser
+acompanhar M&A, é **funil próprio**, com etapas e taxas próprias; misturar os dois faria a
+conversão de marketing parecer pior do que é e a de M&A desaparecer.
 
 ## Perguntas ainda abertas
 
