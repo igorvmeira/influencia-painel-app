@@ -118,29 +118,101 @@ registro para ninguém pesquisar na árvore errada.
 Fonte de verdade para o código: `lib/xmax.ts`. Aqui fica só o registro do que a
 agência informou.
 
-### ⚠ Não existe origem "prospecção de lista"
+### ✅ RESOLVIDO: a prospecção está na ETAPA, não na origem
 
-Era **metade** do funil que responderia à dor do Marcos (anúncio × prospecção). Nenhuma
-das seis origens diz "lista".
+**A hipótese anterior (ABRINT / INOVA SUMMIT) está DESCARTADA** — juntas somam 55 de
+5.084 oportunidades. Não é ali.
 
-**Hipótese a confirmar com ele:** "Leads ABRINT" (a ABRINT é a associação de provedores
-— "leads ABRINT" cheira a lista de associados) e "INOVA SUMMIT" (evento) podem ser
-justamente a prospecção, registrada com outro nome. Se for, a pergunta dele já tem
-resposta sem campo novo.
+O diagnóstico de 15/08/2026 achou o lugar certo: o funil 4 tem as etapas **LEADS
+OUTBOUND** (86 abertas, 5,2%) e **PROSPECÇÃO M&A** (9). E o cruzamento decide:
 
-**Não classificar por conta própria.** O agrupamento origem → categoria vive numa
-constante configurável em `lib/xmax.ts`, com as incertas marcadas como `a_confirmar` —
-nunca chumbado no código nem adivinhado.
+> **Das 95 oportunidades nessas duas etapas, 89 têm `origin = 0` (sem origem)** e só 6
+> têm FaceAds.
+
+Ou seja: **quem entra por prospecção não tem origem preenchida.** O funil por origem,
+sozinho, nunca responderia a pergunta do Marcos ("lista converte pior que anúncio?").
+A resposta exige cruzar **origem × etapa**.
+
+### ⚠ A limitação que decide o cronograma
+
+**A etapa mede quem está PARADO nela, não quem ENTROU por ela.** O campo é a etapa
+ATUAL: um lead que entrou por LEADS OUTBOUND e avançou para NEGOCIAÇÃO já não é
+contado como outbound. Os 86 são estoque parado, não captação.
+
+**A prospecção só será medível de verdade quando o histórico de etapas existir** — e o
+histórico só nasce com as automações apontando para o nosso endpoint. É o argumento
+mais forte para ligá-las cedo, e vale dizer à agência com todas as letras: sem elas, a
+pergunta que motivou a tela fica sem resposta confiável.
+
+### Origem 0 = AUSÊNCIA de origem (1.672 de 5.084, 33%)
+
+Três evidências independentes, medidas em 15/08/2026:
+
+- **zero** oportunidades com `origin` null — a API normaliza ausência para 0;
+- funis **inteiros** em 0: Black Friday 1.010/1.010, Financeiro 65/65, Indicações
+  11/11 — carga em massa, ninguém escolheu origem;
+- **cai com o tempo**: 37% (2024) → 54% (2025) → **17% (2026)**, sinal de hábito de
+  preenchimento, não de categoria estável.
+
+**A tela mostra "Sem origem", NUNCA rateia entre as outras.** Um terço da base
+distribuído proporcionalmente inventaria volume em todas e destruiria a comparação que
+motiva a tela. Ver `SEM_ORIGEM` em `lib/xmax.ts`.
+
+### Etiquetas — o que elas revelam além do "sem perfil"
+
+`getTags` devolve 15 nomes, mas as oportunidades usam **36 IDs**: 21 não resolvem
+(namespaces diferentes). Ordenados por uso, os seis maiores concentram 553 dos 621 usos
+órfãos e **valem ser pedidos à agência**: `[17]` 211, `[34]` 99, `[6]` 77, `[8]` 68,
+`[7]` 52, `[44]` 46.
+
+Das que têm nome, duas famílias úteis que não estavam no plano:
+
+| etiqueta | usos | serve para |
+|---|---|---|
+| `[26] MARCO - NE` | 2.199 | parece marcar **responsável** — dá recorte por vendedor sem depender do `responsableid` |
+| `[27] André - NE` | 345 | idem |
+| `[39]` a `[43]` (faixas de ticket) | 242 somadas | segmentar o funil por **porte do cliente** |
+| `[38] Sem Perfil` | **14** | a desqualificação que o Marcos citou — **volume bem menor do que a dor sugeria** |
+
+⚠ O `Sem Perfil` com 14 usos não bate com "muito lead não é lead". Ou a desqualificação
+acontece de outro jeito (o funil 23 "LEADS NÃO QUALIFICADOS" tem 333 abertas), ou a
+etiqueta é recente.
 
 ## Perguntas ainda abertas
 
-1. **A lista de etiquetas**, em especial o ID de "sem perfil" (o diagnóstico tenta
-   resolver via `getTags`, mas pode ser outro namespace).
-2. **Como o Marcos registra prospecção de lista**, se não é nenhuma das 6 origens.
+**Bloqueiam o desenho das coleções** — o modelo não é desenhado antes delas:
+
+1. **Como o Marcos desqualifica lead?** Etiqueta `[38] Sem Perfil` (14 usos), funil 23
+   "LEADS NÃO QUALIFICADOS" (333), ou os dois? Muda onde a taxa de desqualificação é
+   lida.
+2. **O MRR vazio:** medido, 1 de 3 ganhas fechou com `closerecurrentvalue = 0`. Ele
+   preenche sempre? Se não, o número de manchete do Thiago nasce menor que a realidade
+   e o painel não tem como saber.
+3. Os nomes das 6 etiquetas mais usadas sem nome (`[17] [34] [6] [8] [7] [44]`).
 
 ---
 
-## Plano do `/api/diag-xmax` (endpoint TEMPORÁRIO, ainda não escrito)
+## O funil do comercial é o 4, e só ele
+
+`PIPELINE_COMERCIAL = 4` ("Provedor de internet", 1.655 abertas) — **constante em
+`lib/xmax.ts`, não env**: o funil não muda de um dia para o outro, env exigiria
+Redeploy, e um override por env deixaria o comportamento mudar sem o código mostrar.
+
+⚠ **Não é o funil 1**, que se chama "COMERCIAL" e tem 52 abertas. O nome engana.
+
+Os outros 18 ficam fora: a instância tem 5.084 abertas, mas a maioria está em pipelines
+de disparo/automação (Black Friday 1.010, AUTOMAÇÃO-NUTRIÇÃO 904, NUTRIÇÃO 415…).
+Somar tudo infla o funil em ~3×.
+
+## Autenticação: a chave GLOBAL nos dois escopos
+
+A chave da fila fornecida é rejeitada com `AUTH_018` (o `queueId=7` está certo — a
+global passa nele). Mas a decisão não foi por contorno: **os dados do CRM são globais à
+instância**, medido — o funil 1 devolve as mesmas 52 oportunidades com `queueId` 7, 17
+ou 19. A fila autentica, não recorta. Usar a chave da fila não reduziria exposição
+nenhuma. `XMAX_API_KEY_FILA` fica documentada e **não é obrigatória**.
+
+## Plano do `/api/diag-xmax` (endpoint temporário — JÁ ESCRITO E RODADO)
 
 Mesmo padrão do `/api/diag-janelas` que já usamos e removemos: protegido por
 `CRON_SECRET`, somente leitura, e **removido no fim**. Ele existe para responder cinco
@@ -206,19 +278,22 @@ de interface, por alguém com acesso:
 
 ## Riscos, do mais grave ao menor
 
-1. **Não existe origem "prospecção de lista".** O funil por origem responde metade da
-   pergunta do Marcos; a outra metade não tem onde ser lida. Ver a hipótese ABRINT /
-   INOVA SUMMIT acima. *(O `origin` continuar sem endpoint é secundário: o mapa das 6
-   já veio da agência e está em `lib/xmax.ts`.)*
-2. **O MRR depende de o comercial preencher `closerecurrentvalue` ao ganhar.** O campo
-   é OPCIONAL no `winOpportunity`. Se fecharem sem preencher, o número de manchete do
-   Thiago vem **zero** e o painel não tem como saber que está faltando. Medir no
-   diagnóstico antes de prometer a tela.
-3. **Automação pode não saber chamar URL** (premissa não verificada).
-4. **Allowlist de IP** contra IP dinâmico da Vercel.
-5. **Valores × 100** — erro de 100× no MRR se alguém esquecer.
-6. **`tags` da oportunidade podem não ser resolvíveis** pelo `getTags`.
-7. **Polling diário perde transições intradiárias** até as automações existirem.
+1. **O MRR vazio deixou de ser hipótese: foi MEDIDO.** Das 3 ganhas da amostra, **1
+   fechou com `closerecurrentvalue = 0`**. O campo é opcional no `winOpportunity`, e o
+   painel não tem como distinguir "vendeu zero de recorrência" de "esqueceram de
+   preencher". O número de manchete do Thiago nasceria menor que a realidade.
+2. **A prospecção só é medível com o histórico de etapas.** A etapa atual mede estoque
+   parado, não captação — ver a seção acima. Sem as automações, a pergunta que motivou
+   a tela não tem resposta confiável.
+3. **`closedat` e `stagebegintime` são EPOCH, não ISO** — a spec mente. `new Date()`
+   direto devolve Invalid Date, que não estoura: vira NaN na tela ou some num filtro de
+   período. Blindado por `epochParaISO`/`fechadaEm`/`naEtapaDesde` em `lib/xmax.ts`.
+4. **Valores × 100** — erro de 100× no MRR se alguém esquecer o `centavosParaReais`.
+5. **21 IDs de etiqueta sem nome**, 621 usos no total. Sem os nomes, viram balde cego.
+6. **Polling diário perde transições intradiárias** até as automações existirem.
+7. ~~Allowlist de IP~~ — **descartado**: a agência confirmou que não há (15/08/2026).
+8. ~~Automação pode não saber chamar URL~~ — **descartado**: faz POST e aceita cabeçalho
+   ou campo fixo no corpo (15/08/2026).
 
 ## Escopo já decidido
 
