@@ -247,6 +247,18 @@ real é menor. Se um dia passar disso, a chave precisa mudar; até lá, muda-se 
 chaves de 8 dígitos que cobrem mais de um número completo — o frouxo juntaria pessoas
 diferentes só porque o final coincide. É a mesma lição do "GOLD contém OLD", com gente.
 
+### ⚠️ LIÇÃO DE MÉTODO: script que compara contra limiar precisa do denominador certo
+
+O script que mediu isso **cuspiu o veredito errado**: comparou os 21% contra um limiar e
+concluiu "risco alto, o telefone não serve como chave, precisa de outra". Estava certo na
+conta e errado na pergunta — **21% dos GRUPOS de telefone repetido são 1,4% do FUNIL**, e
+é o funil que decide se a chave serve.
+
+O erro só apareceu porque a amostra foi olhada em vez de o veredito ser aceito. Vale para
+qualquer medição futura deste painel: **antes de comparar um percentual contra um limiar,
+diga em voz alta sobre o que ele é percentual.** Um número correto sobre o denominador
+errado é mais perigoso que um número errado, porque passa na revisão.
+
 ## DECISÃO: desqualificação conta AS DUAS formas
 
 O Marcos confirmou que o funil "LEADS NÃO QUALIFICADOS" (id 23) e a etiqueta
