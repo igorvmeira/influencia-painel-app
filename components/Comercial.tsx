@@ -71,7 +71,7 @@ function Aviso({ children, tom = "ouro" }: { children: React.ReactNode; tom?: "o
 }
 
 export default function Comercial() {
-  const { agregado, carregando, erro } = useComercial();
+  const { agregado, carregando, erro, recarregar } = useComercial();
   const [todosMeses, setTodosMeses] = useState(false);
   // Cada bloco animado tem o próprio observador: a cascata do funil não deve
   // esperar o usuário chegar nas faixas de idade, lá embaixo.
@@ -87,10 +87,28 @@ export default function Comercial() {
     []
   );
 
+  // ⚠️ O ERRO MANTÉM O TÍTULO DA TELA e oferece saída. Sem o título, a pessoa não
+  // sabe se errou de página; sem o botão, a única saída é recarregar o navegador
+  // inteiro e perder o resto da sessão.
   if (erro) {
     return (
-      <div className="rounded-xl px-4 py-3 text-[13px]" style={{ background: TEMA.erroFundo, color: RED }}>
-        {erro}
+      <div>
+        <h1 className="mb-4 text-lg font-semibold text-brand-ink">Funil Comercial</h1>
+        <div
+          className="rounded-xl px-4 py-4"
+          style={{ background: TEMA.erroFundo, color: RED, border: `1px solid ${TEMA.negativo}` }}
+        >
+          <div className="text-[13px] font-medium">Não foi possível carregar o funil.</div>
+          <div className="mt-1 text-[12.5px] opacity-90">{erro}</div>
+          <button
+            type="button"
+            onClick={recarregar}
+            className="mt-3 rounded-full px-4 py-1.5 text-[12px] font-semibold transition hover:brightness-125"
+            style={{ background: TEMA.destaque, color: TEMA.textoSobreDestaque }}
+          >
+            Tentar de novo
+          </button>
+        </div>
       </div>
     );
   }
