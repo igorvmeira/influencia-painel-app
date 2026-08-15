@@ -42,9 +42,14 @@ export default function CardGestor({
   return (
     <button
       onClick={onClick}
-      className="w-full p-4 text-left transition-shadow hover:shadow-md"
+      /* ⚠️ O hover era `transition-shadow hover:shadow-md`, e sombra não existe no
+         escuro — não há luz para bloquear. O card virava clicável sem nenhum sinal
+         disso. Agora o hover CLAREIA a superfície, que é como profundidade se
+         comunica no escuro.
+         O fundo precisou sair do `style` inline para a classe: estilo inline vence
+         `hover:` do Tailwind, então o hover nunca chegaria a pintar. */
+      className="w-full bg-brand-card p-4 text-left transition-colors hover:bg-brand-hover"
       style={{
-        background: TEMA.card,
         // A borda dourada é o único uso de destaque como CONTORNO — o selo é o
         // que carrega o significado; a borda só ajuda a achar o card no grid.
         border: premiado ? `2px solid ${TEMA.destaque}` : `1px solid ${LINE}`,

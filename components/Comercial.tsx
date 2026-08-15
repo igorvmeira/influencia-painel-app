@@ -149,14 +149,19 @@ export default function Comercial() {
         </div>
 
         <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1.5 border-t pt-3 text-[12.5px]" style={{ borderColor: LINE }}>
+          {/* ⚠️ Havia um `opacity-70` nestes parênteses. Sobre texto que JÁ é `muted`,
+              no escuro isso dá 3,59:1 — reprova a AA. No claro passava porque o
+              blend ia na direção do branco. Opacidade sobre texto secundário é
+              exatamente o tipo de coisa que inverte com o tema; o parêntese já
+              separa hierarquia sem precisar apagar o texto. */}
           <span style={{ color: MUTED }}>
             <b className="tabular-nums" style={{ color: TEMA.texto }}>{n(negociacao.pessoas)}</b> em negociação
-            <span className="opacity-70"> (Negociação + Fechamento)</span>
+            <span> (Negociação + Fechamento)</span>
           </span>
           {/* Não é "a versão antiga de negociação": responde outra pergunta. */}
           <span style={{ color: MUTED }}>
             <b className="tabular-nums" style={{ color: TEMA.texto }}>{n(conversaAvancada.pessoas)}</b> em conversa avançada
-            <span className="opacity-70"> (inclui Reunião agendada)</span>
+            <span> (inclui Reunião agendada)</span>
           </span>
         </div>
       </Bloco>

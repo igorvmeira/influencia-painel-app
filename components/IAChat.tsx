@@ -67,7 +67,14 @@ function IAChatPainel({ periodoDias }: { periodoDias: number }) {
       {aberto && (
         <div
           className="flex h-[28rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl shadow-2xl"
-          style={{ background: INK, border: `1px solid ${LINE}` }}
+          /* ⚠️ O painel tem o MESMO fundo da página (os dois são `fundo`), e no tema
+             claro quem os separava era o `shadow-2xl`. No escuro a sombra não
+             aparece e o painel flutuante encostava na página sem contorno.
+             A borda passa a ser `bordaForte` (~3,5:1 contra a página) em vez de
+             `borda` (1,38:1): aqui ela não é enfeite, é o que diz onde o painel
+             começa. A paleta INTERNA continua igual — corpo recuado, cabeçalho,
+             balões e entrada elevados —, e essa relação funciona nos dois temas. */
+          style={{ background: INK, border: `1px solid ${TEMA.bordaForte}` }}
         >
           {/* Cabeçalho */}
           <div className="flex items-center justify-between px-4 py-3" style={{ background: CARD, borderBottom: `1px solid ${LINE}` }}>

@@ -55,6 +55,19 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
 - Números em tabelas e KPIs com `tabular-nums` (evita as colunas "dançarem").
 - Ao trocar a identidade de um cliente, peça uma **auditoria de cores "chumbadas"** fora dos
   tokens — é isso que mantém o starter realmente reutilizável.
+- ⚠️ **A auditoria de cor procura `rgba(` e `hsl(` também, não só `#RRGGBB`.** Numa migração
+  de tema claro→escuro, quatro `rgba(...)` atravessaram a auditoria inteira porque ela só
+  caçava hexadecimal — e eram justamente as cores dependentes do tema: véu de modal,
+  cursor de hover de gráfico, realce de item ativo. **Quebram do jeito mais silencioso:**
+  véu escuro sobre fundo escuro não escurece nada, realce escuro sobre card escuro não
+  realça nada. Nada estoura, nada some — só para de funcionar.
+- **Todo par {fundo de marca + texto} tem token PRÓPRIO**, nunca reuso do token de texto
+  geral. `{ background: destaque, color: texto }` funcionava a 9,4:1 no tema claro e virou
+  1,6:1 no escuro sem que um único hex mudasse: o build passa, o tipo confere, e o botão
+  fica ilegível. Um token `textoSobreDestaque` torna a regra explícita.
+- Contraste é **medido**, não estimado. Rode a fórmula WCAG nos pares antes de aprovar a
+  paleta, e **remeça sempre que trocar um valor** — a diferença entre 4,4:1 e 4,5:1 não se
+  enxerga e é a fronteira entre passar e reprovar.
 
 ## Segurança e variáveis de ambiente (crítico)
 - **Segredos** (tokens de API, chaves admin) ficam **só no servidor**, em variáveis de ambiente.
@@ -155,6 +168,16 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
 - Em listas do React, a `key` deve ser o **ID único**, nunca o nome (nomes repetidos causam
   linhas duplicadas e vazamento entre agrupamentos).
 - Não quebre features existentes ao adicionar novas; mudanças cirúrgicas.
+- ⚠️ **Substituição em massa por PREFIXO roda ANTES das correções pontuais** — ou o padrão
+  ancora o fim. Trocar `color: TEMA.texto` por `color: TEMA.textoSobreDestaque` em massa,
+  depois de já ter corrigido uma linha à mão, casa o prefixo da linha corrigida e produz
+  `textoSobreDestaqueSobreDestaque`. Aqui o TypeScript pegou; num nome de classe CSS ou
+  numa string, passaria.
+- **Antes de comparar um percentual contra um limiar, diga sobre o que ele é percentual.**
+  Um número correto sobre o denominador errado passa na revisão, porque a conta fecha.
+- **Nunca compare dois números em frames de data diferentes.** Cada um pode estar certo
+  sozinho e a comparação medir coisas distintas — "criados este ano" contra "fechados este
+  ano" não é a mesma pergunta, e a conclusão sai maior que o dado.
 - Ao terminar uma tarefa grande, faça um resumo curto do que mudou e como testar.
 
 ## Estilo de comunicação com o usuário
