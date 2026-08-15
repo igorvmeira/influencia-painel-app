@@ -12,9 +12,10 @@ const LINE = TEMA.borda;
 const MUTED = TEMA.muted;
 const TEXTO = TEMA.texto;
 const RED = TEMA.negativo;
-// Tema claro: os papéis se invertem em relação ao dark. O gasto vira BARRA DOURADA
-// (preenchimento da marca, que rende bem no claro) e a linha de leads vira
-// quase-preta (linha dourada fina ficaria fraca sobre fundo claro).
+// TEMA ESCURO. A atribuição de papéis abaixo continua valendo — e é a que a
+// referência aprovada pede: barra principal DOURADA. Medidos sobre o card:
+// dourado 9,44:1, linha de leads (off-white) 15,12:1, CPL (vermelho) 6,07:1.
+// Os três passam o piso de 3:1 da WCAG 1.4.11 para dado não-textual.
 const BARRA = TEMA.destaque;
 const LINHA_LEADS = TEMA.texto;
 
@@ -44,7 +45,10 @@ function TooltipGrafico({ active, payload, label, fantasma }: {
   if (!active || !payload || !payload.length) return null;
   const p = payload[0].payload;
   return (
-    <div className="rounded-lg px-3 py-2 text-[12px]" style={{ background: CARD, border: `1px solid ${LINE}`, color: TEXTO, boxShadow: TEMA.sombraCard }}>
+    // ⚠️ O tooltip flutua SOBRE o card do gráfico. Com `card` no fundo dele, os dois
+    // ficam da mesma cor e no claro era a sombra que separava — no escuro a sombra
+    // não aparece. Agora: `flutuante` (o degrau acima do card) com `bordaForte`.
+    <div className="rounded-lg px-3 py-2 text-[12px]" style={{ background: TEMA.flutuante, border: `1px solid ${TEMA.bordaForte}`, color: TEXTO, boxShadow: TEMA.sombraCard }}>
       <div className="mb-1 font-medium">{label}</div>
       {!p.temDados ? (
         <div style={{ color: MUTED }}>Sem dados neste dia</div>
@@ -136,8 +140,11 @@ export default function HeroChart({ pontos, periodoLabel, fantasma = null }: {
             {/* Eixo oculto só para dar forma à linha de CPL (R$/lead) */}
             <YAxis yAxisId="cpl" hide domain={["auto", "auto"]} />
 
-            {/* Realce sob o cursor: escuro-sobre-claro (no dark era branco translúcido). */}
-            <Tooltip content={<TooltipGrafico fantasma={fantasma} />} cursor={{ fill: "rgba(28,27,23,0.05)" }} />
+            {/* ⚠️ Realce sob o cursor: CLARO translúcido. Era um lavado escuro, que
+                sobre card escuro não realça nada — o hover simplesmente sumia, sem
+                erro nenhum. É uma das quatro cores `rgba()` que a auditoria de hex
+                não pegava; agora é token (`realceGrafico`). */}
+            <Tooltip content={<TooltipGrafico fantasma={fantasma} />} cursor={{ fill: TEMA.realceGrafico }} />
 
             <Bar yAxisId="gasto" dataKey="gasto" name="Gasto" fill={BARRA} radius={[2, 2, 0, 0]} maxBarSize={26} />
             {fantasma && (

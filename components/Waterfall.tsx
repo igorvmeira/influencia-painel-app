@@ -72,7 +72,12 @@ export default function Waterfall({
   passos.push({ nome: labelAtual, base: 0, valor: cplAtual, tipo: "fim", contribuicao: 0, incompleta: false });
 
   const corDe = (p: Passo) => {
-    if (p.tipo === "inicio") return TEMA.navFundo;
+    // ⚠️ Era `navFundo` — quase-preto, que sobre o card BRANCO do tema claro era a
+    // barra de maior contraste do gráfico. No escuro virou preto sobre quase-preto:
+    // a barra de referência do waterfall SUMIA, e um waterfall sem o ponto de
+    // partida não fecha visualmente. `muted` é neutro (não é bom nem ruim, é o
+    // ponto de origem) e dá 5,92:1 sobre o card.
+    if (p.tipo === "inicio") return TEMA.muted;
     if (p.tipo === "fim") return TEMA.destaque;
     if (p.tipo === "outras") return TEMA.barraNeutra;
     // Semântica: contribuição negativa puxou o CPL para BAIXO = bom = verde.
@@ -84,7 +89,9 @@ export default function Waterfall({
     const p = payload[0].payload;
     return (
       <div className="rounded-lg px-3 py-2 text-[12px]"
-        style={{ background: TEMA.card, border: `1px solid ${TEMA.borda}`, color: TEMA.texto, boxShadow: TEMA.sombraCard }}>
+        /* Mesmo motivo do tooltip do HeroChart: flutua sobre o card, então precisa
+           do degrau acima (`flutuante`) e de borda que leia contra ele. */
+        style={{ background: TEMA.flutuante, border: `1px solid ${TEMA.bordaForte}`, color: TEMA.texto, boxShadow: TEMA.sombraCard }}>
         <div className="font-medium">{p.nome}</div>
         {p.tipo === "inicio" || p.tipo === "fim" ? (
           <div className="tabular-nums" style={{ color: TEMA.muted }}>CPL {brlDec(p.valor)}</div>
@@ -119,7 +126,8 @@ export default function Waterfall({
             tickFormatter={(v: number) => brlDec(v)}
             width={56}
           />
-          <Tooltip content={<Dica />} cursor={{ fill: "rgba(28,27,23,0.04)" }} />
+          {/* Realce CLARO — ver o comentário gêmeo no HeroChart. */}
+          <Tooltip content={<Dica />} cursor={{ fill: TEMA.realceGrafico }} />
           {/* Base invisível: posiciona a barra visível na altura acumulada. */}
           <Bar dataKey="base" stackId="w" fill="transparent" isAnimationActive={false} />
           <Bar dataKey="valor" stackId="w" radius={[2, 2, 0, 0]} isAnimationActive={false}>

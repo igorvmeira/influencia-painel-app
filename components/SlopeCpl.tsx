@@ -128,8 +128,11 @@ export default function SlopeCpl({
         aria-label={`Evolução do CPL por gestor de ${labelAnterior} para ${labelAtual}`}
         onMouseLeave={() => setDestacado(null)}
       >
-        <line x1={X0} y1={PAD_TOPO - 12} x2={X0} y2={ALTURA - PAD_BASE + 6} stroke={TEMA.borda} strokeWidth={1} />
-        <line x1={X1} y1={PAD_TOPO - 12} x2={X1} y2={ALTURA - PAD_BASE + 6} stroke={TEMA.borda} strokeWidth={1} />
+        {/* ⚠️ Os dois eixos verticais marcam OS PERÍODOS — são o que dá sentido às
+            linhas, não moldura. Estavam em `borda` (1,23:1 no escuro), que some.
+            `sparkline` dá 3,19:1, o piso da WCAG 1.4.11 para dado não-textual. */}
+        <line x1={X0} y1={PAD_TOPO - 12} x2={X0} y2={ALTURA - PAD_BASE + 6} stroke={TEMA.sparkline} strokeWidth={1} />
+        <line x1={X1} y1={PAD_TOPO - 12} x2={X1} y2={ALTURA - PAD_BASE + 6} stroke={TEMA.sparkline} strokeWidth={1} />
 
         {naEscala.map((p) => {
           const yA = y(p.cplAnterior);
@@ -172,9 +175,10 @@ export default function SlopeCpl({
               onMouseEnter={() => setDestacado(p.nome)}
             >
               <title>{`${p.nome}: ${brlDec(p.cplAnterior)} → ${brlDec(p.cplAtual)}`}</title>
-              {/* Linha-guia quando o rótulo foi empurrado da posição real do ponto. */}
+              {/* Linha-guia quando o rótulo foi empurrado da posição real do ponto.
+                  Em `borda` ela sumia no escuro e o rótulo parecia solto no gráfico. */}
               {Math.abs(yFinal - yIdeal) > 1 && (
-                <line x1={X1} y1={yIdeal} x2={X1 + 7} y2={yFinal} stroke={TEMA.borda} strokeWidth={0.75} />
+                <line x1={X1} y1={yIdeal} x2={X1 + 7} y2={yFinal} stroke={TEMA.sparkline} strokeWidth={0.75} />
               )}
               {/* Nome à esquerda e valor ancorado na borda direita: mesma linha, sem
                   chance de se sobrepor por mais longo que seja o nome. */}
