@@ -18,6 +18,7 @@ export const MENU_PRINCIPAL: ItemMenu[] = [
   { rotulo: "Orientações Gerenciais", href: "/orientacoes", descricao: "Observações por conta, com histórico." },
   { rotulo: "Carteira de Contas", href: "/carteira", descricao: "Contas por gestor; edite o responsável (histórico datado)." },
   { rotulo: "Análise de Gestores", href: "/gestores", descricao: "Mês fechado vs mês fechado: evolução de CPL, gasto e conversões." },
+  { rotulo: "Funil Comercial", href: "/comercial", descricao: "Captação de novos clientes: onde as pessoas estão, leads novos e perdas." },
 ];
 
 export const MENU_EM_BREVE: ItemMenu[] = [

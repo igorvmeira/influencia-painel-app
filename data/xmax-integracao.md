@@ -315,16 +315,23 @@ backfill). O achado saiu de um número que não fechava: 92 abertas paradas na e
 **A contraprova diz que a etapa está certa:** das 38 ganhas do funil, **37 estão em
 Fechamento**. O caminho do CRM funciona — o que parou foi a marcação.
 
-⚠️ **CORREÇÃO DE 15/08/2026 — a primeira leitura desta seção estava errada, e o erro é
-instrutivo.** Ela dizia *"em 2026 o comercial chegou 47 vezes em Fechamento e clicou
-'ganhou' uma vez"*, comparando **47 e 1 medidos por mês de CRIAÇÃO**. Errado por dois
-motivos: o clique acontece na data de FECHAMENTO, não na de criação, e a mediana de
-criação até vitória é de **82 dias** — negócio criado em 2026 ainda nem teve tempo de
-fechar. Por `closedat`, **2026 tem 11 vitórias, todas em março**.
+### ⚠️ CORREÇÃO DE 15/08/2026 — e a lição vale mais que a correção
 
-**A regra que o erro ensina: nunca comparar dois números em frames de data diferentes.**
-Cada um estava certo sozinho; juntos, mediam coisas distintas e a conclusão saiu maior do
-que o dado.
+> ~~"Em 2026 o comercial chegou 47 vezes em Fechamento e clicou 'ganhou' uma vez."~~
+> **2026 tem 11 vitórias, todas em março.**
+
+O erro: **47 e 1 foram medidos por mês de CRIAÇÃO**, e o clique acontece na data de
+**FECHAMENTO**. Com a mediana de criação até vitória em **82 dias**, negócio criado em
+2026 ainda nem teve tempo de fechar — o "1" media a espera, não a marcação.
+
+**LIÇÃO — nunca comparar dois números em frames de data diferentes.** Cada um estava
+certo sozinho. Juntos, mediam coisas distintas, e a conclusão saiu maior que o dado. É
+irmã da lição do denominador: número correto sobre o eixo errado passa na revisão, porque
+a conta fecha.
+
+⚠️ **Onde isso é fácil de repetir neste projeto:** `createdAt` é criação, `closedat` é o
+clique de encerramento, `stagebegintime` é entrada na etapa atual. **Três eixos de data no
+mesmo objeto** — qualquer comparação entre dois deles precisa dizer qual está usando.
 
 O que a base realmente mostra, por **data do clique**:
 
@@ -340,10 +347,31 @@ O que a base realmente mostra, por **data do clique**:
 única tarde em maio/2025, nada entre out/2025 e fev/2026, 11 em março/2026, e **zero nos
 últimos cinco meses**. É arrumação periódica, não registro no momento da venda.
 
-⚠️ **Consequência prática, e ela é maior que o erro:** `closedat` é a data do CLIQUE, não
-a data da VENDA. Vale para a série mensal de vendas confirmadas — a única que eu havia
-dado como estável. Ela também precisa marcar o mês de sessão de marcação, e o agregado
-faz isso em `vendasConfirmadasPorMes.mesmoDia`.
+### 🛑 NENHUMA SÉRIE MENSAL DE FECHAMENTO É CONFIÁVEL HOJE
+
+A consequência é maior que o erro, e é a conclusão mais importante desta seção inteira.
+São **duas fontes de venda, e as duas estão quebradas para fins de mês**:
+
+| fonte | o que tem | o que falta |
+|---|---|---|
+| **confirmadas** (`status = 1`) | valor e data | a data é do **clique**, não da venda — 12 numa tarde |
+| **em Fechamento** (63) | valor | **data nenhuma** |
+
+**O painel consegue dizer QUANTO foi vendido e O QUE está vendido. Não consegue dizer
+"vendas em julho".** Esse número só passa a existir quando o clique virar rotina.
+
+⚠️ **Isto NÃO é ressalva de rodapé — é o número principal do Thiago.** A declaração vai
+**onde o número aparece**, não em tooltip: a data de fechamento é a data em que alguém
+marcou, e como a marcação não é rotina, a série mensal é aproximada. Tooltip é para o
+detalhe do mês marcado; a limitação da série é texto no corpo.
+
+**E é o argumento mais concreto para o alinhamento de processo com a agência:** pedir que
+o comercial marque "ganhou" na hora não é burocracia de CRM — **é o que faz o número do
+mês existir.** Enquanto não virar rotina, "quanto vendemos em julho" não tem resposta, por
+mais completo que o painel fique.
+
+Implementado em `vendasConfirmadasPorMes.mesmoDia` (70% no mesmo dia, mínimo 5 vendas) —
+o mês **fica na série**, marcado, com o motivo no tooltip.
 
 O indício mais forte é o valor: **63 das 92 abertas em Fechamento (68%) já têm
 `recurrentvalue` preenchido, somando R$ 157.560,00/mês** — contra R$ 68.120,00 de MRR
