@@ -79,7 +79,9 @@ export default function Waterfall({
     // ponto de origem) e dá 5,92:1 sobre o card.
     if (p.tipo === "inicio") return TEMA.muted;
     if (p.tipo === "fim") return TEMA.destaque;
-    if (p.tipo === "outras") return TEMA.barraNeutra;
+    // ⚠️ `barraNeutra` é trilho (1,47:1) — aqui é BARRA, e a soma das contas fora do
+    // piso precisa aparecer para o waterfall fechar. `sparkline` dá os 3:1 de dado.
+    if (p.tipo === "outras") return TEMA.sparkline;
     // Semântica: contribuição negativa puxou o CPL para BAIXO = bom = verde.
     return p.contribuicao < 0 ? TEMA.positivo : TEMA.negativo;
   };

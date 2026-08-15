@@ -122,8 +122,14 @@ export const TEMA = {
   // ===== GRÁFICOS =====
   // ⚠️ `sparkline` É DADO, NÃO DECORAÇÃO. Cai na WCAG 1.4.11 e precisa de 3:1 —
   // o valor claro apenas escurecido daria 1,88:1 e sumiria no card.
-  sparkline: "#6E6A5E",   // 3,19:1 sobre card — mini-série
-  barraNeutra: "#3A382F", // TRILHO de barra/ranking: decorativo, piso não se aplica
+  sparkline: "#6E6A5E",   // 3,19:1 sobre card — mini-série E barra neutra de ranking
+  // ⚠️ SÓ TRILHO — o sulco VAZIO atrás da barra. 1,47:1 sobre o card, o que é certo
+  // para um sulco e ERRADO para qualquer coisa que informe. Dois rankings usavam
+  // este token na PRÓPRIA BARRA (onde o comprimento codifica o CPL) e no escuro a
+  // maioria das barras sumiria. Barra neutra que carrega dado usa `sparkline`.
+  // É o exemplo do "token legítimo em contexto errado": nenhum grep acha, só medir
+  // o par real acha.
+  barraNeutra: "#3A382F", // TRILHO de barra/ranking — nunca a barra em si
 
   // ===== VÉUS E REALCES (as cores que NÃO são hex) =====
   // ⚠️ ESTES TOKENS NASCERAM DE UM BURACO NA AUDITORIA. A regra da casa é "nenhuma

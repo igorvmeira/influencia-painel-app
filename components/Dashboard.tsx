@@ -967,8 +967,13 @@ export default function Dashboard(
               const largura = Math.max(6, (g.cpl / maxCpl) * 100);
               // Cor da barra reusa CPL_ALERTA: vermelho acima do teto; amarelo só no
               // melhor saudável; neutro nos demais saudáveis.
+              // ⚠️ O neutro era `barraNeutra`, que é TRILHO — 1,47:1 sobre o card. Aqui
+              // a barra é o DADO (o comprimento codifica o CPL), então cai no piso de
+              // 3:1 da WCAG 1.4.11 e a maioria das barras sumiria. `sparkline` é o
+              // token de dado neutro (3,19:1). Token legítimo no contexto errado é o
+              // defeito que nenhum grep acha — ver CLAUDE.md.
               const acimaDoTeto = g.cpl >= CPL_ALERTA;
-              const corBarra = acimaDoTeto ? RED : melhor ? YELLOW : TEMA.barraNeutra;
+              const corBarra = acimaDoTeto ? RED : melhor ? YELLOW : TEMA.sparkline;
               return (
                 <div key={g.nome} className="flex flex-wrap items-center gap-x-4 gap-y-2">
                   <div className="flex w-36 shrink-0 items-center gap-2 sm:w-52">

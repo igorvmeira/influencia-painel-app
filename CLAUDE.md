@@ -181,6 +181,13 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
 - Em listas do React, a `key` deve ser o **ID único**, nunca o nome (nomes repetidos causam
   linhas duplicadas e vazamento entre agrupamentos).
 - Não quebre features existentes ao adicionar novas; mudanças cirúrgicas.
+- ⚠️ **Fundo de elemento que tem `hover:` vai em CLASSE, nunca em `style` inline.** Estilo
+  inline vence stylesheet, então `style={{ background: X }}` + `hover:bg-y` na classe faz o
+  hover **nunca pintar** — sem erro, sem aviso, e a tela parece só "sem resposta ao mouse".
+  Três hovers deste painel estavam mortos assim desde antes do tema escuro; só apareceram
+  quando a migração obrigou a medir par a par.
+  **Conferência que vale rodar em projeto novo:** procurar `hover:bg-` e checar se o mesmo
+  elemento tem `background:` inline nas linhas seguintes. É rápida e acha dívida antiga.
 - ⚠️ **Substituição em massa por PREFIXO roda ANTES das correções pontuais** — ou o padrão
   ancora o fim. Trocar `color: TEMA.texto` por `color: TEMA.textoSobreDestaque` em massa,
   depois de já ter corrigido uma linha à mão, casa o prefixo da linha corrigida e produz

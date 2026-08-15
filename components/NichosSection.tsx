@@ -44,7 +44,10 @@ export default function NichosSection({ nichos }: { nichos: LinhaNicho[] }) {
             const melhor = i === 0;
             const pior = nichos.length > 1 && i === nichos.length - 1;
             const largura = Math.max(6, (n.cpl / maxCpl) * 100);
-            const corBarra = pior ? RED : melhor ? YELLOW : TEMA.barraNeutra;
+            // ⚠️ Mesma correção do ranking de gestores: a barra é DADO (o comprimento
+            // codifica o CPL), então o neutro precisa dos 3:1 da WCAG 1.4.11.
+            // `barraNeutra` é trilho e dá 1,47:1 sobre o card — sumiria.
+            const corBarra = pior ? RED : melhor ? YELLOW : TEMA.sparkline;
             return (
               <div key={n.nicho} className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <div className="flex w-36 shrink-0 items-center gap-2 sm:w-52">
