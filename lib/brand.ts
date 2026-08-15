@@ -66,7 +66,17 @@ export const TEMA = {
   chip: "#2A2822",        // fundo de selo/chip neutro
   flutuante: "#302E27",   // tooltip e popover — acima do card, por isso mais claro
   borda: "#2E2C26",       // divisória de 1px — ESTRUTURAL, ver acima
-  bordaForte: "#6E6A5E",  // foco, seleção, borda que SIGNIFICA (3,19:1 no card)
+  /**
+   * ⚠️ QUEM USA `borda` E QUEM USA `bordaForte` — a divisão é por FUNÇÃO, não por
+   * tamanho:
+   *   • CARD e PAINEL ...... `borda`. É separação de superfície; o olho acha a
+   *     aresta de um retângulo grande com pouquíssimo contraste, e subir aqui
+   *     encheria a tela de molduras.
+   *   • CONTROLE INTERATIVO  `bordaForte`. Botão, opção de seletor, campo em foco.
+   *     Aqui o contorno não separa: ele AFIRMA que o elemento é clicável, e em
+   *     `borda` (1,23:1) três opções de seletor viraram texto solto no escuro.
+   */
+  bordaForte: "#6E6A5E",  // limite de CONTROLE e foco (3,19:1 no card)
 
   // ===== TEXTO =====
   texto: "#F2F0EA",       // primário — 15,12:1 sobre card (AAA)

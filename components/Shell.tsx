@@ -93,7 +93,9 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           // inline vence stylesheet, então o hover NUNCA pintou. Defeito anterior ao
           // tema escuro; só apareceu porque a migração mediu par a par.
           className="mt-2 w-full rounded-lg bg-nav-hover px-3 py-1.5 text-sm font-medium transition-colors hover:bg-nav-chip"
-          style={{ color: NAV_TEXTO, border: `1px solid ${NAV_BORDA}` }}
+          // `bordaForte` pelo mesmo motivo dos botões da /orientacoes: sobre a
+          // sidebar, `navBorda` dá ~1,5:1 e o botão fica sem limite visível.
+          style={{ color: NAV_TEXTO, border: `1px solid ${TEMA.bordaForte}` }}
         >
           Sair
         </button>

@@ -199,8 +199,11 @@ function LinhaOrientacao({ conta, atual, ordem, aoSalvar }: {
             {salvo && <span className="text-[12px] font-medium" style={{ color: GREEN }}>✓ salvo</span>}
             <button
               onClick={abrirEdicao}
-              className="rounded-full px-3 py-1.5 text-[12px] font-medium"
-              style={{ background: INK, color: TEMA.texto, border: `1px solid ${LINE}` }}
+              className="rounded-full px-3 py-1.5 text-[12px] font-medium transition hover:brightness-125"
+              // Mesmo motivo do seletor abaixo: é BOTÃO, então o limite vai em
+              // `bordaForte`. O preenchimento recuado (`INK` sobre o card) separa
+              // pouco no escuro — 1,12:1 — e sozinho não diz que é clicável.
+              style={{ background: INK, color: TEMA.texto, border: `1px solid ${TEMA.bordaForte}` }}
             >
               {atual ? "Editar" : "Adicionar"}
             </button>
@@ -317,10 +320,16 @@ function SeletorSemaforo({ valor, onChange }: {
               type="button"
               onClick={() => onChange(o)}
               title={e.descricao}
-              className="rounded-full px-3 py-1 text-[12px] font-medium transition-opacity"
+              className="rounded-full px-3 py-1 text-[12px] font-medium transition hover:brightness-125"
+              // ⚠️ A opção NÃO selecionada precisa parecer clicável. Em `borda`
+              // (1,23:1) o contorno sumia no escuro e as três viravam texto solto —
+              // logo na interação que o semáforo acabou de estrear. `bordaForte` dá
+              // 3,19:1, o piso da WCAG 1.4.11 para limite de componente.
+              // Sem preenchimento de propósito: quatro pills lado a lado, só a
+              // selecionada tem cor, e o contorno é o que diz "isto é um botão".
               style={ativo
                 ? { background: e.fundo, color: e.cor, border: `1.5px solid ${e.cor}` }
-                : { background: "transparent", color: MUTED, border: `1px solid ${LINE}` }}
+                : { background: "transparent", color: MUTED, border: `1px solid ${TEMA.bordaForte}` }}
             >
               {o ? e.rotulo : "Sem classificar"}
             </button>
