@@ -14,6 +14,7 @@ import {
 } from "@/lib/destaques";
 import { buscarCriativosMes, CriativoMes } from "@/lib/useCriativosMes";
 import MiniCardCriativo from "./MiniCardCriativo";
+import SecaoHeader from "./SecaoHeader";
 import IndicadorFrescor from "./IndicadorFrescor";
 import DeltaChip from "./DeltaChip";
 import CardGestor from "./CardGestor";
@@ -337,14 +338,16 @@ export default function Gestores() {
             )}
           </div>
 
-          {/* Slope: a evolução dos 8 num relance, antes do detalhe. */}
+          {/* Slope: a evolução dos 8 num relance, antes do detalhe.
+              ⚠️ A legenda vira SUBTÍTULO do cabeçalho em vez de texto solto à direita:
+              ela explica como LER o gráfico, então pertence ao título, não ao canto. */}
+          <SecaoHeader
+            titulo="Evolução do CPL"
+            icone="↗"
+            subtitulo="verde = caiu (bom) · vermelho = subiu · passe o mouse para isolar uma linha"
+            pill={`${labelAnterior} → ${labelAtual}`}
+          />
           <div className="mb-6 p-4" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}>
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <p className="text-[13px] uppercase tracking-wider" style={{ color: MUTED }}>Evolução do CPL</p>
-              <p className="text-[11px]" style={{ color: MUTED }}>
-                verde = caiu (bom) · vermelho = subiu · passe o mouse para isolar uma linha
-              </p>
-            </div>
             <SlopeCpl pontos={pontosSlope} labelAnterior={labelAnterior} labelAtual={labelAtual} />
           </div>
 

@@ -60,6 +60,10 @@ export default function Inicio() {
 
   return (
     <div>
+      {/* ⚠️ O H1 fica FORA do SecaoHeader, de propósito: o cabeçalho de seção marca
+          onde uma seção começa DENTRO da tela, e o título da tela é outro nível.
+          Usar a barra dourada aqui gastaria o marcador logo na primeira linha e ele
+          deixaria de significar "começou uma seção". */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold text-brand-ink">Início</h1>

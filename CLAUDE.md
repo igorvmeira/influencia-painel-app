@@ -240,6 +240,14 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   estranho".
   **Método:** levante os estados ANTES de tocar, e reconfira cada um DEPOIS, no arquivo
   final. E a união vai **na direção da versão mais rica**, não da mais nova.
+- ⚠️ **Nem tudo que se parece é duplicata — antes de unificar, pergunte o PAPEL.** Este
+  painel tem três coisas que exibem variação percentual e **não** devem virar uma só:
+  `DeltaChip` (chip com fundo tingido, para KPI que se lê de longe), `Trend` (só seta e cor,
+  para linha de tabela onde o chip pesaria) e o "—" com motivo. Unificar por semelhança
+  visual apagaria a diferença de peso, que é justamente a informação.
+  Do mesmo jeito, **card de MÉTRICA e card de ENTIDADE são naturezas distintas**: o de
+  entidade tem avatar, é clicável e carrega selos; forçá-lo no molde do de métrica custa
+  exatamente o que ele tem de próprio.
 - ⚠️ **Regra que mora no PONTO DE CHAMADA se perde na terceira tela.** Um card fazia
   `delta={semComparacao ? null : delta}` no render: funcionava, e dependia de todo uso
   futuro lembrar. Regra que define o comportamento do componente mora **dentro** dele.
