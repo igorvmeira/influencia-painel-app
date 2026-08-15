@@ -55,12 +55,25 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
 - Números em tabelas e KPIs com `tabular-nums` (evita as colunas "dançarem").
 - Ao trocar a identidade de um cliente, peça uma **auditoria de cores "chumbadas"** fora dos
   tokens — é isso que mantém o starter realmente reutilizável.
-- ⚠️ **A auditoria de cor procura `rgba(` e `hsl(` também, não só `#RRGGBB`.** Numa migração
-  de tema claro→escuro, quatro `rgba(...)` atravessaram a auditoria inteira porque ela só
-  caçava hexadecimal — e eram justamente as cores dependentes do tema: véu de modal,
-  cursor de hover de gráfico, realce de item ativo. **Quebram do jeito mais silencioso:**
-  véu escuro sobre fundo escuro não escurece nada, realce escuro sobre card escuro não
-  realça nada. Nada estoura, nada some — só para de funcionar.
+- ⚠️ **A auditoria de cor tem DUAS metades, e só a primeira é uma busca de texto.**
+  1. **Procure `#RRGGBB`, `rgba(` E `hsl(`.** Numa migração claro→escuro, quatro `rgba(...)`
+     atravessaram a auditoria inteira porque ela só caçava hexadecimal — e eram justamente
+     as cores dependentes do tema: véu de modal, cursor de hover de gráfico, realce de item
+     ativo. **Quebram do jeito mais silencioso:** véu escuro sobre fundo escuro não escurece
+     nada. O cursor de hover dos gráficos ficou com razão de luminância **1,000x** contra o
+     card — não "difícil de ver": inexistente.
+  2. **Token VÁLIDO em contexto ERRADO não aparece em busca nenhuma — só medindo o par
+     real.** A barra de início do waterfall usava `navFundo`, um token legítimo: sobre o
+     card branco do tema claro era a barra de maior contraste do gráfico, e sobre o card
+     escuro virou 1,15:1. Nenhum grep acha isso. **A auditoria termina medindo cada par
+     {cor, fundo em que ela é realmente pintada}**, não conferindo se a cor saiu do arquivo
+     certo.
+- **Efeito visual também inverte com o tema, não só cor.** `hover:opacity-90` clareia sobre
+  fundo claro e ESCURECE sobre fundo escuro — o gesto continua funcionando e passa a
+  significar o contrário. Sombra some no escuro (não há luz para bloquear), então `shadow`
+  como única indicação de que algo é clicável vira nada. No escuro, profundidade e hover se
+  comunicam **clareando**: `brightness` para superfície tingida ou de marca, troca de
+  `background` para superfície neutra.
 - **Todo par {fundo de marca + texto} tem token PRÓPRIO**, nunca reuso do token de texto
   geral. `{ background: destaque, color: texto }` funcionava a 9,4:1 no tema claro e virou
   1,6:1 no escuro sem que um único hex mudasse: o build passa, o tipo confere, e o botão
