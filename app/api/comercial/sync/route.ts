@@ -28,8 +28,10 @@ import {
 } from "@/lib/xmax";
 import {
   FUNIL_CAPTACAO, FUNIL_DESQUALIFICADOS, ordemDeEtapas, normalizarOportunidade,
-  agruparPessoas, ehRecuperacao, ehNegociacao, ehEncerrada, OportunidadeGravada,
+  agruparPessoas, ehRecuperacao, ehNegociacao, ehEncerrada, conflitoDeOrdem,
+  OportunidadeGravada,
 } from "@/lib/comercial";
+import { montarAgregado } from "@/lib/comercialAgregado";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -38,6 +40,8 @@ export const maxDuration = 60;
 const COL_OP = "comercial_oportunidades";
 const COL_PESSOA = "comercial_pessoas";
 const COL_CONFIG = "comercial_config";
+/** Pré-agregado: um doc, uma leitura. Ver o comentário na gravação. */
+const COL_AGREGADO = "comercial_agregados";
 /** Abaixo do limite de 500 operações por batch do Firestore. */
 const LOTE = 450;
 
@@ -65,12 +69,24 @@ interface Funil { id: number; name?: string; stageorders?: number[]; stages?: Et
 const REFERENCIA = {
   oportunidades: 1656,
   pessoas: 1455,
-  captacao: 629,
+  captacao: 472,
   recuperacao: 838,
-  negociacao: 225,
-  medidoEm: "2026-08-15",
-  escopo: "abertas do funil de captação",
+  negociacao: 110,
+  conversaAvancada: 150,
+  foraDoFunil: 156,
+  medidoEm: "2026-08-14",
+  escopo: "abertas do funil de captação, com o funil do dono",
 };
+
+/**
+ * ⚠️ A CONFERÊNCIA QUE PEGA ERRO DE EMPATE NO NÍVEL 1.
+ *
+ * `captacao` sozinha não pega: se [15] e [114] deixarem de empatar, a soma
+ * continua 472 e os níveis 1 e 2 trocam gente entre si. Só a distribuição
+ * denuncia — por isso ela é conferida nível a nível, e a soma tem de fechar
+ * com `captacao`.
+ */
+const REFERENCIA_NIVEIS: Record<number, number> = { 1: 91, 2: 231, 3: 40, 4: 22, 5: 88 };
 
 export async function GET(req: Request) {
   const bloqueio = checarCronSecret(req);
@@ -156,9 +172,13 @@ export async function GET(req: Request) {
   const idsAbertos = new Set(abertasFunil4.map((o) => o.id));
   const pessoasComAberta = pessoasDoFunil4.filter((p) => p.oportunidadeIds.some((id) => idsAbertos.has(id)));
 
-  const emCaptacao = pessoasDoFunil4.filter((p) => p.etapaNaCaptacao !== null).length;
-  const emRecuperacao = pessoasDoFunil4.filter((p) => p.emRecuperacao).length;
-  const emNegociacao = pessoasDoFunil4.filter((p) => p.emNegociacao).length;
+  // ⚠️ CAPTAÇÃO passou a ser "está numa das 6 etapas do funil do DONO", não mais
+  // "tem etapa e não é recuperação". Foi de 629 para 472: a diferença são as 156
+  // pessoas em etapas que o Thiago tirou do funil — que viram linha visível, não
+  // sumiço. Ver NIVEIS_FUNIL e ETAPAS_FORA_DO_FUNIL em lib/comercial.ts.
+  const emCaptacao = pessoasComAberta.filter((p) => p.nivel !== null).length;
+  const emRecuperacao = pessoasComAberta.filter((p) => p.emRecuperacao).length;
+  const emNegociacao = pessoasComAberta.filter((p) => p.emNegociacao).length;
 
   const obtido = {
     oportunidades: abertasFunil4.length,
@@ -166,7 +186,15 @@ export async function GET(req: Request) {
     captacao: emCaptacao,
     recuperacao: emRecuperacao,
     negociacao: emNegociacao,
+    conversaAvancada: pessoasComAberta.filter((p) => p.emConversaAvancada).length,
+    foraDoFunil: pessoasComAberta.filter((p) => p.foraDoFunil).length,
   };
+
+  const niveis = [1, 2, 3, 4, 5].map((n) => {
+    const q = pessoasComAberta.filter((p) => p.nivel === n).length;
+    return { nivel: n, esperado: REFERENCIA_NIVEIS[n], obtido: q, diferenca: q - REFERENCIA_NIVEIS[n] };
+  });
+  const somaNiveis = niveis.reduce((t, x) => t + x.obtido, 0);
   // Só as chaves NUMÉRICAS entram na comparação — `medidoEm` e `escopo` são
   // rótulos. Filtrar por nome já deixou o `escopo` virar uma linha com
   // `diferenca: null`, que sozinha derrubava o `tudoBate`.
@@ -266,9 +294,50 @@ export async function GET(req: Request) {
         "Divergência não é automaticamente defeito — a base é viva. Preocupa o que for "
         + "grande ou de direção estranha (pessoas > oportunidades, negociação triplicando): "
         + "aí a regra mudou de comportamento.",
+      // ⚠️ `tudoBate` compara com uma FOTO de 14/08/2026 e vai divergir para sempre,
+      // porque a agência cria lead todo dia. Ele responde "mudou desde a medição?",
+      // não "está certo?". Quem responde "está certo?" é `coerencia` abaixo: são
+      // identidades que valem em QUALQUER dia, e essas sim nunca podem quebrar.
       linhas: conferencia,
-      tudoBate: divergentes.length === 0,
+      // ⚠️ A conferência por NÍVEL é a que pega quebra de empate no nível 1 — a
+      // soma continuaria certa com os níveis 1 e 2 trocando gente entre si.
+      niveis,
+      tudoBate: divergentes.length === 0 && niveis.every((n) => n.diferenca === 0),
+
+      /**
+       * ⚠️ AS IDENTIDADES QUE VALEM EM QUALQUER DIA. Ao contrário de `tudoBate`,
+       * estas não derivam com o crescimento da base — se uma quebrar, é BUG.
+       *
+       * `somaDosNiveis` é a que pega quebra do empate no nível 1: se [15] e [114]
+       * deixarem de empatar, `captacao` continua igual e os níveis 1 e 2 trocam
+       * gente entre si — a única coisa que denuncia é a distribuição.
+       */
+      coerencia: {
+        somaDosNiveis: {
+          soma: somaNiveis, captacao: obtido.captacao, ok: somaNiveis === obtido.captacao,
+        },
+        // Negociação ⊆ conversa avançada, sempre: [27,20] está contido em [17,27,20].
+        negociacaoDentroDeConversa: {
+          negociacao: obtido.negociacao, conversaAvancada: obtido.conversaAvancada,
+          ok: obtido.negociacao <= obtido.conversaAvancada,
+        },
+        // Ninguém do funil pode estar contado como "fora do funil".
+        semSobreposicao: {
+          captacao: obtido.captacao, foraDoFunil: obtido.foraDoFunil,
+          somaNaoPassaDoTotal: obtido.captacao + obtido.foraDoFunil <= obtido.pessoas,
+          ok: obtido.captacao + obtido.foraDoFunil <= obtido.pessoas,
+        },
+        tudoCoerente:
+          somaNiveis === obtido.captacao
+          && obtido.negociacao <= obtido.conversaAvancada
+          && obtido.captacao + obtido.foraDoFunil <= obtido.pessoas,
+      },
     },
+
+    // ⚠️ O `stageorders` continua sendo lido — não para mandar, para DENUNCIAR.
+    // A ordem de negócio é a constante NIVEIS_FUNIL; se a agência reordenar no
+    // Xmax, aparece aqui em vez de mudar a foto do funil em silêncio.
+    ordemDoDonoVsXmax: conflitoDeOrdem(ordem),
 
     funil: {
       id: FUNIL_CAPTACAO,
@@ -369,6 +438,19 @@ export async function GET(req: Request) {
       nomes: Object.fromEntries([...nomeEtapa.entries()]),
       atualizadoEm: new Date().toISOString(),
     }, { merge: true });
+    /**
+     * ⚠️ O PRÉ-AGREGADO — é o que faz a tela custar 1 LEITURA em vez de ~7.500.
+     *
+     * Sem ele, /comercial varreria `comercial_oportunidades` (4.862) e
+     * `comercial_pessoas` (2.653) a cada visita. No plano grátis isso derruba o
+     * app; no Blaze vira dinheiro por aba aberta. Ver a regra de custo de leitura
+     * no CLAUDE.md.
+     *
+     * É DERIVADO: as duas coleções granulares seguem intactas como auditoria, e
+     * mudar uma regra é rodar o sync de novo — não há migração de dado.
+     */
+    await db.collection(COL_AGREGADO).doc("funil").set(
+      montarAgregado(universo, pessoas, new Date()), { merge: false });
     await db.collection("sistema").doc("sync_comercial").set({
       ultimaExecucao: new Date().toISOString(),
       oportunidadesAbertas: frescas.length,

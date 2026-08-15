@@ -586,6 +586,26 @@ contagens, e a de oportunidade continua com 51% concentrado num dia. Lá, e só 
 aparece marcado com o motivo — nunca somado cru à série. A regra geral fica: **anomalia
 que só existe na contagem por oportunidade é sintoma de clonagem, não de negócio.**
 
+### 🛑 CONTRAEXEMPLO OBRIGATÓRIO: 05/02/2026 é campanha DE VERDADE
+
+**Nunca criar uma regra que exclua dias por volume.** O dia 05/02/2026 tem **190
+oportunidades criadas** — volume de pico — e é legítimo:
+
+| | 26/05/2025 (clonagem) | **05/02/2026 (real)** |
+|---|---|---|
+| oportunidades | 1.445 | 190 |
+| **pessoas distintas** | **2** | **175** |
+| com origem preenchida | 0 | 176 |
+| destino | etapa apagada, perdidas em 1 dia | **168 em Recuperação de LEAD**, 170 ainda abertas |
+
+É uma **campanha de recuperação** com 175 pessoas reais. Um filtro do tipo "dia com mais
+de N registros é carga em massa" apagaria esta campanha inteira — e apagaria justamente o
+trabalho que a agência fez.
+
+**O que separa os dois não é o volume, é a razão oportunidades ÷ pessoas:** 722× no
+primeiro, 1,1× no segundo. É essa razão que denuncia clonagem, e ela é a mesma medida que
+o painel já usa para tudo. Regra por data seria coincidência virando lei.
+
 ### ✅ A ETAPA da perda existe — mas o nome, só de 2026 em diante
 
 `fkStage` de uma encerrada é onde ela estava ao encerrar, e são **22 etapas distintas** —
