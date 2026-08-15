@@ -10,9 +10,20 @@ html, body {
   min-height: 100%;
 }
 
-/* Tema claro: antialiasing agressivo afina demais o texto escuro sobre fundo
-   claro. O padrão do sistema (auto) rende melhor aqui. */
-* { -webkit-font-smoothing: auto; }
+/* ⚠️ AVISA O NAVEGADOR QUE O TEMA É ESCURO. Sem isto, tudo que o navegador
+   desenha por conta própria continua CLARO — o <select> de gestor da /carteira
+   abre com fundo branco, a barra de rolagem fica clara sobre o app escuro, e
+   campos nativos (date, número) vêm com o estilo de tema claro. Não é estética:
+   é a única forma de pedir isso ao navegador. */
+html { color-scheme: dark; }
+
+/* ⚠️ ESTA LINHA INVERTEU JUNTO COM O TEMA, e a explicação é a mesma de antes,
+   ao contrário. No tema claro o comentário aqui dizia: "antialiasing agressivo
+   afina demais o texto ESCURO sobre fundo CLARO", e o padrão do sistema (auto)
+   rendia melhor. No escuro o problema é o oposto — texto CLARO sobre fundo
+   ESCURO ENGORDA, e o `antialiased` é justamente o que o afina de volta.
+   Trocar de volta para `auto` deixa a Poppins pastosa no escuro. */
+* { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 
 /* Números sempre alinhados em tabelas/KPIs (tabular-nums é font-variant e
    independe da família — segue valendo com a Poppins). */
