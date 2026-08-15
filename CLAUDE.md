@@ -107,6 +107,11 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
 - Contraste é **medido**, não estimado. Rode a fórmula WCAG nos pares antes de aprovar a
   paleta, e **remeça sempre que trocar um valor** — a diferença entre 4,4:1 e 4,5:1 não se
   enxerga e é a fronteira entre passar e reprovar.
+- 🔧 **`node scripts/audita-tema.js`** faz a parte mecânica: espelho entre `brand.ts` e
+  `tailwind.config.ts`, contraste de todos os pares, cor chumbada (`#`, `rgba(`, `hsl(`) e
+  hover morto. Sai com código 1 se reprovar. **Ele NÃO acha token legítimo em contexto
+  errado** — existe para sobrar atenção humana justamente para essa parte.
+  Retrospectiva completa da migração de tema em `data/migracao-tema-escuro.md`.
 
 ## Segurança e variáveis de ambiente (crítico)
 - **Segredos** (tokens de API, chaves admin) ficam **só no servidor**, em variáveis de ambiente.
