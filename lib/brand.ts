@@ -43,7 +43,25 @@ export const TEMA = {
   navFundo: "#0B0A08",    // sidebar — o degrau mais profundo
   fundo: "#0F0E0B",       // fundo da página
   card: "#1C1B17",        // superfície de card (texto 15,12:1 · dourado 9,44:1)
-  hover: "#26241E",       // hover de linha/superfície (classe: hover:bg-[#26241E])
+  /**
+   * ⚠️ REGRA DE HOVER NO ESCURO (Igor, 16/08/2026) — duas ferramentas, um princípio:
+   * **no escuro, hover CLAREIA.** Nunca opacidade.
+   *
+   *   • superfície NEUTRA ......... troca de background para este token
+   *   • superfície TINGIDA ou de MARCA ... `hover:brightness-125`
+   *
+   * O motivo de não ser uma só: trocar o background de um card de alerta apaga o
+   * tinte semântico (vermelho de CPL estourado vira cinza), e clarear um card
+   * neutro por filtro é mais frágil que trocar a cor. O motivo de não ser
+   * opacidade: `hover:opacity-90` clareia sobre fundo claro e ESCURECE sobre fundo
+   * escuro — o gesto continua acontecendo e passa a significar o contrário.
+   *
+   * ⚠️ `brightness` atinge o elemento E os filhos, então o par foi medido no estado
+   * de hover, não só no normal: pill dourada 10,58 → 12,32:1, alerta de CPL
+   * 5,44 → 5,91:1, alerta de limite 5,88 → 6,71:1. O dourado satura em #FFC80F e
+   * para de subir, o que é o que permite usar 125 nos quatro sem estourar.
+   */
+  hover: "#26241E",       // hover de superfície NEUTRA (classe: hover:bg-brand-hover)
   zebra: "#191814",       // linha alternada de tabela densa
   chip: "#2A2822",        // fundo de selo/chip neutro
   flutuante: "#302E27",   // tooltip e popover — acima do card, por isso mais claro

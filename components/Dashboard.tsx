@@ -865,7 +865,7 @@ export default function Dashboard(
             {cplAlto.length > 0 && (
               <button
                 onClick={() => abrirAlertas("cplAlto")}
-                className="p-4 text-left transition-opacity hover:opacity-90"
+                className="p-4 text-left transition hover:brightness-125"
                 style={{ background: TEMA.erroFundo, border: `1px solid ${RED}`, borderRadius: TEMA.raioCard }}
               >
                 <div className="flex items-center gap-2">
@@ -885,7 +885,7 @@ export default function Dashboard(
             {pertoLimite.length > 0 && (
               <button
                 onClick={() => abrirAlertas("limite")}
-                className="p-4 text-left transition-opacity hover:opacity-90"
+                className="p-4 text-left transition hover:brightness-125"
                 style={{ background: TEMA.limiteFundo, border: `1px solid ${AMBAR}`, borderRadius: TEMA.raioCard }}
               >
                 <div className="flex items-center gap-2">
@@ -1307,7 +1307,10 @@ function LinhaClienteRow({ c, ordem, limite, orientacao, par }: {
         <span className="inline-flex items-center gap-1.5">
           {c.cliente}
           {orientacao && (
-            <Link href="/orientacoes" title={orientacao.texto} className="text-[12px] leading-none hover:opacity-80" style={{ color: TEMA.ouroTexto }} aria-label="Ver orientação">
+            // O `color` que havia aqui era estilo MORTO: o conteúdo é um emoji, que
+            // renderiza com as próprias cores e ignora `color`. Sobreviveu a alguma
+            // refatoração pintando nada.
+            <Link href="/orientacoes" title={orientacao.texto} className="text-[12px] leading-none transition hover:brightness-125" aria-label="Ver orientação">
               💬
             </Link>
           )}

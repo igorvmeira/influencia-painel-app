@@ -51,7 +51,7 @@ function CardReuniao({ r }: { r: Reuniao }) {
           href={r.linkMeet}
           target="_blank"
           rel="noopener noreferrer"
-          className="shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-opacity hover:opacity-90"
+          className="shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition hover:brightness-125"
           style={{ background: YELLOW, color: TEMA.textoSobreDestaque }}
         >
           Entrar no Meet
