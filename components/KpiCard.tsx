@@ -2,6 +2,7 @@
 
 import { TEMA } from "@/lib/brand";
 import NumeroAnimado from "./NumeroAnimado";
+import DeltaChip from "./DeltaChip";
 
 /**
  * KPI com a sparkline ATRÁS do número (versão B, escolhida pelo Igor em 16/08).
@@ -19,10 +20,30 @@ import NumeroAnimado from "./NumeroAnimado";
  */
 export default function KpiCard({
   rotulo, valor, formatar, serie, delta, menorMelhor = false, anterior, info, base, secundario,
+  sub, destaque = false, titulo, contexto, neutralizar, rodape, motivo, grande = false,
 }: {
   rotulo: string;
   valor: number;
   formatar: (n: number) => string;
+  /** Segunda linha do rótulo (ex.: "formulário + WhatsApp"). */
+  sub?: string;
+  /** Número em ouro. ⚠️ Um por grade — se todos destacam, nenhum destaca. */
+  destaque?: boolean;
+  /** `title` do próprio número (valor cheio, sem abreviação). */
+  titulo?: string;
+  /** Contra o quê o Δ varia — vira tooltip do chip. Ver DeltaChip. */
+  contexto?: string | null;
+  /** Δ perde a cor semântica mas mantém o número. Ver DeltaChip. */
+  neutralizar?: string | null;
+  /** Texto curto sob o Δ (ex.: "vs período anterior"). */
+  rodape?: string;
+  /**
+   * ⚠️ NÚMERO GRANDE (34px) — o do Dashboard, que é a tela de varredura da
+   * agência. O padrão (26px) serve para grades com mais cards, como a
+   * /comercial. Dois tamanhos fixos, sem auto-dimensionar ao container: a
+   * referência faz isso e é justamente a parte frágil que decidimos não copiar.
+   */
+  grande?: boolean;
   /** Série da mini-linha. Menos de 2 pontos: a sparkline some, o card fica. */
   serie?: number[];
   /**
@@ -36,6 +57,8 @@ export default function KpiCard({
   /** Valor do período anterior, já formatado. */
   anterior?: string;
   info?: string;
+  /** Por que não há comparação — força o "—" e explica. Ver DeltaChip. */
+  motivo?: string | null;
   /**
    * ⚠️ SOBRE O QUE O NÚMERO É. Existe porque compactar em card faz a BASE sumir,
    * e dois cards lado a lado parecem comparáveis mesmo quando contam coisas
@@ -48,10 +71,13 @@ export default function KpiCard({
   secundario?: string;
 }) {
   const pontos = serie && serie.length >= 2 ? serie : null;
-  const bom = delta == null ? null : menorMelhor ? delta < 0 : delta > 0;
-  const corDelta = delta == null || delta === 0 ? TEMA.muted : bom ? TEMA.positivo : TEMA.negativo;
-  const fundoDelta =
-    delta == null || delta === 0 ? TEMA.neutroFundo : bom ? TEMA.positivoFundo : TEMA.negativoFundo;
+  /**
+   * ⚠️ `motivo` FORÇA o "—". Sem isto, uma tela poderia passar `motivo` (a razão
+   * de não haver comparação) E um `delta` calculado contra base incompleta — e o
+   * chip mostraria um número que o próprio `motivo` diz não valer. A regra fica
+   * AQUI e não no ponto de chamada, para não depender de ninguém lembrar.
+   */
+  const deltaEfetivo: number | null = motivo ? null : (delta ?? null);
 
   return (
     <div
@@ -73,12 +99,18 @@ export default function KpiCard({
         >
           {rotulo}
         </div>
+        {sub && <div className="text-[11px]" style={{ color: TEMA.muted }}>{sub}</div>}
 
         <NumeroAnimado
           valor={valor}
           formatar={formatar}
-          className="mt-2.5 block text-[26px] font-semibold leading-[1.1] tracking-[-0.02em] tabular-nums"
-          style={{ color: TEMA.texto }}
+          title={titulo}
+          className={`mt-2.5 block font-semibold tracking-[-0.02em] tabular-nums ${
+            grande ? "text-[34px] leading-none" : "text-[26px] leading-[1.1]"
+          }`}
+          // ⚠️ Ouro ESCURO no destaque, nunca o dourado puro como texto pequeno —
+          // e aqui o número é grande o bastante para a regra dos 18px valer.
+          style={{ color: destaque ? TEMA.ouroTexto : TEMA.texto }}
         />
 
         {secundario && (
@@ -87,23 +119,24 @@ export default function KpiCard({
           </div>
         )}
 
-        {(delta !== undefined || anterior) && (
+        {(delta !== undefined || anterior || rodape) && (
           <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span
-              className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium tabular-nums"
-              style={{ background: fundoDelta, color: corDelta }}
-            >
-              {delta == null ? "—" : (
-                <>
-                  <span style={{ fontSize: 9 }}>{delta > 0 ? "▲" : delta < 0 ? "▼" : "•"}</span>
-                  {delta > 0 ? "+" : ""}{delta}%
-                </>
-              )}
-            </span>
+            {delta !== undefined && (
+              <DeltaChip
+                delta={deltaEfetivo}
+                menorMelhor={menorMelhor}
+                motivo={motivo}
+                contexto={contexto}
+                neutralizar={neutralizar}
+              />
+            )}
             {anterior && (
               <span className="text-[11.5px] tabular-nums" style={{ color: TEMA.muted }}>
                 ant. {anterior}
               </span>
+            )}
+            {rodape && (
+              <span className="text-[11px]" style={{ color: TEMA.muted }}>{rodape}</span>
             )}
           </div>
         )}

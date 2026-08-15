@@ -22,6 +22,8 @@ import NichosSection from "./NichosSection";
 import CriativosSection from "./CriativosSection";
 import HeroChart from "./HeroChart";
 import Sparkline from "./Sparkline";
+import KpiCard from "./KpiCard";
+import DeltaChip from "./DeltaChip";
 import NumeroAnimado from "./NumeroAnimado";
 import IndicadorFrescor from "./IndicadorFrescor";
 import IAChat from "./IAChat";
@@ -105,42 +107,6 @@ function Trend({ v, menorMelhor = false }: { v: number; menorMelhor?: boolean })
 
 // Badge de variação para os KPIs. delta null → "—" (sem base suficiente).
 // `motivo` explica o "—" no tooltip com o motivo CONCRETO (datas), quando houver.
-// `contexto` diz CONTRA O QUÊ o número está variando (o periodoLabel, com o
-// tamanho de cada lado). Sem isso, um Δ de gasto entre períodos de tamanhos
-// diferentes é um número sem régua — quem passa o mouse tem que ver a régua.
-// `neutralizar` tira a COR semântica sem tirar o número: o Δ continua lá, mas
-// para de afirmar "bom" ou "ruim". Usado quando os dois períodos têm tamanhos
-// muito diferentes (ver TOLERANCIA_TAMANHO_PCT) — aí boa parte da variação de
-// gasto/conversões é calendário, e verde/vermelho seria uma conclusão errada.
-function DeltaBadge({ delta, menorMelhor = false, motivo, contexto, neutralizar }: {
-  delta: number | null; menorMelhor?: boolean; motivo?: string | null;
-  contexto?: string | null; neutralizar?: string | null;
-}) {
-  // Chip com fundo tingido: o delta é o sinal que se lê de longe no KPI.
-  const base = "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium";
-  if (delta === null) {
-    return (
-      <span className={base} style={{ background: TEMA.neutroFundo, color: MUTED, cursor: "help" }} title={motivo ?? "sem período anterior comparável"}>—</span>
-    );
-  }
-  const cor = neutralizar ? MUTED : corVar(delta, menorMelhor);
-  const seta = delta > 0 ? "▲" : delta < 0 ? "▼" : "•";
-  // O tint acompanha a SEMÂNTICA (cor), não o sinal do número: em CPL, subir é ruim.
-  const fundo = neutralizar
-    ? TEMA.neutroFundo
-    : cor === GREEN ? TEMA.positivoFundo : cor === RED ? TEMA.negativoFundo : TEMA.neutroFundo;
-  const dica = neutralizar ?? (contexto ? `Variação — ${contexto}` : null);
-  return (
-    <span
-      className={`${base} tabular-nums`}
-      style={{ background: fundo, color: cor, cursor: dica ? "help" : undefined }}
-      title={dica ?? undefined}
-    >
-      <span style={{ fontSize: 9 }}>{seta}</span>
-      {pct(delta)}
-    </span>
-  );
-}
 
 // Contas pausadas: acordeão discreto de rodapé, fechado por padrão. Ao abrir,
 // mostra pills só com o nome do cliente (account_id vai no title). Estado não
@@ -192,48 +158,6 @@ function Iniciais({ nome }: { nome: string }) {
 
 // Card de KPI: rótulo + subtítulo, número grande tabular (com count-up), delta
 // semântico e sparkline. O número anima ao trocar de período (respeita reduced-motion).
-function KpiCard({ label, sub, valorNum, formatar, title, delta, menorMelhor = false, destaque = false, serie, semComparacao, info, contexto, neutralizar }: {
-  label: string; sub?: string; valorNum: number; formatar: (n: number) => string; title: string;
-  delta: number | null; menorMelhor?: boolean; destaque?: boolean; serie: number[];
-  // Quando preenchido: o período anterior não cabe no histórico → força "—" e
-  // explica o motivo (melhor do que mostrar variação contra base incompleta).
-  semComparacao?: string | null;
-  // Texto do ⓘ ao lado do rótulo (o que a métrica conta / ressalvas).
-  info?: string;
-  // Contra o quê o Δ está variando (periodoLabel) — vira tooltip do chip.
-  contexto?: string | null;
-  // Preenchido = o Δ perde a cor semântica (soma contra períodos de tamanhos
-  // muito diferentes). O texto vira o tooltip. Não se aplica ao CPL.
-  neutralizar?: string | null;
-}) {
-  return (
-    <div className="p-5" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          {/* Hierarquia: rótulo menor/secundário — o NÚMERO é o alvo de varredura. */}
-          <p className="flex items-center gap-1 text-[12px] font-medium" style={{ color: MUTED }}>
-            {label}
-            {info && <Info texto={info} />}
-          </p>
-          {sub && <p className="text-[11px]" style={{ color: MUTED }}>{sub}</p>}
-        </div>
-        <Sparkline dados={serie} cor={TEMA.dadoNeutro} />
-      </div>
-      <NumeroAnimado
-        valor={valorNum}
-        formatar={formatar}
-        title={title}
-        className="mt-3 block text-[34px] font-semibold leading-none tracking-tight"
-        // Destaque via ouro ESCURO (legível); dourado puro nunca vira texto.
-        style={{ color: destaque ? OURO : TEXTO, fontVariantNumeric: "tabular-nums" }}
-      />
-      <div className="mt-2 flex items-center gap-2">
-        <DeltaBadge delta={semComparacao ? null : delta} menorMelhor={menorMelhor} motivo={semComparacao} contexto={contexto} neutralizar={neutralizar} />
-        <span className="text-[11px]" style={{ color: MUTED }}>vs período anterior</span>
-      </div>
-    </div>
-  );
-}
 
 const PERIODOS = ["7 dias", "15 dias", "30 dias", "60 dias", "Mês", "Personalizado"] as const;
 type Periodo = (typeof PERIODOS)[number];
@@ -799,53 +723,65 @@ export default function Dashboard(
       {/* Gasto, Leads e Conversas são SOMAS: recebem `neutralizar`. O CPL médio é
           RAZÃO e fica de fora — ele mantém a cor mesmo com tamanhos diferentes. */}
       <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+        {/* ⚠️ `neutralizar` NÃO vai no CPL, e a ausência é deliberada: o CPL é uma
+            RAZÃO (gasto ÷ conversões) e sobrevive a períodos de tamanhos
+            diferentes. Gasto, leads e conversas são SOMAS — o período mais longo
+            tem mais dias somando, e aí o Δ perde a cor. Ver TOLERANCIA_TAMANHO_PCT. */}
         <KpiCard
-          label="Gasto"
-          valorNum={kpis.gasto.valor}
+          rotulo="Gasto"
+          valor={kpis.gasto.valor}
           formatar={moedaCard}
-          title={brl(kpis.gasto.valor)}
+          titulo={brl(kpis.gasto.valor)}
           delta={kpis.gasto.delta}
           serie={kpis.gasto.serie}
-          semComparacao={motivoSemComparacao}
+          motivo={motivoSemComparacao}
           contexto={data.periodoLabel}
           neutralizar={neutralizarSomas}
+          rodape="vs período anterior"
+          grande
         />
         <KpiCard
-          label="Leads"
+          rotulo="Leads"
           sub="formulário"
-          valorNum={kpis.leads.valor}
+          valor={kpis.leads.valor}
           formatar={numCard}
-          title={`${num(kpis.leads.valor)} leads de formulário`}
+          titulo={`${num(kpis.leads.valor)} leads de formulário`}
           delta={kpis.leads.delta}
           serie={kpis.leads.serie}
-          semComparacao={motivoSemComparacao}
+          motivo={motivoSemComparacao}
           contexto={data.periodoLabel}
           neutralizar={neutralizarSomas}
+          rodape="vs período anterior"
+          grande
         />
         <KpiCard
-          label="CPL médio"
-          valorNum={kpis.cpl.valor}
+          rotulo="CPL médio"
+          valor={kpis.cpl.valor}
           formatar={brlDec}
-          title={`${brlDec(kpis.cpl.valor)} · base: ${num(kpis.cpl.base)} resultados no período (leads + conversas)`}
+          titulo={`${brlDec(kpis.cpl.valor)} · base: ${num(kpis.cpl.base)} resultados no período (leads + conversas)`}
           delta={kpis.cpl.delta}
           menorMelhor
           destaque
           serie={kpis.cpl.serie}
-          semComparacao={motivoSemComparacao}
+          motivo={motivoSemComparacao}
           contexto={data.periodoLabel}
+          rodape="vs período anterior"
+          grande
         />
         <KpiCard
-          label="Conversas"
+          rotulo="Conversas"
           sub="WhatsApp"
-          valorNum={kpis.conversas.valor}
+          valor={kpis.conversas.valor}
           formatar={numCard}
-          title={`${num(kpis.conversas.valor)} conversas de WhatsApp`}
+          titulo={`${num(kpis.conversas.valor)} conversas de WhatsApp`}
           delta={kpis.conversas.delta}
           serie={kpis.conversas.serie}
-          semComparacao={motivoSemComparacao}
+          motivo={motivoSemComparacao}
           contexto={data.periodoLabel}
           neutralizar={neutralizarSomas}
           info={TOOLTIP_CONVERSOES}
+          rodape="vs período anterior"
+          grande
         />
       </div>
 
