@@ -315,16 +315,35 @@ backfill). O achado saiu de um número que não fechava: 92 abertas paradas na e
 **A contraprova diz que a etapa está certa:** das 38 ganhas do funil, **37 estão em
 Fechamento**. O caminho do CRM funciona — o que parou foi a marcação.
 
-E parou numa data. Ganhas por período, entre as que passaram por Fechamento:
+⚠️ **CORREÇÃO DE 15/08/2026 — a primeira leitura desta seção estava errada, e o erro é
+instrutivo.** Ela dizia *"em 2026 o comercial chegou 47 vezes em Fechamento e clicou
+'ganhou' uma vez"*, comparando **47 e 1 medidos por mês de CRIAÇÃO**. Errado por dois
+motivos: o clique acontece na data de FECHAMENTO, não na de criação, e a mediana de
+criação até vitória é de **82 dias** — negócio criado em 2026 ainda nem teve tempo de
+fechar. Por `closedat`, **2026 tem 11 vitórias, todas em março**.
 
-| período | passaram por Fechamento | ganhas | abertas sem desfecho |
-|---|---|---|---|
-| 2024 | 28 | 14 | 8 |
-| 2025 (1º sem.) | 29 | 16 | 13 |
-| 2025 (2º sem.) | 33 | 6 | 27 |
-| 2026 | 47 | **1** | 44 |
+**A regra que o erro ensina: nunca comparar dois números em frames de data diferentes.**
+Cada um estava certo sozinho; juntos, mediam coisas distintas e a conclusão saiu maior do
+que o dado.
 
-**Em 2026 o comercial chegou 47 vezes em Fechamento e clicou "ganhou" uma vez.**
+O que a base realmente mostra, por **data do clique**:
+
+| mês do clique | vitórias | maior dia |
+|---|---|---|
+| jul–out/2024 | 12 | 2 |
+| **03/05/2025** | **12** | **12 — todas no mesmo dia** |
+| set/2025 | 3 | 3 |
+| **mar/2026** | **11** | 4 |
+| abr–ago/2026 | **0** | — |
+
+**O clique não parou: ele nunca foi rotina.** Acontece em sessões — 12 marcadas numa
+única tarde em maio/2025, nada entre out/2025 e fev/2026, 11 em março/2026, e **zero nos
+últimos cinco meses**. É arrumação periódica, não registro no momento da venda.
+
+⚠️ **Consequência prática, e ela é maior que o erro:** `closedat` é a data do CLIQUE, não
+a data da VENDA. Vale para a série mensal de vendas confirmadas — a única que eu havia
+dado como estável. Ela também precisa marcar o mês de sessão de marcação, e o agregado
+faz isso em `vendasConfirmadasPorMes.mesmoDia`.
 
 O indício mais forte é o valor: **63 das 92 abertas em Fechamento (68%) já têm
 `recurrentvalue` preenchido, somando R$ 157.560,00/mês** — contra R$ 68.120,00 de MRR
