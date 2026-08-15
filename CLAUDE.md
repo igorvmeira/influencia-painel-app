@@ -68,6 +68,13 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
      escuro virou 1,15:1. Nenhum grep acha isso. **A auditoria termina medindo cada par
      {cor, fundo em que ela é realmente pintada}**, não conferindo se a cor saiu do arquivo
      certo.
+- ⚠️ **Token de contraste baixo é para TRILHO e MOLDURA. Qualquer elemento cujo TAMANHO ou
+  POSIÇÃO codifica informação precisa de 3:1, mesmo sendo cinza.** Barra de ranking, fatia,
+  série, ponto num eixo — o comprimento é o dado, então some junto com a cor. Três rankings
+  deste painel usavam o token de trilho na própria barra; no tema claro passava por
+  acidente (o token era escuro sobre card branco) e no escuro a maioria das barras sumiria.
+  **Mantenha dois tokens separados** — um para o sulco vazio, outro para o dado neutro — e
+  diga no comentário de cada um o que ele NÃO é.
 - **Efeito visual também inverte com o tema, não só cor.** `hover:opacity-90` clareia sobre
   fundo claro e ESCURECE sobre fundo escuro — o gesto continua funcionando e passa a
   significar o contrário. Sombra some no escuro (não há luz para bloquear), então `shadow`
