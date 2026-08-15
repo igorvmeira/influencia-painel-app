@@ -107,6 +107,19 @@ export const TEMA = {
   sparkline: "#6E6A5E",   // 3,19:1 sobre card — mini-série
   barraNeutra: "#3A382F", // TRILHO de barra/ranking: decorativo, piso não se aplica
 
+  // ===== VÉUS E REALCES (as cores que NÃO são hex) =====
+  // ⚠️ ESTES TOKENS NASCERAM DE UM BURACO NA AUDITORIA. A regra da casa é "nenhuma
+  // cor chumbada fora dos tokens", e a conferência procurava `#RRGGBB` — então
+  // quatro `rgba(...)` passaram batido por toda a vida do tema claro. Todos eram
+  // dependentes do tema, e todos quebravam no escuro do jeito mais silencioso:
+  // véu escuro sobre fundo escuro não escurece nada, e realce escuro sobre card
+  // escuro não realça nada. Procure por `rgba(` também, não só por `#`.
+  overlay: "rgba(0,0,0,0.66)",              // véu do drawer mobile — mais forte que
+                                            // no claro: sobre fundo já escuro, 0,55
+                                            // não separava o drawer da página
+  realceGrafico: "rgba(242,240,234,0.06)",  // cursor de hover em gráfico. ⚠️ CLARO,
+                                            // não escuro — é o inverso do tema claro
+
   // ===== FORMA =====
   raioCard: "0.75rem",
   // ⚠️ Sombra faz pouco no escuro — não há luz para bloquear. Ela ficou como um

@@ -10,12 +10,15 @@ import { TEMA } from "@/lib/brand";
 import { MENU_PRINCIPAL, MENU_EM_BREVE } from "@/lib/menu";
 import NodeMark from "./NodeMark";
 
-// Tema claro com SIDEBAR ESCURA: a barra quase-preta é a âncora visual do layout
-// claro. O dourado entra como acento (pill do item ativo e logo), nunca como texto.
-// Paleta própria (TEMA.nav*) — ver o porquê no comentário de lib/brand.ts.
+// Tema escuro. A sidebar deixou de ser "a âncora clara/escura" e virou o degrau
+// MAIS PROFUNDO da escala de elevação (navFundo < fundo < card), para o conteúdo
+// parecer vir à frente. Paleta própria (TEMA.nav*) — ver lib/brand.ts.
 const FUNDO = TEMA.fundo;
-const TEXTO = TEMA.texto;
 const AMARELO = TEMA.destaque;
+// ⚠️ NÃO use TEMA.texto sobre o dourado. Ver `textoSobreDestaque` em lib/brand.ts:
+// no tema claro `texto` era quase-preto e dava 9,44:1 sobre o dourado; no escuro
+// virou off-white e o MESMO código passa a 1,60:1, ilegível e sem erro nenhum.
+const SOBRE_AMARELO = TEMA.textoSobreDestaque;
 const NAV_FUNDO = TEMA.navFundo;
 const NAV_TEXTO = TEMA.navTexto;
 const NAV_MUTED = TEMA.navMuted;
@@ -52,8 +55,8 @@ export default function Shell({ children }: { children: React.ReactNode }) {
               href={item.href!}
               onClick={() => setAberto(false)}
               className={`mb-1 block rounded-lg px-3 py-2 text-sm font-medium transition-colors${ativo ? "" : " hover:bg-nav-hover"}`}
-              // Item ativo: pill dourado com texto quase-preto (nunca texto dourado).
-              style={ativo ? { background: AMARELO, color: TEXTO } : { color: NAV_TEXTO }}
+              // Item ativo: pill dourado com o texto ESCURO do token próprio (10,58:1).
+              style={ativo ? { background: AMARELO, color: SOBRE_AMARELO } : { color: NAV_TEXTO }}
             >
               {item.rotulo}
             </Link>
@@ -115,10 +118,12 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         {/* Drawer no mobile */}
         {aberto && (
           <div className="fixed inset-0 z-50 md:hidden">
-            {/* Overlay em 0,55: com a sidebar agora quase-preta, um véu mais fraco
-                fundia as duas superfícies. A borda-direita (navBorda, dentro do
-                <aside>) recorta a silhueta do drawer contra o fundo escurecido. */}
-            <div className="absolute inset-0" style={{ background: "rgba(28,27,23,0.55)" }} onClick={() => setAberto(false)} />
+            {/* ⚠️ O véu precisou ENGROSSAR no tema escuro. Era 0,55 do quase-preto
+                sobre uma página CLARA, e o contraste vinha de graça. Sobre a página
+                escura, escurecer o escuro não separa nada — o drawer parecia flutuar
+                sem fundo. Agora é `TEMA.overlay` (preto a 0,66); a borda-direita
+                (navBorda, dentro do <aside>) recorta a silhueta contra ele. */}
+            <div className="absolute inset-0" style={{ background: TEMA.overlay }} onClick={() => setAberto(false)} />
             <div className="absolute left-0 top-0 h-full shadow-2xl">{nav}</div>
           </div>
         )}

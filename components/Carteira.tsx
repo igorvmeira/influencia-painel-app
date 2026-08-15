@@ -224,7 +224,7 @@ function LinhaConta({ conta, ordem }: { conta: ContaMap; ordem: number }) {
               onClick={salvar}
               disabled={salvando}
               className="rounded-full px-4 py-1.5 text-[12px] font-semibold transition-opacity disabled:opacity-40"
-              style={{ background: YELLOW, color: TEMA.texto }}
+              style={{ background: YELLOW, color: TEMA.textoSobreDestaque }}
             >
               {salvando ? "Salvando…" : "Salvar"}
             </button>

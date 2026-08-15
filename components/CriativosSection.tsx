@@ -122,7 +122,7 @@ export default function CriativosSection(
             key={m}
             onClick={() => setModo(m)}
             className="rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors"
-            style={modo === m ? { background: YELLOW, color: TEMA.texto } : { background: "transparent", color: MUTED }}
+            style={modo === m ? { background: YELLOW, color: TEMA.textoSobreDestaque } : { background: "transparent", color: MUTED }}
           >
             {m === "cliente" ? "Por cliente" : "Por nicho"}
           </button>
@@ -165,7 +165,7 @@ export default function CriativosSection(
                 key={p.dias}
                 onClick={() => setDias(p.dias)}
                 className="rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors"
-                style={ativo ? { background: YELLOW, color: TEMA.texto } : { background: "transparent", color: MUTED }}
+                style={ativo ? { background: YELLOW, color: TEMA.textoSobreDestaque } : { background: "transparent", color: MUTED }}
               >
                 {p.label}
               </button>

@@ -99,7 +99,7 @@ export default function CardGestor({
         {premiado && (
           <span
             className="rounded-md px-1.5 py-0.5 text-[11px] font-semibold"
-            style={{ background: TEMA.destaque, color: TEMA.texto }}
+            style={{ background: TEMA.destaque, color: TEMA.textoSobreDestaque }}
             title="Melhor evolução de CPL entre os gestores elegíveis do mês."
           >
             ★ melhor evolução

@@ -626,7 +626,7 @@ export default function Dashboard(
                   onClick={() => setPeriodo(p)}
                   className="rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors"
                   style={ativo
-                    ? { background: YELLOW, color: TEXTO }
+                    ? { background: YELLOW, color: TEMA.textoSobreDestaque }
                     : { background: "transparent", color: MUTED }}
                   title={faixa ? `Janela: ${faixa}` : undefined}
                 >
@@ -918,13 +918,17 @@ export default function Dashboard(
               key={a}
               onClick={() => setAba(a)}
               className="inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors"
-              style={aba === a ? { background: YELLOW, color: TEMA.texto } : { background: CARD, color: MUTED }}
+              // ⚠️ MESMA armadilha da pill do Shell, em outro lugar: sobre o dourado
+              // vai `textoSobreDestaque`, nunca `texto`. Ver lib/brand.ts.
+              style={aba === a ? { background: YELLOW, color: TEMA.textoSobreDestaque } : { background: CARD, color: MUTED }}
             >
               {rotulo}
               {a === "alertas" && alertas.length > 0 && (
                 <span
                   className="rounded-full px-1.5 text-[11px] font-semibold tabular-nums"
-                  style={aba === a ? { background: "rgba(0,0,0,0.18)", color: TEMA.texto } : { background: TEMA.chip, color: MUTED }}
+                  // O preto a 0,18 escurece o PRÓPRIO dourado da pill (não a página),
+                  // então continua valendo no escuro — o que muda é a cor do texto.
+                  style={aba === a ? { background: "rgba(0,0,0,0.18)", color: TEMA.textoSobreDestaque } : { background: TEMA.chip, color: MUTED }}
                 >
                   {alertas.length}
                 </span>
@@ -986,7 +990,7 @@ export default function Dashboard(
                     {melhor && (
                       <span
                         className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase"
-                        style={{ background: YELLOW, color: TEMA.texto }}
+                        style={{ background: YELLOW, color: TEMA.textoSobreDestaque }}
                       >
                         melhor
                       </span>
@@ -1034,7 +1038,7 @@ export default function Dashboard(
               onClick={() => setGestorSel(d.gestor)}
               className="rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors"
               style={ativo
-                ? { background: YELLOW, color: TEMA.texto }
+                ? { background: YELLOW, color: TEMA.textoSobreDestaque }
                 : { background: CARD, color: MUTED }}
             >
               {d.gestor}
@@ -1159,7 +1163,7 @@ function FiltroPill({ rotulo, ativo, onClick }: { rotulo: string; ativo: boolean
     <button
       onClick={onClick}
       className="rounded-full px-3 py-1 text-[12px] font-medium transition-colors"
-      style={ativo ? { background: YELLOW, color: TEMA.texto } : { background: TEMA.chip, color: MUTED }}
+      style={ativo ? { background: YELLOW, color: TEMA.textoSobreDestaque } : { background: TEMA.chip, color: MUTED }}
     >
       {rotulo}
     </button>

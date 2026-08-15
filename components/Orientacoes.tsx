@@ -228,7 +228,7 @@ function LinhaOrientacao({ conta, atual, ordem, aoSalvar }: {
                 onClick={salvar}
                 disabled={salvando || !texto.trim()}
                 className="rounded-full px-4 py-1.5 text-[12px] font-semibold transition-opacity disabled:opacity-40"
-                style={{ background: YELLOW, color: TEMA.texto }}
+                style={{ background: YELLOW, color: TEMA.textoSobreDestaque }}
               >
                 {salvando ? "Salvando…" : "Salvar"}
               </button>

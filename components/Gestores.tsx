@@ -357,7 +357,7 @@ export default function Gestores() {
                 onClick={() => setVisao(v)}
                 className="rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors"
                 style={visao === v
-                  ? { background: TEMA.destaque, color: TEMA.texto }
+                  ? { background: TEMA.destaque, color: TEMA.textoSobreDestaque }
                   : { background: "transparent", color: MUTED }}
               >
                 {v === "cards" ? "Cards" : "Tabela"}
@@ -720,7 +720,7 @@ function BlocoCriativos({
           <button
             onClick={carregar}
             className="rounded-full px-3 py-1 text-[12px] font-medium"
-            style={{ background: TEMA.destaque, color: TEMA.texto }}
+            style={{ background: TEMA.destaque, color: TEMA.textoSobreDestaque }}
           >
             Carregar
           </button>

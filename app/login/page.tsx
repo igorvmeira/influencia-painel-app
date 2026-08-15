@@ -93,12 +93,13 @@ export default function LoginPage() {
             </p>
           )}
 
-          {/* CTA dourado: preenchimento da marca + texto quase-preto (nunca texto dourado). */}
+          {/* CTA dourado: preenchimento da marca + o texto ESCURO do token próprio.
+              ⚠️ Nunca TEMA.texto aqui — no escuro ele é off-white e dá 1,60:1. */}
           <button
             type="submit"
             disabled={enviando}
             className="mt-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-opacity disabled:opacity-60"
-            style={{ background: YELLOW, color: TEXTO }}
+            style={{ background: YELLOW, color: TEMA.textoSobreDestaque }}
           >
             {enviando ? "Entrando…" : "Entrar"}
           </button>

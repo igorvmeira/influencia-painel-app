@@ -91,7 +91,7 @@ function IAChatPainel({ periodoDias }: { periodoDias: number }) {
                 <div
                   className="max-w-[85%] whitespace-pre-wrap rounded-xl px-3 py-2 text-[13px]"
                   style={m.role === "user"
-                    ? { background: YELLOW, color: TEMA.texto }
+                    ? { background: YELLOW, color: TEMA.textoSobreDestaque }
                     : { background: CARD, color: TEMA.texto, border: `1px solid ${LINE}` }}
                 >
                   {m.content}
@@ -125,7 +125,7 @@ function IAChatPainel({ periodoDias }: { periodoDias: number }) {
               onClick={enviar}
               disabled={carregando || !texto.trim()}
               className="rounded-xl px-3 py-2 text-[13px] font-semibold transition-opacity disabled:opacity-40"
-              style={{ background: YELLOW, color: TEMA.texto }}
+              style={{ background: YELLOW, color: TEMA.textoSobreDestaque }}
             >
               Enviar
             </button>
@@ -137,7 +137,7 @@ function IAChatPainel({ periodoDias }: { periodoDias: number }) {
       <button
         onClick={() => setAberto((a) => !a)}
         className="rounded-full px-4 py-3 text-sm font-semibold shadow-lg transition-transform hover:scale-105"
-        style={{ background: YELLOW, color: TEMA.texto }}
+        style={{ background: YELLOW, color: TEMA.textoSobreDestaque }}
       >
         {aberto ? "Fechar" : `Falar com ${MARCA.assistente}`}
       </button>

@@ -59,7 +59,7 @@ export default function NichosSection({ nichos }: { nichos: LinhaNicho[] }) {
                   </span>
                   <span className="truncate text-sm text-brand-ink">{n.nicho}</span>
                   {melhor && (
-                    <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase" style={{ background: YELLOW, color: TEMA.texto }}>
+                    <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase" style={{ background: YELLOW, color: TEMA.textoSobreDestaque }}>
                       melhor
                     </span>
                   )}
@@ -97,7 +97,7 @@ export default function NichosSection({ nichos }: { nichos: LinhaNicho[] }) {
                 key={n.nicho}
                 onClick={() => setSelNicho(n.nicho)}
                 className="rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors"
-                style={ativo ? { background: YELLOW, color: TEMA.texto } : { background: CARD, color: MUTED }}
+                style={ativo ? { background: YELLOW, color: TEMA.textoSobreDestaque } : { background: CARD, color: MUTED }}
               >
                 {n.nicho}
               </button>
