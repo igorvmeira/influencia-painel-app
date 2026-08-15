@@ -2,7 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { useComercial } from "@/lib/useComercial";
-import { TEMA } from "@/lib/brand";
+import { TEMA, MOVIMENTO } from "@/lib/brand";
+import { useEntrada, atrasoDe } from "@/lib/useEntrada";
+import SecaoHeader from "./SecaoHeader";
+import BarraDado from "./BarraDado";
 
 const CARD = TEMA.card;
 const LINE = TEMA.borda;
@@ -20,15 +23,28 @@ const mesCurto = (m: string) => {
   return `${["", "jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"][Number(mm)]}/${a.slice(2)}`;
 };
 
-function Bloco({ titulo, sub, children }: { titulo: string; sub?: string; children: React.ReactNode }) {
+/**
+ * Seção = cabeçalho FORA do card + card com o conteúdo.
+ *
+ * ⚠️ Mudou de forma: o título vivia DENTRO do card, o que fazia cada bloco
+ * parecer um documento fechado em si. Com o `SecaoHeader` do lado de fora, a
+ * barra dourada alinha as seções numa coluna só e a tela passa a ter ritmo
+ * vertical — é o que dá a densidade da referência sem comprimir espaçamento.
+ */
+function Bloco({
+  titulo, sub, icone, pill, children,
+}: {
+  titulo: string; sub?: string; icone?: string; pill?: string; children: React.ReactNode;
+}) {
   return (
-    <section
-      className="mb-5 px-5 py-4"
-      style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}
-    >
-      <h2 className="text-[15px] font-semibold text-brand-ink">{titulo}</h2>
-      {sub ? <p className="mt-0.5 text-[12.5px]" style={{ color: MUTED }}>{sub}</p> : null}
-      <div className="mt-4">{children}</div>
+    <section className="mb-5">
+      <SecaoHeader titulo={titulo} subtitulo={sub} icone={icone} pill={pill} />
+      <div
+        className="px-5 py-5"
+        style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}
+      >
+        {children}
+      </div>
     </section>
   );
 }
@@ -52,6 +68,10 @@ function Aviso({ children, tom = "ouro" }: { children: React.ReactNode; tom?: "o
 export default function Comercial() {
   const { agregado, carregando, erro } = useComercial();
   const [todosMeses, setTodosMeses] = useState(false);
+  // Cada bloco animado tem o próprio observador: a cascata do funil não deve
+  // esperar o usuário chegar nas faixas de idade, lá embaixo.
+  const { ref: refFunil, entrou: entrouFunil } = useEntrada<HTMLDivElement>();
+  const { ref: refIdade, entrou: entrouIdade } = useEntrada<HTMLDivElement>();
 
   const nomeEtapa = useMemo(
     () => new Map<number, string>([
@@ -109,12 +129,13 @@ export default function Comercial() {
       {/* ================= O FUNIL ================= */}
       <Bloco
         titulo="Onde as pessoas estão agora"
+        icone="◧"
         sub={`${n(funil.pessoasNoFunil)} pessoas no funil de captação · ${n(funil.oportunidadesAbertas)} oportunidades abertas no total`}
       >
         {/* ⚠️ REGRA DA CASA: nunca um número solto chamado "leads". Cada linha diz
             se está contando PESSOA ou OPORTUNIDADE — é a diferença entre 476 e 1.660. */}
-        <div className="space-y-2.5">
-          {funil.niveis.map((nv) => (
+        <div ref={refFunil} className="space-y-2.5">
+          {funil.niveis.map((nv, i) => (
             <div key={nv.nivel}>
               <div className="flex items-baseline gap-2">
                 <span className="w-5 text-[11px] tabular-nums" style={{ color: MUTED }}>{nv.nivel}</span>
@@ -123,9 +144,16 @@ export default function Comercial() {
                 <span className="text-[11.5px]" style={{ color: MUTED }}>pessoas</span>
               </div>
               <div className="ml-7 mt-1 flex items-center gap-2">
-                <div className="h-2 flex-1 overflow-hidden rounded-full" style={{ background: TEMA.barraNeutra }}>
-                  <div className="h-full rounded-full" style={{ width: `${(nv.pessoas / maxNivel) * 100}%`, background: GOLD }} />
-                </div>
+                {/* Degradê só aqui: o dourado tem folga de contraste (9,44:1) e
+                    aguenta escurecer; o neutro das outras barras não teria. */}
+                <BarraDado
+                  pct={(nv.pessoas / maxNivel) * 100}
+                  cor={GOLD}
+                  degrade
+                  entrou={entrouFunil}
+                  indice={i}
+                  titulo={`${n(nv.pessoas)} pessoas no nível ${nv.nivel}`}
+                />
                 <span className="w-28 text-right text-[11.5px] tabular-nums" style={{ color: MUTED }}>
                   {n(nv.oportunidades)} oportunidades
                 </span>
@@ -196,17 +224,23 @@ export default function Comercial() {
         <div className="mt-4">
           <div className="mb-2 text-[12.5px] font-medium text-brand-ink">Há quanto tempo estão paradas na etapa</div>
           {/* A idade é o que separa negociação viva de venda não registrada. */}
-          <div className="space-y-1.5">
-            {emFechamento.porIdade.map((f) => {
+          <div ref={refIdade} className="space-y-1.5">
+            {emFechamento.porIdade.map((f, i) => {
               const max = Math.max(1, ...emFechamento.porIdade.map((x) => x.pessoas));
               const velho = f.chave === "d181a365" || f.chave === "mais365";
               return (
                 <div key={f.chave} className="flex items-center gap-3">
                   <span className="w-32 text-[12px]" style={{ color: MUTED }}>{f.rotulo}</span>
-                  <div className="h-2 flex-1 overflow-hidden rounded-full" style={{ background: TEMA.barraNeutra }}>
-                    <div className="h-full rounded-full"
-                      style={{ width: `${(f.pessoas / max) * 100}%`, background: velho ? AMBER : GOLD }} />
-                  </div>
+                  {/* Sem degradê: o âmbar não foi medido para escurecer, e misturar
+                      barra chapada com barra em degradê na MESMA lista faria a
+                      diferença parecer significado. Aqui o significado é a cor. */}
+                  <BarraDado
+                    pct={(f.pessoas / max) * 100}
+                    cor={velho ? AMBER : GOLD}
+                    entrou={entrouIdade}
+                    indice={i}
+                    titulo={`${n(f.pessoas)} pessoas — ${f.rotulo}`}
+                  />
                   <span className="w-8 text-right text-[12.5px] font-medium tabular-nums text-brand-ink">{n(f.pessoas)}</span>
                 </div>
               );
@@ -310,10 +344,11 @@ function SerieDupla({
   rotuloA: string;
   rotuloB: string;
 }) {
+  const { ref, entrou } = useEntrada<HTMLDivElement>();
   if (!itens.length) return <p className="text-[12.5px]" style={{ color: MUTED }}>Sem dados no período.</p>;
   const max = Math.max(1, ...itens.map((x) => x.pessoas));
   return (
-    <div>
+    <div ref={ref}>
       <div className="mb-2 flex justify-end gap-4 text-[11.5px]" style={{ color: MUTED }}>
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-2 w-3 rounded-sm" style={{ background: GOLD }} /> {rotuloA}
@@ -321,12 +356,19 @@ function SerieDupla({
         <span>{rotuloB} ao lado</span>
       </div>
       <div className="space-y-1">
-        {itens.map((m) => (
+        {itens.map((m, i) => (
           <div key={m.mes} className="flex items-center gap-3">
             <span className="w-14 text-[11.5px] tabular-nums" style={{ color: MUTED }}>{mesCurto(m.mes)}</span>
-            <div className="h-2.5 flex-1 overflow-hidden rounded-full" style={{ background: TEMA.barraNeutra }}>
-              <div className="h-full rounded-full" style={{ width: `${(m.pessoas / max) * 100}%`, background: GOLD }} />
-            </div>
+            {/* ⚠️ Série longa: o escalonamento tem teto de 240ms, senão 28 meses
+                fariam a última barra começar 1,1s depois da primeira. */}
+            <BarraDado
+              pct={(m.pessoas / max) * 100}
+              cor={GOLD}
+              degrade
+              entrou={entrou}
+              indice={i}
+              titulo={`${mesCurto(m.mes)}: ${n(m.pessoas)} pessoas`}
+            />
             <span className="w-10 text-right text-[12.5px] font-medium tabular-nums text-brand-ink">{n(m.pessoas)}</span>
             <span className="w-24 text-right text-[11.5px] tabular-nums" style={{ color: MUTED }}>
               {n(m.oportunidades)} oport.

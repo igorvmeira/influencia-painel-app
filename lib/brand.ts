@@ -177,6 +177,25 @@ export const TEMA = {
   realceGrafico: "rgba(242,240,234,0.06)",  // cursor de hover em gráfico. ⚠️ CLARO,
                                             // não escuro — é o inverso do tema claro
 
+  // ===== DEGRADÊ DE BARRA =====
+  /**
+   * ⚠️ DEGRADÊ SÓ EM COR COM FOLGA DE CONTRASTE — e essa regra saiu da medição,
+   * não do gosto. A barra é DADO: o ponto MAIS ESCURO do degradê é que precisa
+   * passar os 3:1 da WCAG 1.4.11, não a média nem o ponto claro.
+   *
+   *   dourado #F3B60E parte de 9,44:1 → aguenta escurecer até −36% (4,03:1).
+   *   O segundo stop escolhido é −18% (6,29:1): profundidade visível, longe do piso.
+   *
+   * 🛑 `dadoNeutro` NÃO GANHA DEGRADÊ. Ele parte de 3,19:1, que já É o piso —
+   * qualquer escurecimento reprova (−15% cai para 2,46:1). Barra neutra é chapada,
+   * e isso não é inconsistência: é a única forma de ela continuar legível.
+   *
+   * Direção: no horizontal o claro fica na PONTA (puxa o olho para o valor); no
+   * vertical o claro fica no TOPO, pelo mesmo motivo.
+   */
+  gradDestaqueH: "linear-gradient(90deg, #C9930B 0%, #F3B60E 100%)",
+  gradDestaqueV: "linear-gradient(180deg, #F3B60E 0%, #C9930B 100%)",
+
   // ===== FORMA =====
   raioCard: "0.75rem",
   // ⚠️ Sombra faz pouco no escuro — não há luz para bloquear. Ela ficou como um
@@ -210,4 +229,41 @@ export const TEMA = {
   terraTexto: "#E5A579",  // 7,67:1 sobre chipTerra [PROVISÓRIO]
   chipOliva: "#232A16",   // ícone em olivaTexto
   olivaTexto: "#C3D67C",  // 9,35:1 sobre chipOliva [PROVISÓRIO]
+} as const;
+
+/**
+ * MOVIMENTO — tokens de animação, decididos com o Igor em 16/08/2026.
+ *
+ * A referência (Grafana) NÃO anima: os painéis renderizam em canvas por
+ * performance. Então isto é desenho nosso, não cópia — e a regra que rege tudo
+ * saiu dele: **se a animação faz alguém esperar para ler o número, ela está
+ * errada.**
+ *
+ * Consequências que já estão embutidas nos valores abaixo:
+ *   · o easing cobre ~80% da distância nos primeiros 40% do tempo — a barra
+ *     chega perto do valor quase imediato e só assenta no fim;
+ *   · o escalonamento tem TETO, senão um ranking de 20 linhas levaria 800ms;
+ *   · o rótulo de valor entra DEPOIS que a barra assenta: subindo junto com ela,
+ *     o número fica ilegível durante todo o trajeto.
+ *
+ * ⚠️ NÚMERO NÃO CONTA NA ENTRADA. O `NumeroAnimado` anima só quando o valor MUDA
+ * (troca de período) e já era escrito assim. Contar na entrada contraria a regra
+ * acima — um número contando é ilegível enquanto conta.
+ */
+export const MOVIMENTO = {
+  /** Crescimento da barra, do zero ao valor. */
+  barraMs: 520,
+  /** Ease-out forte: quase todo o percurso no começo, assentamento no fim. */
+  ease: "cubic-bezier(.22,1,.36,1)",
+  /** Atraso por índice, para as barras entrarem em cascata. */
+  escalonamentoMs: 40,
+  /** ⚠️ TETO do escalonamento — acima disto a lista inteira vira espera. */
+  escalonamentoTetoMs: 240,
+  /** Rótulo de valor: entra depois da barra assentar. */
+  rotuloMs: 240,
+  rotuloAtrasoMs: 260,
+  /** Linha de média: por último, quando já há o que comparar. */
+  mediaMs: 300,
+  /** Hover — o mesmo 120ms que o resto do app já usa. */
+  hoverMs: 120,
 } as const;

@@ -248,6 +248,11 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   **Regra:** sirva por HTTP (servidor estático numa porta livre já resolve) e, se o arquivo
   também precisar funcionar solto, **elimine toda dependência externa** e faça a página dizer
   na tela de onde veio.
+- ⚠️ **Em investigação de comportamento, COMO a pessoa abriu vale tanto quanto o que ela viu.**
+  No caso acima, "abri o arquivo" estava na primeira frase do relato e eu li como contexto, não
+  como sintoma — custou uma rodada inteira de investigação em cima de código que estava certo.
+  **Pergunte o ambiente antes de suspeitar do código:** protocolo, navegador, se é build ou dev,
+  se há preferência de acessibilidade ligada.
 - Diante de um problema, **descubra a causa real** antes de propor correção — e diga quando
   não souber, em vez de chutar. Um erro de infraestrutura (cota, permissão, credencial) se
   parece com bug de código, mas o conserto é outro.
