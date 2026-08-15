@@ -232,6 +232,20 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
 - Em listas do React, a `key` deve ser o **ID único**, nunca o nome (nomes repetidos causam
   linhas duplicadas e vazamento entre agrupamentos).
 - Não quebre features existentes ao adicionar novas; mudanças cirúrgicas.
+- ⚠️ **UNIFICAR COMPONENTE PEDE LISTA EXPLÍCITA, conferida contra o código final.** Ler os
+  dois lados e concluir que "parecem equivalentes" não basta: numa unificação real deste
+  painel, **4 de 9 estados estavam faltando** no componente que ia absorver o outro, e um
+  deles (o sinal de menos TIPOGRÁFICO do `pct()`, que alinha em `tabular-nums`) só apareceu
+  comparando linha a linha. Defeito assim não é reportado como bug — é lido como "ficou
+  estranho".
+  **Método:** levante os estados ANTES de tocar, e reconfira cada um DEPOIS, no arquivo
+  final. E a união vai **na direção da versão mais rica**, não da mais nova.
+- ⚠️ **Regra que mora no PONTO DE CHAMADA se perde na terceira tela.** Um card fazia
+  `delta={semComparacao ? null : delta}` no render: funcionava, e dependia de todo uso
+  futuro lembrar. Regra que define o comportamento do componente mora **dentro** dele.
+- **Tamanho de número é decisão de TELA, não de componente.** O mesmo KPI é 34px na tela de
+  varredura e 26px numa grade densa. Vira prop com valores FIXOS — nunca auto-dimensionar
+  ao container, que é frágil e quebra em telas estreitas.
 - ⚠️ **Fundo de elemento que tem `hover:` vai em CLASSE, nunca em `style` inline.** Estilo
   inline vence stylesheet, então `style={{ background: X }}` + `hover:bg-y` na classe faz o
   hover **nunca pintar** — sem erro, sem aviso, e a tela parece só "sem resposta ao mouse".

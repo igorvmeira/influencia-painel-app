@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { LinhaNicho } from "@/lib/types";
 import { brl, brlDec, num, pct } from "@/lib/format";
 import { TEMA } from "@/lib/brand";
+import { useEntrada } from "@/lib/useEntrada";
+import BarraDado from "./BarraDado";
 
 // Cores lidas dos design tokens (fonte única em lib/brand.ts).
 const INK = TEMA.fundo;
@@ -21,6 +23,8 @@ export default function NichosSection({ nichos }: { nichos: LinhaNicho[] }) {
   const [nichoB, setNichoB] = useState(nomes[1] ?? nomes[0] ?? "");
 
   const maxCpl = useMemo(() => Math.max(1, ...nichos.map((n) => n.cpl)), [nichos]);
+  // ⚠️ Antes do early return: ganchos não podem ficar atrás de condicional.
+  const { ref, entrou } = useEntrada<HTMLDivElement>();
 
   if (nichos.length === 0) {
     return (
@@ -38,7 +42,7 @@ export default function NichosSection({ nichos }: { nichos: LinhaNicho[] }) {
     <div className="flex flex-col gap-8">
       {/* 1) Ranking de nichos por CPL */}
       <div className="rounded-xl p-5" style={{ background: CARD }}>
-        <div className="flex flex-col gap-4">
+        <div ref={ref} className="flex flex-col gap-4">
           {nichos.map((n, i) => {
             // Nichos vêm ordenados por CPL crescente: primeiro = melhor, último = pior.
             const melhor = i === 0;
@@ -72,9 +76,17 @@ export default function NichosSection({ nichos }: { nichos: LinhaNicho[] }) {
                     </span>
                   )}
                 </div>
-                <div className="order-last h-2.5 w-full overflow-hidden rounded-full sm:order-none sm:w-auto sm:flex-1" style={{ background: LINE }}>
-                  <div className="h-full rounded-full" style={{ width: `${largura}%`, background: corBarra }} />
-                </div>
+                {/* Trilho passa de `borda` (token de superfície) para `barraNeutra`
+                    (token de sulco), junto com a animação de entrada. */}
+                <BarraDado
+                  className="order-last h-2.5 w-full overflow-hidden rounded-full sm:order-none sm:w-auto sm:flex-1"
+                  pct={largura}
+                  cor={corBarra}
+                  degrade={melhor}
+                  entrou={entrou}
+                  indice={i}
+                  titulo={`${n.nicho}: ${brlDec(n.cpl)}`}
+                />
                 <div className="ml-auto flex shrink-0 flex-col items-end sm:ml-0 sm:w-44">
                   <span className="text-sm font-medium tabular-nums text-brand-ink">{brlDec(n.cpl)}</span>
                   <span className="text-[11px]" style={{ color: MUTED }}>

@@ -14,8 +14,10 @@ import { TEMA, MOVIMENTO } from "@/lib/brand";
  * quando a cor tem folga; ver os tokens `gradDestaque*` em lib/brand.ts.
  */
 export default function BarraDado({
-  pct, cor, degrade = false, entrou, indice = 0, titulo,
+  pct, cor, degrade = false, entrou, indice = 0, titulo, className,
 }: {
+  /** Classes do TRILHO — o layout é decisão da tela (largura, ordem responsiva). */
+  className?: string;
   /** 0–100. */
   pct: number;
   cor: string;
@@ -29,7 +31,7 @@ export default function BarraDado({
   const atraso = Math.min(indice * MOVIMENTO.escalonamentoMs, MOVIMENTO.escalonamentoTetoMs);
   return (
     <div
-      className="h-2.5 flex-1 overflow-hidden rounded-full"
+      className={className ?? "h-2.5 flex-1 overflow-hidden rounded-full"}
       style={{ background: TEMA.barraNeutra }}
       title={titulo}
     >

@@ -24,6 +24,8 @@ import HeroChart from "./HeroChart";
 import Sparkline from "./Sparkline";
 import KpiCard from "./KpiCard";
 import DeltaChip from "./DeltaChip";
+import BarraDado from "./BarraDado";
+import { useEntrada } from "@/lib/useEntrada";
 import NumeroAnimado from "./NumeroAnimado";
 import IndicadorFrescor from "./IndicadorFrescor";
 import IAChat from "./IAChat";
@@ -491,6 +493,19 @@ export default function Dashboard(
 
   // Aba ativa: rankings (gestores/nichos/criativos) ou a central de alertas.
   const [aba, setAba] = useState<"gestores" | "nichos" | "criativos" | "alertas">("gestores");
+  /**
+   * ⚠️ DOIS COMPORTAMENTOS DIFERENTES, e os dois são os desejados:
+   *
+   *   TROCA DE ABA → o bloco é renderizado condicionalmente, então o hook
+   *   DESMONTA e remonta. `entrou` volta a false e a cascata roda de novo, que é
+   *   o certo: aba nova é conteúdo novo entrando.
+   *
+   *   TROCA DE PERÍODO → o bloco continua montado e só os valores mudam. As
+   *   barras TRANSICIONAM da largura antiga para a nova em vez de recomeçar do
+   *   zero — mostrar o crescimento de novo esconderia justamente a comparação
+   *   que o usuário pediu ao trocar o período.
+   */
+  const { ref: refRanking, entrou: entrouRanking } = useEntrada<HTMLDivElement>();
   // Abre a aba de alertas já filtrada pelo tipo do chip clicado.
   function abrirAlertas(tipo: TipoAlerta | "todos") {
     setCentralFiltro(tipo);
@@ -897,7 +912,7 @@ export default function Dashboard(
         </div>
       ) : aba === "gestores" ? (
         <div className="mb-10 rounded-xl p-5" style={{ background: CARD }}>
-          <div className="flex flex-col gap-4">
+          <div ref={refRanking} className="flex flex-col gap-4">
             {ranking.map((g, i) => {
               const melhor = i === 0;
               const largura = Math.max(6, (g.cpl / maxCpl) * 100);
@@ -937,9 +952,18 @@ export default function Dashboard(
                       </span>
                     )}
                   </div>
-                  <div className="order-last h-2.5 w-full overflow-hidden rounded-full sm:order-none sm:w-auto sm:flex-1" style={{ background: LINE }}>
-                    <div className="h-full rounded-full" style={{ width: `${largura}%`, background: corBarra }} />
-                  </div>
+                  {/* ⚠️ O trilho era `borda`, que é token de SUPERFÍCIE. `barraNeutra`
+                      é o token de sulco, e passa a ser usado aqui pelo `BarraDado` —
+                      mesmo vocabulário do resto do app. */}
+                  <BarraDado
+                    className="order-last h-2.5 w-full overflow-hidden rounded-full sm:order-none sm:w-auto sm:flex-1"
+                    pct={largura}
+                    cor={corBarra}
+                    degrade={melhor && !acimaDoTeto}
+                    entrou={entrouRanking}
+                    indice={i}
+                    titulo={`${g.nome}: ${brlDec(g.cpl)}`}
+                  />
                   <div className="ml-auto flex shrink-0 flex-col items-end sm:ml-0 sm:w-52">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium tabular-nums" style={{ color: TEMA.texto }}>{brlDec(g.cpl)}</span>
@@ -1307,7 +1331,11 @@ function BarraLimite({ limite }: { limite?: LimiteConta }) {
   const cor = usoPct >= LIMITE_CRITICO ? RED : usoPct >= LIMITE_ATENCAO ? AMBAR : GREEN;
   return (
     <div className="flex items-center gap-2" title={`${brlDec(limite.amountSpent)} de ${brlDec(limite.spendCap)}`}>
-      <div className="h-1.5 w-20 overflow-hidden rounded-full" style={{ background: LINE }}>
+      {/* ⚠️ SEM `BarraDado` de propósito, apesar de ser barra de dado. Ela vive numa
+          LINHA DE TABELA, e animar dezenas delas na entrada seria o mesmo ruído que
+          nos fez tirar o count-up dos números em lista. O trilho vai em
+          `barraNeutra` (o token de sulco), que era o que estava errado aqui. */}
+      <div className="h-1.5 w-20 overflow-hidden rounded-full" style={{ background: TEMA.barraNeutra }}>
         <div className="h-full rounded-full" style={{ width: `${larg}%`, background: cor }} />
       </div>
       <span className="text-[12px] tabular-nums" style={{ color: cor }}>{Math.round(usoPct * 100)}%</span>
