@@ -240,6 +240,14 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
 - Explique em **português, passo a passo, sem jargão**.
 - Diga exatamente **quais cliques** (Vercel/Firebase/GitHub) e **quais envs** são necessários.
 - Antes de publicar algo visual, sugira **validar no navegador** (rodar em dev e conferir).
+- ⚠️ **PREVIEW NASCE SERVIDO POR HTTP, nunca como arquivo para duplo clique.** O Chrome trata
+  `file:` como **origem única e opaca**, e tudo que dependa de origem — fonte externa, `fetch`,
+  iframe, `type="module"`, leitura de `cssRules` — **morre em silêncio**: a página abre, parece
+  inteira, e o comportamento simplesmente não acontece. Um preview de componentes chegou a
+  parecer defeito de código quando o problema era o protocolo.
+  **Regra:** sirva por HTTP (servidor estático numa porta livre já resolve) e, se o arquivo
+  também precisar funcionar solto, **elimine toda dependência externa** e faça a página dizer
+  na tela de onde veio.
 - Diante de um problema, **descubra a causa real** antes de propor correção — e diga quando
   não souber, em vez de chutar. Um erro de infraestrutura (cota, permissão, credencial) se
   parece com bug de código, mas o conserto é outro.
