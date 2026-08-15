@@ -89,8 +89,11 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         {user?.email && <p className="truncate text-[11px]" style={{ color: NAV_MUTED }}>{user.email}</p>}
         <button
           onClick={sair}
-          className="mt-2 w-full rounded-lg px-3 py-1.5 text-sm font-medium transition-colors hover:bg-nav-chip"
-          style={{ background: TEMA.navHover, color: NAV_TEXTO, border: `1px solid ${NAV_BORDA}` }}
+          // ⚠️ O fundo estava no `style` inline com um `hover:bg-nav-chip` na classe —
+          // inline vence stylesheet, então o hover NUNCA pintou. Defeito anterior ao
+          // tema escuro; só apareceu porque a migração mediu par a par.
+          className="mt-2 w-full rounded-lg bg-nav-hover px-3 py-1.5 text-sm font-medium transition-colors hover:bg-nav-chip"
+          style={{ color: NAV_TEXTO, border: `1px solid ${NAV_BORDA}` }}
         >
           Sair
         </button>

@@ -20,8 +20,8 @@ const AMBAR = TEMA.atencao;
 // Período fixo do resumo da Início (a tela não tem seletor). Mesmo default do Dashboard.
 const DIAS_RESUMO = 15;
 
-// Identidade por card: chip de ícone em tint quente + ícone na cor escura do par.
-// Os pares (fundo/cor) vêm dos tokens e já foram conferidos em contraste (≥6:1).
+// Identidade por card: chip de ícone em tint + ícone na cor CLARA do par.
+// Remedidos para o tema escuro: dourado 7,94:1 e oliva 9,35:1.
 // Terra e oliva são PROVISÓRIOS — ver a nota em lib/brand.ts.
 function ChipIcone({ fundo, cor, children }: { fundo: string; cor: string; children: React.ReactNode }) {
   return (
@@ -78,8 +78,8 @@ export default function Inicio() {
         {/* Card do Dashboard — resumo real de atenção */}
         <Link
           href="/dashboard"
-          className="block p-5 transition-colors hover:bg-brand-hover"
-          style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}
+          className="block bg-brand-card p-5 transition-colors hover:bg-brand-hover"
+          style={{ border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}
         >
           <div className="flex items-center justify-between gap-2">
             <span className="flex items-center gap-2.5">
@@ -143,8 +143,8 @@ export default function Inicio() {
         {/* Card de Orientações — resumo real */}
         <Link
           href="/orientacoes"
-          className="block p-5 transition-colors hover:bg-brand-hover"
-          style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}
+          className="block bg-brand-card p-5 transition-colors hover:bg-brand-hover"
+          style={{ border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}
         >
           <div className="flex items-center justify-between gap-2">
             <span className="flex items-center gap-2.5">
