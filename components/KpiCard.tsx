@@ -18,20 +18,34 @@ import NumeroAnimado from "./NumeroAnimado";
  * animação nunca faz esperar para ler.
  */
 export default function KpiCard({
-  rotulo, valor, formatar, serie, delta, menorMelhor = false, anterior, info,
+  rotulo, valor, formatar, serie, delta, menorMelhor = false, anterior, info, base, secundario,
 }: {
   rotulo: string;
   valor: number;
   formatar: (n: number) => string;
   /** Série da mini-linha. Menos de 2 pontos: a sparkline some, o card fica. */
   serie?: number[];
-  /** Variação em %. `null` = sem comparação possível. */
+  /**
+   * Variação em %. `null` = há comparação, mas não foi possível calcular (mostra
+   * "—"). **Omitir** = a métrica não tem comparação nenhuma, e aí o chip nem
+   * aparece — um "—" permanente vira ruído que ninguém mais lê.
+   */
   delta?: number | null;
   /** Ex.: CPL — subir é RUIM. A cor segue o SIGNIFICADO, nunca o sinal. */
   menorMelhor?: boolean;
   /** Valor do período anterior, já formatado. */
   anterior?: string;
   info?: string;
+  /**
+   * ⚠️ SOBRE O QUE O NÚMERO É. Existe porque compactar em card faz a BASE sumir,
+   * e dois cards lado a lado parecem comparáveis mesmo quando contam coisas
+   * diferentes — "vendas marcadas" e "pessoas na etapa" não somam nem se
+   * comparam. Quando duas métricas vizinhas têm bases distintas, isto é
+   * obrigatório nas duas.
+   */
+  base?: string;
+  /** Segunda dimensão da mesma métrica (ex.: o MRR ao lado da contagem). */
+  secundario?: string;
 }) {
   const pontos = serie && serie.length >= 2 ? serie : null;
   const bom = delta == null ? null : menorMelhor ? delta < 0 : delta > 0;
@@ -67,24 +81,41 @@ export default function KpiCard({
           style={{ color: TEMA.texto }}
         />
 
-        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span
-            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium tabular-nums"
-            style={{ background: fundoDelta, color: corDelta }}
-          >
-            {delta == null ? "—" : (
-              <>
-                <span style={{ fontSize: 9 }}>{delta > 0 ? "▲" : delta < 0 ? "▼" : "•"}</span>
-                {delta > 0 ? "+" : ""}{delta}%
-              </>
-            )}
-          </span>
-          {anterior && (
-            <span className="text-[11.5px] tabular-nums" style={{ color: TEMA.muted }}>
-              ant. {anterior}
+        {secundario && (
+          <div className="mt-1 text-[13px] font-medium tabular-nums" style={{ color: TEMA.destaque }}>
+            {secundario}
+          </div>
+        )}
+
+        {(delta !== undefined || anterior) && (
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span
+              className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium tabular-nums"
+              style={{ background: fundoDelta, color: corDelta }}
+            >
+              {delta == null ? "—" : (
+                <>
+                  <span style={{ fontSize: 9 }}>{delta > 0 ? "▲" : delta < 0 ? "▼" : "•"}</span>
+                  {delta > 0 ? "+" : ""}{delta}%
+                </>
+              )}
             </span>
-          )}
-        </div>
+            {anterior && (
+              <span className="text-[11.5px] tabular-nums" style={{ color: TEMA.muted }}>
+                ant. {anterior}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* A BASE fica DENTRO do card, colada no número que ela qualifica —
+            não num rodapé comum aos dois. Rodapé compartilhado se lê como
+            ressalva geral; aqui cada número carrega a sua. */}
+        {base && (
+          <div className="mt-2.5 text-[11.5px] leading-relaxed" style={{ color: TEMA.muted }}>
+            {base}
+          </div>
+        )}
       </div>
     </div>
   );

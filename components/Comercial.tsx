@@ -2,10 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { useComercial } from "@/lib/useComercial";
+import type { SerieMes } from "@/lib/comercialAgregado";
 import { TEMA, MOVIMENTO } from "@/lib/brand";
 import { useEntrada, atrasoDe } from "@/lib/useEntrada";
 import SecaoHeader from "./SecaoHeader";
 import BarraDado from "./BarraDado";
+import KpiCard from "./KpiCard";
+import ColunasComMedia from "./ColunasComMedia";
 
 const CARD = TEMA.card;
 const LINE = TEMA.borda;
@@ -18,6 +21,8 @@ const AMBER = TEMA.atencao;
 const MESES_VISIVEIS = 12;
 
 const n = (v: number) => v.toLocaleString("pt-BR");
+const reais = (cent: number) =>
+  "R$ " + (cent / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const mesCurto = (m: string) => {
   const [a, mm] = m.split("-");
   return `${["", "jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"][Number(mm)]}/${a.slice(2)}`;
@@ -199,14 +204,42 @@ export default function Comercial() {
         titulo="Fechamento — o que já está vendido"
         sub="A agência definiu que estar em Fechamento é negociação concluída, ou seja, venda feita."
       >
-        <div className="flex flex-wrap items-baseline gap-x-8 gap-y-2">
-          <div>
-            <div className="text-[22px] font-semibold tabular-nums text-brand-ink">{n(emFechamento.pessoas)}</div>
-            <div className="text-[12px]" style={{ color: MUTED }}>pessoas em Fechamento</div>
+        {/* ⚠️ OS DOIS NÚMEROS NÃO TÊM A MESMA BASE, e compactar em card é
+            justamente o que faz a base sumir: dois cards lado a lado parecem
+            comparáveis mesmo contando coisas diferentes.
+            Um conta OPORTUNIDADE marcada como ganha (`status = 1`); o outro conta
+            PESSOA parada na etapa [20]. Não somam, não se comparam, e cada um
+            carrega a própria base escrita dentro do card. */}
+        <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(250px,1fr))" }}>
+          <KpiCard
+            rotulo="Vendas confirmadas"
+            valor={fechamento.confirmadas.vendas}
+            formatar={(v) => `${n(Math.round(v))}`}
+            secundario={reais(fechamento.confirmadas.mrrCent)}
+            base={`Oportunidades marcadas como ganhas no CRM. ${n(fechamento.confirmadas.comValor)} com valor informado, ${n(fechamento.confirmadas.semValor)} sem.`}
+          />
+          <KpiCard
+            rotulo="Em Fechamento"
+            valor={emFechamento.pessoas}
+            formatar={(v) => `${n(Math.round(v))}`}
+            secundario={reais(emFechamento.mrrCent)}
+            base={`Pessoas paradas na etapa, contadas como venda por decisão da agência — não têm clique de ganho nem data. ${n(emFechamento.comValor)} com valor informado.`}
+          />
+        </div>
+
+        {/* A COMPOSIÇÃO CONTINUA VISÍVEL, e é obrigatória: nunca um número solto
+            chamado "MRR". A soma só existe com as duas parcelas ditas. */}
+        <div
+          className="mt-4 rounded-lg px-4 py-3"
+          style={{ background: TEMA.chip }}
+        >
+          <div className="text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: MUTED }}>
+            MRR do que está vendido
           </div>
-          <div>
-            <div className="text-[22px] font-semibold tabular-nums text-brand-ink">{n(fechamento.confirmadas.vendas)}</div>
-            <div className="text-[12px]" style={{ color: MUTED }}>vendas marcadas como ganhas</div>
+          <div className="mt-1 text-[14px] tabular-nums" style={{ color: TEMA.texto }}>
+            <b style={{ color: TEMA.destaque }}>{reais(fechamento.confirmadas.mrrCent)}</b> confirmado
+            {" + "}
+            <b style={{ color: TEMA.destaque }}>{reais(emFechamento.mrrCent)}</b> em fechamento
           </div>
         </div>
 
@@ -299,16 +332,18 @@ export default function Comercial() {
       {/* ================= SÉRIES ================= */}
       <Bloco
         titulo="Leads novos por mês"
+        icone="↗"
         sub="Pessoa cujo PRIMEIRO contato foi no mês — não oportunidade criada no mês."
       >
-        <SerieDupla itens={cortar(agregado.leadsNovos)} rotuloA="pessoas" rotuloB="oportunidades" />
+        <SerieMensal itens={cortar(agregado.leadsNovos)} />
       </Bloco>
 
       <Bloco
         titulo="Perdas por mês"
+        icone="↘"
         sub="Uma vez sincronizada, a oportunidade perdida não some mais — fica registrada com a data e a etapa."
       >
-        <SerieDupla itens={cortar(agregado.perdas)} rotuloA="pessoas" rotuloB="oportunidades" />
+        <SerieMensal itens={cortar(agregado.perdas)} />
         {/* O painel mostra ONDE o lead morreu, nunca POR QUÊ: o Xmax não devolve o
             motivo da perda. Dito na tela em vez de coluna omitida em silêncio. */}
         <div className="mt-3">
@@ -332,10 +367,56 @@ export default function Comercial() {
 }
 
 /**
- * As duas contagens lado a lado, sempre. ⚠️ Quando a razão denuncia clonagem da
- * automação, o mês é MARCADO em vez de escondido — o dado é real, o que engana é
- * lê-lo como negócio. Ver o contraexemplo de 05/02/2026: volume alto com pessoas
- * distintas é campanha de verdade, e um filtro por volume a apagaria.
+ * Série mensal em colunas, com valor no topo e linha de média.
+ *
+ * ⚠️ A COLUNA CONTA PESSOAS, e a contagem por OPORTUNIDADE não se perdeu: ela
+ * está no tooltip de cada mês, no total abaixo do gráfico e no marcador ⚠ dos
+ * meses em que a razão denuncia clonagem da automação. A regra da casa —
+ * nunca um número solto chamado "leads" — continua valendo; o que mudou é que a
+ * segunda contagem deixou de ocupar uma coluna própria.
+ *
+ * ⚠️ O QUE ISSO CUSTOU, e é reversível numa linha: com as duas barras lado a
+ * lado, maio/2025 mostrava 11 contra 1.456 de relance. Agora o mês aparece
+ * marcado e o contraste só se lê no tooltip. Se a comparação visual importar
+ * mais que a forma de coluna, `SerieDupla` continua neste arquivo.
+ */
+function SerieMensal({ itens }: { itens: SerieMes[] }) {
+  if (!itens.length) return <p className="text-[12.5px]" style={{ color: MUTED }}>Sem dados no período.</p>;
+  const totalPessoas = itens.reduce((t, m) => t + m.pessoas, 0);
+  const totalOps = itens.reduce((t, m) => t + m.oportunidades, 0);
+  const clonados = itens.filter((m) => m.clonagem);
+
+  return (
+    <div>
+      <ColunasComMedia
+        colunas={itens.map((m) => ({
+          rotulo: mesCurto(m.mes),
+          valor: m.pessoas,
+          alerta: m.clonagem,
+          titulo: `${mesCurto(m.mes)} · ${n(m.pessoas)} pessoas · ${n(m.oportunidades)} oportunidades`
+            + (m.clonagem
+              ? ` — a automação criou ${(m.oportunidades / Math.max(1, m.pessoas)).toFixed(0)}× mais oportunidades que pessoas. O número de pessoas é o que vale.`
+              : ""),
+        }))}
+        formatar={(v) => n(Math.round(v))}
+      />
+      <p className="mt-3 text-[11.5px]" style={{ color: MUTED }}>
+        Colunas contam <b style={{ color: TEMA.texto }}>pessoas</b>: {n(totalPessoas)} no período,
+        contra {n(totalOps)} oportunidades — a diferença é o retrabalho da automação.
+        {clonados.length > 0 && (
+          <> Os meses com <span style={{ color: AMBER }}>⚠</span> têm razão alta o bastante para
+          denunciar clonagem; passe o mouse para ver as duas contagens.</>
+        )}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * As duas contagens lado a lado. ⚠️ NÃO ESTÁ EM USO — foi substituída pelo
+ * `SerieMensal` em colunas, e ficou porque é o retorno de um passo se a
+ * comparação visual entre pessoas e oportunidades voltar a pesar mais que a
+ * forma de coluna. Ver o comentário do `SerieMensal`.
  */
 function SerieDupla({
   itens, rotuloA, rotuloB,

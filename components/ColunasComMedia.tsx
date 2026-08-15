@@ -8,6 +8,12 @@ export interface Coluna {
   valor: number;
   /** Sinaliza a coluna sem usar cor como único canal — o rótulo diz o resto. */
   destacada?: boolean;
+  /**
+   * Mês anômalo. ⚠️ A coluna vira âmbar E ganha um "⚠" acima do valor: cor
+   * sozinha não é canal suficiente, e este marcador existe justamente para
+   * quem não distingue matiz.
+   */
+  alerta?: boolean;
   titulo?: string;
 }
 
@@ -85,6 +91,7 @@ export default function ColunasComMedia({
                   transitionDelay: `${atraso + MOVIMENTO.rotuloAtrasoMs}ms`,
                 }}
               >
+                {c.alerta && <span style={{ color: TEMA.atencao }}>⚠ </span>}
                 {formatar(c.valor)}
               </span>
 
@@ -93,9 +100,12 @@ export default function ColunasComMedia({
                 className="w-full max-w-[34px] rounded-t-[3px]"
                 style={{
                   height: entrou ? `${alt}%` : "0%",
-                  // ⚠️ Degradê só na coluna de destaque: o neutro parte de 3,19:1
-                  // e qualquer escurecimento dele reprova o piso de dado.
-                  background: c.destacada ? TEMA.gradDestaqueV : TEMA.dadoNeutro,
+                  // ⚠️ Degradê só onde a cor tem folga: dourado parte de 9,44:1 e
+                  // aguenta; `dadoNeutro` parte de 3,19:1, que já é o piso, e o
+                  // âmbar não foi medido para escurecer — os dois vão chapados.
+                  background: c.alerta
+                    ? TEMA.atencao
+                    : c.destacada ? TEMA.gradDestaqueV : TEMA.dadoNeutro,
                   transition: `height ${MOVIMENTO.barraMs}ms ${MOVIMENTO.ease}`,
                   transitionDelay: `${atraso}ms`,
                 }}
