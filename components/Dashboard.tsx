@@ -217,7 +217,7 @@ function KpiCard({ label, sub, valorNum, formatar, title, delta, menorMelhor = f
           </p>
           {sub && <p className="text-[11px]" style={{ color: MUTED }}>{sub}</p>}
         </div>
-        <Sparkline dados={serie} cor={TEMA.sparkline} />
+        <Sparkline dados={serie} cor={TEMA.dadoNeutro} />
       </div>
       <NumeroAnimado
         valor={valorNum}
@@ -973,7 +973,7 @@ export default function Dashboard(
               // token de dado neutro (3,19:1). Token legítimo no contexto errado é o
               // defeito que nenhum grep acha — ver CLAUDE.md.
               const acimaDoTeto = g.cpl >= CPL_ALERTA;
-              const corBarra = acimaDoTeto ? RED : melhor ? YELLOW : TEMA.sparkline;
+              const corBarra = acimaDoTeto ? RED : melhor ? YELLOW : TEMA.dadoNeutro;
               return (
                 <div key={g.nome} className="flex flex-wrap items-center gap-x-4 gap-y-2">
                   <div className="flex w-36 shrink-0 items-center gap-2 sm:w-52">

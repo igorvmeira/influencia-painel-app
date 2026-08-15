@@ -80,6 +80,16 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   cheia**, e a tela passa a afirmar 100% onde havia 40%. Sempre que a cor participa de uma
   PROPORÇÃO (barra dividida, pizza, área empilhada), medir cada fatia contra o fundo **e
   contra a fatia vizinha**, antes de aprovar.
+- ⚠️ **TOKEN COM NOME DE LUGAR SÓ SERVE NAQUELE LUGAR — a lição mais reutilizável desta
+  migração, e vale para o starter.** `navFundo` (fundo da sidebar) foi parar em três
+  gráficos porque, no tema claro, ele era *"a cor mais escura disponível"*: escolhido pelo
+  que PARECIA, não pelo que SIGNIFICAVA. Foram **três usos legítimos por acaso**, e o
+  acaso durou até o contexto inverter. O mesmo aconteceu com um token chamado `sparkline`,
+  que acabou em 8 lugares dos quais só um era uma sparkline.
+  **Regra:** nome POSICIONAL (`navFundo`, `card`, `zebra`, `chip`) só é consumido no seu
+  lugar. Quando algo precisa de "escuro", "claro" ou "neutro" **por contraste**, o token
+  tem que ser SEMÂNTICO (`dadoNeutro`, `bordaForte`, `textoSobreDestaque`) — o nome é o que
+  impede o reuso errado, porque nenhuma busca acha um token usado fora do papel dele.
 - **Fatias que se separam por MATIZ e não por luminância só valem com canal redundante.**
   Ouro contra off-white difere 1,6:1 — quem não distingue matiz não lê a divisão. Aceitável
   quando existe legenda com rótulo, valor e percentual em texto; **se o componente for

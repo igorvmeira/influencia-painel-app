@@ -81,7 +81,7 @@ export default function Waterfall({
     if (p.tipo === "fim") return TEMA.destaque;
     // ⚠️ `barraNeutra` é trilho (1,47:1) — aqui é BARRA, e a soma das contas fora do
     // piso precisa aparecer para o waterfall fechar. `sparkline` dá os 3:1 de dado.
-    if (p.tipo === "outras") return TEMA.sparkline;
+    if (p.tipo === "outras") return TEMA.dadoNeutro;
     // Semântica: contribuição negativa puxou o CPL para BAIXO = bom = verde.
     return p.contribuicao < 0 ? TEMA.positivo : TEMA.negativo;
   };

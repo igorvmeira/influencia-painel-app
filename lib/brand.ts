@@ -141,9 +141,21 @@ export const TEMA = {
   erroFundo: "#3A1C18",     // card de erro — negativo sobre ele: 5,44:1
 
   // ===== GRÁFICOS =====
-  // ⚠️ `sparkline` É DADO, NÃO DECORAÇÃO. Cai na WCAG 1.4.11 e precisa de 3:1 —
-  // o valor claro apenas escurecido daria 1,88:1 e sumiria no card.
-  sparkline: "#6E6A5E",   // 3,19:1 sobre card — mini-série E barra neutra de ranking
+  /**
+   * ⚠️ NOME SEMÂNTICO, DE PROPÓSITO — este token chamava `sparkline`, e o nome era
+   * o defeito. Ele acabou em 8 lugares e só UM era uma sparkline: os outros sete
+   * são barra de ranking, eixo do slope, linha-guia e barra do waterfall. Quem
+   * escolhia o token (eu, nesta migração) o pegava pelo que ele É — o neutro que
+   * passa os 3:1 — e carregava junto um nome que diz onde ele MORAVA.
+   *
+   * É a mesma armadilha do `navFundo`, que virou "a cor mais escura disponível" e
+   * foi parar em três gráficos: token com nome de LUGAR só serve naquele lugar;
+   * quando algo precisa de contraste, o nome tem que dizer o SIGNIFICADO.
+   *
+   * ⚠️ E É DADO, NÃO DECORAÇÃO: cai na WCAG 1.4.11 e precisa de 3:1 — o valor
+   * claro apenas escurecido daria 1,88:1 e sumiria no card.
+   */
+  dadoNeutro: "#6E6A5E",  // 3,19:1 sobre card — série, barra ou eixo sem semântica
   // ⚠️ SÓ TRILHO — o sulco VAZIO atrás da barra. 1,47:1 sobre o card, o que é certo
   // para um sulco e ERRADO para qualquer coisa que informe. Dois rankings usavam
   // este token na PRÓPRIA BARRA (onde o comprimento codifica o CPL) e no escuro a

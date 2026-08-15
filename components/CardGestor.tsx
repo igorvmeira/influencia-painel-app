@@ -37,7 +37,7 @@ export default function CardGestor({
 }) {
   const semConversao = conversas === 0;
   // CPL caindo é BOM: a cor da linha acompanha a semântica, não o sinal.
-  const corLinha = semConversao ? TEMA.sparkline : cplVar < 0 ? TEMA.positivo : cplVar > 0 ? TEMA.negativo : TEMA.sparkline;
+  const corLinha = semConversao ? TEMA.dadoNeutro : cplVar < 0 ? TEMA.positivo : cplVar > 0 ? TEMA.negativo : TEMA.dadoNeutro;
 
   return (
     <button
