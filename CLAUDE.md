@@ -195,6 +195,11 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   quando a migração obrigou a medir par a par.
   **Conferência que vale rodar em projeto novo:** procurar `hover:bg-` e checar se o mesmo
   elemento tem `background:` inline nas linhas seguintes. É rápida e acha dívida antiga.
+- ⚠️ **Varredura por `onClick` acusa CONTAINER, não só controle — confira o elemento antes
+  de aplicar.** Uma conferência de afordância desta migração apontou um `<div>` de painel
+  como se fosse botão: o `onClick` das linhas acima pertencia ao card irmão, não a ele.
+  Heurística de proximidade encontra candidatos, não veredictos — **a correção em massa sai
+  depois de olhar cada um**, senão a varredura conserta o que não estava quebrado.
 - ⚠️ **Substituição em massa por PREFIXO roda ANTES das correções pontuais** — ou o padrão
   ancora o fim. Trocar `color: TEMA.texto` por `color: TEMA.textoSobreDestaque` em massa,
   depois de já ter corrigido uma linha à mão, casa o prefixo da linha corrigida e produz

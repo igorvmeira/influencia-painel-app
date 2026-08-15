@@ -65,18 +65,29 @@ export const TEMA = {
   zebra: "#191814",       // linha alternada de tabela densa
   chip: "#2A2822",        // fundo de selo/chip neutro
   flutuante: "#302E27",   // tooltip e popover — acima do card, por isso mais claro
-  borda: "#2E2C26",       // divisória de 1px — ESTRUTURAL, ver acima
   /**
-   * ⚠️ QUEM USA `borda` E QUEM USA `bordaForte` — a divisão é por FUNÇÃO, não por
-   * tamanho:
-   *   • CARD e PAINEL ...... `borda`. É separação de superfície; o olho acha a
-   *     aresta de um retângulo grande com pouquíssimo contraste, e subir aqui
-   *     encheria a tela de molduras.
-   *   • CONTROLE INTERATIVO  `bordaForte`. Botão, opção de seletor, campo em foco.
-   *     Aqui o contorno não separa: ele AFIRMA que o elemento é clicável, e em
-   *     `borda` (1,23:1) três opções de seletor viraram texto solto no escuro.
+   * ⚠️ DUAS BORDAS, DUAS FUNÇÕES — e a formulação que impede confundi-las:
+   *
+   *     `borda`      SEPARA superfícies.
+   *     `bordaForte` AFIRMA que o elemento é clicável.
+   *
+   * Não é uma escala de intensidade, é uma diferença de papel. Subir tudo para
+   * `bordaForte` "porque contrasta mais" encheria a tela de molduras e apagaria
+   * justamente o sinal que distingue um botão de um retângulo — que é o único
+   * motivo de `bordaForte` existir.
    */
-  bordaForte: "#6E6A5E",  // limite de CONTROLE e foco (3,19:1 no card)
+  borda: "#2E2C26",       // SEPARA superfície: card, painel, divisória, grade
+  /**
+   * O par de `borda` — ver a formulação lá em cima. Aqui vale o CASO REAL que a
+   * originou: em `borda` (1,23:1) as três opções não selecionadas do seletor de
+   * semáforo viraram texto solto no escuro, sem preenchimento e sem contorno. O
+   * olho acha a aresta de um card grande com quase nada de contraste; o de um
+   * pill de 24px de altura, não.
+   *
+   * Onde entra: botão, opção de seletor, campo em foco, painel flutuante que
+   * precisa se destacar de uma superfície da mesma cor.
+   */
+  bordaForte: "#6E6A5E",  // AFIRMA controle clicável e foco (3,19:1 no card)
 
   // ===== TEXTO =====
   texto: "#F2F0EA",       // primário — 15,12:1 sobre card (AAA)
