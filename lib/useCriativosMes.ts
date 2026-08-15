@@ -1,6 +1,6 @@
 "use client";
 
-import { auth } from "./firebaseClient";
+import { buscarJson } from "./buscaAutenticada";
 import { Criativo } from "./types";
 
 /** Criativo do mês com a conta de origem (para o card dizer de quem é). */
@@ -23,27 +23,31 @@ export async function buscarCriativosMes(
   ano: number,
   mes: number
 ): Promise<{ criativos: CriativoMes[]; falhas: number; deCache: number }> {
-  const usuario = auth?.currentUser;
-  if (!usuario) throw new Error("Sessão expirada. Faça login novamente.");
-  const token = await usuario.getIdToken();
-
+  /**
+   * ⚠️ AQUI O TETO IMPORTA MAIS QUE NOS OUTROS, e o motivo é o `allSettled`:
+   * ele espera TODAS as promessas se acomodarem. Uma única conta cuja requisição
+   * nunca settla trava o bloco inteiro para sempre — as outras oito já teriam
+   * respondido e nada apareceria. O "conta que falhar não derruba as outras" do
+   * comentário acima só vale se a falha CHEGAR a acontecer; sem teto, ela fica
+   * pendurada e leva o resto junto.
+   *
+   * Teto maior que o padrão: esta rota consulta a Meta ao vivo na primeira visita
+   * do mês, e 20s é apertado para insights de uma conta grande.
+   */
   const resultados = await Promise.allSettled(
-    contas.map(async (c) => {
-      const r = await fetch(
+    contas.map((c) =>
+      buscarJson<{ doCache?: boolean; criativos: Criativo[] }>(
         `/api/criativos-mes?accountId=${encodeURIComponent(c.accountId)}&ano=${ano}&mes=${mes}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const j = await r.json();
-      if (!r.ok || !j.ok) throw new Error(j?.erro || `Erro ${r.status}`);
-      return {
+        { tetoMs: 45000, oQue: `os criativos de ${c.cliente}` }
+      ).then((j) => ({
         deCache: !!j.doCache,
-        criativos: (j.criativos as Criativo[]).map((cr) => ({
+        criativos: j.criativos.map((cr) => ({
           ...cr,
           accountId: c.accountId,
           cliente: c.cliente,
         })),
-      };
-    })
+      }))
+    )
   );
 
   const criativos: CriativoMes[] = [];

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { auth } from "./firebaseClient";
 import { mensagemErro } from "./erros";
+import { buscarJson } from "./buscaAutenticada";
 import type { AgregadoComercial } from "./comercialAgregado";
 
 /** Cache de sessão — o agregado só muda quando o sync roda, então trocar de aba
@@ -11,43 +11,13 @@ let cache: AgregadoComercial | null = null;
 let carregou = false;
 let emVoo: Promise<AgregadoComercial | null> | null = null;
 
-/**
- * ⚠️ TETO DE ESPERA. `fetch` não tem timeout: se o servidor aceita a conexão e
- * nunca responde, a promessa **nunca settla** — nem resolve nem rejeita — e a
- * tela fica em "Carregando…" para sempre, sem nunca dizer que falhou.
- *
- * Isso é o oposto de degradar com elegância: um erro visível é recuperável (o
- * usuário recarrega, avisa alguém); um carregamento eterno parece que o sistema
- * ainda está trabalhando, e a pessoa espera indefinidamente.
- */
-const TETO_MS = 20000;
-
+// Teto de espera e tradução do abort vivem em `buscarJson` — ver o porquê lá.
 async function buscar(): Promise<AgregadoComercial | null> {
-  const usuario = auth?.currentUser;
-  if (!usuario) throw new Error("Sessão expirada. Faça login novamente.");
-  const token = await usuario.getIdToken();
-
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), TETO_MS);
-  try {
-    const r = await fetch("/api/comercial/funil", {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: ctrl.signal,
-    });
-    const j = await r.json();
-    if (!r.ok || !j.ok) throw new Error(j?.erro || `Erro ${r.status}`);
-    return (j.agregado ?? null) as AgregadoComercial | null;
-  } catch (e) {
-    // A mensagem do abort ("The user aborted a request") não diz nada a quem lê.
-    if ((e as Error)?.name === "AbortError") {
-      throw new Error(
-        `O servidor não respondeu em ${TETO_MS / 1000}s. O funil pode estar indisponível — tente recarregar.`
-      );
-    }
-    throw e;
-  } finally {
-    clearTimeout(t);
-  }
+  const j = await buscarJson<{ agregado: AgregadoComercial | null }>(
+    "/api/comercial/funil",
+    { oQue: "o funil comercial" }
+  );
+  return j.agregado ?? null;
 }
 
 export function useComercial(): {

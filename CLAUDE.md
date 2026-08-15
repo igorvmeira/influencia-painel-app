@@ -18,6 +18,12 @@ diferentes, reaproveitando o mesmo "motor" e trocando só a "casca" (marca, tela
 - Repositório **nunca dentro de pasta sincronizada** (OneDrive, Google Drive, Dropbox) —
   a sincronização corrompe a pasta `.git`. Use algo como `C:\dev\nome-do-projeto`.
 
+### ⚠️ ASSINATURA: 500 em TODOS os estáticos é CACHE, não código
+**Código quebrado dá erro em UM lugar; cache dá erro em tudo de uma vez.** Se o console
+mostra 500 em `layout.css`, em `webpack.js`, no `main-app.js` e nos chunks de página ao
+mesmo tempo, não procure o bug — é a pasta `.next` desencontrada. Vá direto para a
+sequência abaixo, sem abrir o código.
+
 ### Dev server e a pasta `.next` (ordem que evita falso alarme)
 `next build` e `next dev` escrevem na MESMA pasta `.next`. Rodar o build com o dev de pé
 (ou apagar `.next` sem parar o dev) deixa o servidor apontando para chunks que não existem
@@ -30,6 +36,10 @@ mais. O sintoma é um **500 que parece bug do código** — quase sempre
 1. **parar** o dev server;
 2. **limpar** o `.next`;
 3. **subir** o dev de novo.
+
+E ao rodar um `next build` no meio do trabalho: **limpe o `.next` DEPOIS do build também**,
+antes de subir o dev. Senão o dev sobe herdando artefato de produção e a armadilha volta
+na chamada seguinte.
 
 Antes de investigar um 500 no dev, confira se o `next build` passa: **build verde + 500 só
 no dev = cache, não código.** Não saia procurando bug no que você acabou de escrever.
@@ -170,6 +180,16 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
 - Uma feature secundária que falha **não pode derrubar** a tela principal: degrade com
   elegância (some o enfeite, o essencial continua).
 - Coleção que ainda não existe deve retornar lista vazia, não erro 500.
+- ⚠️ **`fetch` NÃO tem timeout, e carregamento eterno é pior que erro.** Se o servidor
+  aceita a conexão e não responde, a promessa **nunca settla** — o `.catch` nunca roda e a
+  tela fica em "Carregando…" indefinidamente **sem nunca dizer que falhou**. Erro visível é
+  recuperável (recarrega, avisa alguém); espera eterna parece que o sistema ainda está
+  trabalhando. Use sempre um `AbortController` com teto — é a única forma, porque
+  `Promise.race` deixa a requisição original correndo solta.
+  **Pior caso: `Promise.allSettled`** — ele espera TODAS se acomodarem, então uma única
+  requisição pendurada trava o bloco inteiro, mesmo com todas as outras já respondidas.
+  **Teto em GET sempre; em POST, só com escrita idempotente** — abortar o cliente não
+  cancela o que o servidor já gravou, e a retentativa duplicaria o registro.
 
 ## Sincronização e tarefas longas
 - Vercel grátis corta funções em ~10s. Para uso **comercial**, prefira **Vercel Pro**

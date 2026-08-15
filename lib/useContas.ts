@@ -3,20 +3,17 @@
 import { useEffect, useState } from "react";
 import { auth } from "./firebaseClient";
 import { mensagemErro } from "./erros";
+import { buscarJson } from "./buscaAutenticada";
 import { ContaMap } from "./types";
 
 // Cache de sessão do de-para (leve). Usado pela /orientacoes (só precisa das contas).
 let cache: ContaMap[] | null = null;
 let emVoo: Promise<ContaMap[]> | null = null;
 
+// Teto de espera via `buscarJson` — ver o porquê em lib/buscaAutenticada.ts.
 async function buscar(): Promise<ContaMap[]> {
-  const usuario = auth?.currentUser;
-  if (!usuario) throw new Error("Sessão expirada. Faça login novamente.");
-  const token = await usuario.getIdToken();
-  const r = await fetch("/api/contas", { headers: { Authorization: `Bearer ${token}` } });
-  const j = await r.json();
-  if (!r.ok || !j.ok) throw new Error(j?.erro || `Erro ${r.status}`);
-  return j.contas as ContaMap[];
+  const j = await buscarJson<{ contas: ContaMap[] }>("/api/contas", { oQue: "a carteira de contas" });
+  return j.contas;
 }
 
 // Atualiza o cache de sessão do de-para (in-place, novo array) após uma escrita, para

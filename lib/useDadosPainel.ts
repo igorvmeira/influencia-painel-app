@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { auth } from "./firebaseClient";
 import { mensagemErro } from "./erros";
+import { buscarJson } from "./buscaAutenticada";
 import { ContaMap, LimiteConta, MetricaDiaria } from "./types";
 
 export interface DadosPainel {
@@ -18,15 +18,10 @@ export interface DadosPainel {
 let cache: DadosPainel | null = null;
 let emVoo: Promise<DadosPainel> | null = null;
 
-async function buscar(): Promise<DadosPainel> {
-  const usuario = auth?.currentUser;
-  if (!usuario) throw new Error("Sessão expirada. Faça login novamente.");
-  const token = await usuario.getIdToken();
-  const r = await fetch("/api/painel", { headers: { Authorization: `Bearer ${token}` } });
-  const j = await r.json();
-  if (!r.ok || !j.ok) throw new Error(j?.erro || `Erro ${r.status}`);
-  return j as DadosPainel;
-}
+// ⚠️ Teto de espera via `buscarJson` — sem ele, um servidor que aceita a conexão
+// e não responde deixa o Dashboard em "Carregando…" para sempre. É a tela que a
+// agência mais usa, e ali isso passaria por "hoje está lento".
+const buscar = () => buscarJson<DadosPainel>("/api/painel", { oQue: "os dados do painel" });
 
 // Busca autenticada de /api/painel (mesma do dashboard). Reusa o cache de sessão.
 export function useDadosPainel(): { dados: DadosPainel | null; erro: string | null } {

@@ -2,9 +2,21 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { auth } from "./firebaseClient";
+import { buscarJson } from "./buscaAutenticada";
 import { EntradaOrientacao, Orientacao } from "./types";
 import type { Semaforo } from "./semaforo";
 
+/**
+ * ⚠️ AINDA USADO PELOS POSTS, e de propósito.
+ *
+ * O teto de espera do `buscarJson` cobre LEITURA. Em ESCRITA ele seria perigoso:
+ * abortar o cliente não cancela o que o servidor já gravou, então quem visse o
+ * erro poderia salvar de novo. Em `salvarGestor` isso é inofensivo (grava o mesmo
+ * campo), mas `salvarOrientacao` EMPILHA no histórico — a retentativa duplicaria
+ * o registro.
+ *
+ * Regra: teto em GET sempre; em POST, só com escrita idempotente.
+ */
 async function tokenAtual(): Promise<string> {
   const u = auth?.currentUser;
   if (!u) throw new Error("Sessão expirada. Faça login novamente.");
@@ -22,10 +34,10 @@ export function useOrientacoes(): {
 
   const recarregar = useCallback(async () => {
     try {
-      const token = await tokenAtual();
-      const r = await fetch("/api/orientacoes", { headers: { Authorization: `Bearer ${token}` } });
-      const j = await r.json();
-      if (!r.ok || !j.ok) throw new Error(j?.erro || `Erro ${r.status}`);
+      // Teto de espera via `buscarJson` — ver lib/buscaAutenticada.ts.
+      const j = await buscarJson<{ orientacoes: { accountId: string; atual: EntradaOrientacao | null }[] }>(
+        "/api/orientacoes", { oQue: "as orientações" }
+      );
       const m: Record<string, EntradaOrientacao | null> = {};
       for (const o of j.orientacoes as Orientacao[]) m[o.accountId] = o.atual;
       setMapa(m);
@@ -58,9 +70,9 @@ export async function salvarOrientacao(
 
 // Histórico de uma conta (sob demanda).
 export async function buscarHistorico(accountId: string): Promise<EntradaOrientacao[]> {
-  const token = await tokenAtual();
-  const r = await fetch(`/api/orientacoes?accountId=${encodeURIComponent(accountId)}`, { headers: { Authorization: `Bearer ${token}` } });
-  const j = await r.json();
-  if (!r.ok || !j.ok) throw new Error(j?.erro || `Erro ${r.status}`);
-  return (j.historico ?? []) as EntradaOrientacao[];
+  const j = await buscarJson<{ historico?: EntradaOrientacao[] }>(
+    `/api/orientacoes?accountId=${encodeURIComponent(accountId)}`,
+    { oQue: "o histórico da conta" }
+  );
+  return j.historico ?? [];
 }

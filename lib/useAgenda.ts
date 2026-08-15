@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { auth } from "./firebaseClient";
+import { buscarJson } from "./buscaAutenticada";
 import { Reuniao } from "./types";
 
 // Busca autenticada de /api/agenda (ID token do Firebase). Reusado pela tela
@@ -12,16 +12,9 @@ export function useAgenda(): { reunioes: Reuniao[] | null; erro: string | null }
 
   useEffect(() => {
     let cancelado = false;
-    (async () => {
-      const usuario = auth?.currentUser;
-      if (!usuario) throw new Error("Sessão expirada. Faça login novamente.");
-      const token = await usuario.getIdToken();
-      const r = await fetch("/api/agenda", { headers: { Authorization: `Bearer ${token}` } });
-      const j = await r.json();
-      if (!r.ok || !j.ok) throw new Error(j?.erro || `Erro ${r.status}`);
-      return j.reunioes as Reuniao[];
-    })()
-      .then((d) => { if (!cancelado) setReunioes(d); })
+    // Teto de espera via `buscarJson` — ver o porquê em lib/buscaAutenticada.ts.
+    buscarJson<{ reunioes: Reuniao[] }>("/api/agenda", { oQue: "a agenda" })
+      .then((j) => { if (!cancelado) setReunioes(j.reunioes); })
       .catch((e) => { if (!cancelado) setErro(e.message); });
     return () => { cancelado = true; };
   }, []);

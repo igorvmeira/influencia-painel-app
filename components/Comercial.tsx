@@ -393,10 +393,12 @@ export default function Comercial() {
  * nunca um número solto chamado "leads" — continua valendo; o que mudou é que a
  * segunda contagem deixou de ocupar uma coluna própria.
  *
- * ⚠️ O QUE ISSO CUSTOU, e é reversível numa linha: com as duas barras lado a
- * lado, maio/2025 mostrava 11 contra 1.456 de relance. Agora o mês aparece
- * marcado e o contraste só se lê no tooltip. Se a comparação visual importar
- * mais que a forma de coluna, `SerieDupla` continua neste arquivo.
+ * ⚠️ O QUE ISSO CUSTOU, validado na tela pelo Igor em 16/08/2026: com as duas
+ * barras lado a lado, maio/2025 mostrava 11 contra 1.456 de relance. Em coluna,
+ * o mês aparece marcado e o contraste só se lê no tooltip — e ele decidiu que
+ * **o marcador âmbar com ⚠ basta**. A versão de barras duplas foi removida; o
+ * histórico dela está no commit que trouxe as colunas, se um dia a comparação
+ * visual voltar a pesar mais que a forma.
  */
 function SerieMensal({ itens }: { itens: SerieMes[] }) {
   if (!itens.length) return <p className="text-[12.5px]" style={{ color: MUTED }}>Sem dados no período.</p>;
@@ -426,66 +428,6 @@ function SerieMensal({ itens }: { itens: SerieMes[] }) {
           denunciar clonagem; passe o mouse para ver as duas contagens.</>
         )}
       </p>
-    </div>
-  );
-}
-
-/**
- * As duas contagens lado a lado. ⚠️ NÃO ESTÁ EM USO — foi substituída pelo
- * `SerieMensal` em colunas, e ficou porque é o retorno de um passo se a
- * comparação visual entre pessoas e oportunidades voltar a pesar mais que a
- * forma de coluna. Ver o comentário do `SerieMensal`.
- */
-function SerieDupla({
-  itens, rotuloA, rotuloB,
-}: {
-  itens: { mes: string; pessoas: number; oportunidades: number; clonagem: boolean }[];
-  rotuloA: string;
-  rotuloB: string;
-}) {
-  const { ref, entrou } = useEntrada<HTMLDivElement>();
-  if (!itens.length) return <p className="text-[12.5px]" style={{ color: MUTED }}>Sem dados no período.</p>;
-  const max = Math.max(1, ...itens.map((x) => x.pessoas));
-  return (
-    <div ref={ref}>
-      <div className="mb-2 flex justify-end gap-4 text-[11.5px]" style={{ color: MUTED }}>
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block h-2 w-3 rounded-sm" style={{ background: GOLD }} /> {rotuloA}
-        </span>
-        <span>{rotuloB} ao lado</span>
-      </div>
-      <div className="space-y-1">
-        {itens.map((m, i) => (
-          <div key={m.mes} className="flex items-center gap-3">
-            <span className="w-14 text-[11.5px] tabular-nums" style={{ color: MUTED }}>{mesCurto(m.mes)}</span>
-            {/* ⚠️ Série longa: o escalonamento tem teto de 240ms, senão 28 meses
-                fariam a última barra começar 1,1s depois da primeira. */}
-            <BarraDado
-              pct={(m.pessoas / max) * 100}
-              cor={GOLD}
-              degrade
-              entrou={entrou}
-              indice={i}
-              titulo={`${mesCurto(m.mes)}: ${n(m.pessoas)} pessoas`}
-            />
-            <span className="w-10 text-right text-[12.5px] font-medium tabular-nums text-brand-ink">{n(m.pessoas)}</span>
-            <span className="w-24 text-right text-[11.5px] tabular-nums" style={{ color: MUTED }}>
-              {n(m.oportunidades)} oport.
-            </span>
-            <span className="w-4">
-              {m.clonagem ? (
-                <span
-                  title={`${n(m.oportunidades)} oportunidades para ${n(m.pessoas)} pessoas — a automação de recuperação criou várias para os mesmos contatos. O número de pessoas é o que vale.`}
-                  className="cursor-help text-[12px]"
-                  style={{ color: AMBER }}
-                >
-                  ⚠
-                </span>
-              ) : null}
-            </span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
