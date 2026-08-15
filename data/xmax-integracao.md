@@ -353,7 +353,69 @@ encerrar — isso é "esteve em Fechamento". Para aberta, é onde está agora. *
 por Fechamento e voltou atrás continuando aberta é invisível.** Todo número desta seção
 é PISO, nunca total.
 
-### 🚫 BLOQUEIO DE PROCESSO (não técnico) — a ETAPA E não é desenhada até resolver
+### ✅ DECISÃO DO DONO (Thiago, 15/08/2026): Fechamento É venda
+
+Levado como número, não como suspeita. A resposta:
+
+> "pode considerar Fechamento como a negociação já concluída"
+
+e confirmado que **concluída = venda GANHA**, não perda. Ou seja: **estar na etapa [20]
+significa venda feita, mesmo sem o clique de "ganhar".**
+
+⚠️ **A decisão resolve como o painel LÊ, não como o comercial REGISTRA.** O alinhamento do
+processo (quando clicar em ganhar) segue pendente com o Marcos — ver o bloqueio abaixo, que
+NÃO foi cancelado por esta decisão. E enquanto não for resolvido, **as vendas continuam sem
+data**, que é a consequência tratada a seguir.
+
+O desenho, então:
+
+| bloco | base | valor |
+|---|---|---|
+| **Vendas confirmadas** | `status = 1` | `closerecurrentvalue` — 32 de 38, **R$ 68.120,00** |
+| **Em Fechamento** | abertas na etapa [20] | `recurrentvalue` — 63 de 92, **R$ 157.560,00** |
+
+⚠️ **Dois campos diferentes, e isso não é detalhe:** aberta usa `recurrentvalue`, ganha usa
+`closerecurrentvalue`. `value` está **zerado nas 92** — a agência só usa o recorrente.
+Somar o campo errado devolve zero em silêncio.
+
+⚠️ **Nunca um número só chamado "MRR".** Sempre a composição: *"R$ 68.120 confirmado +
+R$ 157.560 em fechamento"*. E a **idade na etapa continua na tela**: 48 das 92 paradas há
+mais de 180 dias, 17 há mais de um ano, 3 entradas nos últimos 30 dias. É o que separa
+negociação viva de venda não registrada, e continua valendo mesmo com a decisão do dono.
+
+### ⚠️ A CONSEQUÊNCIA: venda sem clique é venda SEM DATA
+
+O painel passa a saber que 63 vendas aconteceram — **e não sabe em que mês.** "Fechamentos
+no mês" é justamente o número que o Thiago mais quer, e é o que esta decisão não entrega.
+
+A única data disponível é `stagebegintime` — **quando entrou na etapa atual**. Para estas
+92 a etapa atual É Fechamento, então ela é literalmente "quando chegou em Fechamento": a
+melhor aproximação possível de data de venda. **Mesmo assim, NÃO é usada para montar a
+série mensal.** Duas razões, e as duas são sobre confiança no número:
+
+1. **Reescreveria o passado.** Distribuídas por `stagebegintime`, as 63 jogam receita nova
+   em **8 meses de 2024/2025** — R$ 7.570 em mai/2025, R$ 16.390 em out/2025… meses que a
+   agência já fechou e já reportou. Nove entraram na etapa há mais de um ano.
+2. **O passado mudaria DE NOVO.** No dia em que alguém clicar "ganhar", a venda ganha
+   `closedat` e **migra** do mês do `stagebegintime` para o mês do clique. Um gráfico cujo
+   histórico se move é pior que um gráfico incompleto: ninguém consegue conferir contra o
+   que anotou mês passado.
+
+**REGRA:** a série mensal mostra **só as confirmadas** (por `closedat`) — estável, nunca
+muda. As 63 aparecem como **bloco do presente**, com valor e faixa de idade, sem mês
+atribuído e com o motivo dito na tela: *"sem data de fechamento — não foram marcadas como
+ganhas"*.
+
+E isso tem uma propriedade boa: conforme o processo melhorar, cada venda marcada **migra
+sozinha** para a série, com data de verdade, e o bloco encolhe. **O tamanho do bloco vira
+a medida da dívida de processo** — o painel mostra o problema em vez de escondê-lo numa
+estimativa.
+
+Se o Thiago quiser a visão mensal mesmo assim, ela existe e está medida — mas com o rótulo
+**"entrou em Fechamento no mês"**, nunca "vendeu no mês", e nunca somada na mesma linha das
+confirmadas.
+
+### 🚫 BLOQUEIO DE PROCESSO (não técnico) — segue pendente, e não é o mesmo assunto
 
 A pergunta foi feita ao Marcos em 15/08/2026, e a resposta **não foi "clico" nem "não
 clico"** — foi que a regra não existe:
@@ -366,13 +428,18 @@ o que a medição acima encontrou, dito pelo lado de dentro. O Thiago já defini
 fechamento é *"envio dos dados para contrato"*, mas isso **nunca chegou ao comercial como
 regra** — o Igor escalou para o Thiago acertar com o Marcos em 15/08/2026.
 
-⚠️ **Nada da Etapa E se desenha antes disso.** Não é preciosismo: sem a regra, "vendas do
-mês" não tem definição, e um painel que responde uma pergunta mal definida produz um
-número que parece oficial. Pior que não ter tela.
+**A decisão do Thiago destravou a LEITURA, e este bloqueio continua de pé** — são dois
+assuntos. O dono definiu o que o painel conta como venda; o processo define quando o
+comercial registra. Enquanto o segundo não existir:
 
-Quando destravar, o desenho já está decidido — as **duas contagens rotuladas** dos itens 1
-e 2 acima. A regra que o Thiago fixar só decide qual das duas vira o número principal;
-as duas aparecem de qualquer forma, e a fila continua sendo fila.
+- as vendas em Fechamento continuam **sem data** (ver a consequência acima);
+- **"vendas no mês" segue sem definição operacional** — a série mensal só tem as 38
+  confirmadas, e um mês real pode ter fechado negócios que não aparecem em mês nenhum.
+
+⚠️ **A Etapa E só é desenhada depois da Etapa C validada** — decisão do Igor: *"quero ver o
+funil na tela antes de somar dinheiro nele"*. E, quando for desenhada, ela mostra o bloco
+sem data em vez de estimar uma; o tamanho desse bloco é o próprio indicador de que o
+processo ainda não fechou.
 
 ## O FUNIL É DEFINIDO PELO DONO, não pelo `stageorders`
 
@@ -408,16 +475,33 @@ TRÁFEGO. Não é: são a mesma coisa por dois caminhos. A comparação passa a 
 
 ### O que os números viram (medido em 14/08/2026, ANTES de mexer no código)
 
-| métrica | hoje | com o funil do Thiago | |
+Decisões do Igor em 15/08/2026, sobre as três ambiguidades que a medição levantou:
+
+1. **`[49]` FICA na recuperação** — recuperação = `[113, 49]` = 838. As 35 pessoas que
+   estão só nele não podem sumir das duas visões, e conceitualmente é recuperação: o
+   Thiago descreveu como estado transitório do ciclo.
+2. **Negociação = `[27] + [20]` = 110.** O Thiago listou *Agendado Reunião* como etapa
+   própria; tratar reunião marcada como negociação contraria o desenho dele. O
+   `[17,27,20]` = 150 **continua disponível**, com o rótulo **"em conversa avançada"** —
+   são perguntas diferentes, não duas versões da mesma.
+3. **As 156 que saem viram LINHA VISÍVEL**, nunca sumiço — mesmo tratamento da
+   recuperação, detalhe a um clique. É literalmente a queixa do Thiago sobre a perda; não
+   cabe cometê-la contra ele.
+
+### CONSTANTES DE CONFERÊNCIA (medidas em 14/08/2026, recalculadas do zero duas vezes)
+
+| métrica | hoje | funil novo | |
 |---|---|---|---|
 | oportunidades abertas (funil 4) | 1.656 | **1.656** | não muda |
 | pessoas com aberta | 1.455 | **1.455** | não muda |
 | **em captação** | 629 | **472** | −157 |
-| **em recuperação** | 838 | 838 ou **803** | depende do [49] |
-| **em negociação** | 225 | 150 ou **110** | depende do [61] |
+| **em recuperação** `[113,49]` | 838 | **838** | igual |
+| **em negociação** `[27,20]` | 225 | **110** | −115 |
+| em conversa avançada `[17,27,20]` | — | **150** | rótulo novo |
+| fora do funil | — | **156** | linha visível |
 
-Pessoas por nível, na foto nova: **91** no nível 1 · **231** no 2 · **40** no 3 · **22**
-no 4 · **88** no 5.
+Pessoas por nível: **91 · 231 · 40 · 22 · 88** — e a soma tem de fechar em 472, o que é a
+conferência que pega erro de empate no nível 1.
 
 Dois fatos que saltam dessa coluna e valem para o desenho da tela:
 
@@ -462,26 +546,45 @@ ocasional, nunca categoria. `products` e `username` vêm vazios em 100%.
 **Consequência: a tela mostra ONDE o lead morreu, nunca POR QUÊ.** Prometer "motivo da
 perda" com este dado seria inventar categoria.
 
-### ⚠️ 1.444 PERDAS NUM ÚNICO DIA — 27/05/2025
+### ⚠️ 1.444 PERDAS NUM ÚNICO DIA — 27/05/2025, e a causa NÃO é a que parecia
 
-Metade de tudo. A série mensal:
+**1.444 perdas fecharam em 27/05/2025** — 51% de todas as perdas registradas — e 99%
+delas estão em etapas que hoje não existem. A primeira leitura foi "reorganização de
+funil". **Errada.** A medição seguinte, olhando o outro lado do calendário, achou a causa
+de verdade:
 
-| mês | perdas | em etapa apagada |
-|---|---|---|
-| … | | |
-| 2025-04 | 23 | 1 |
-| **2025-05** | **1.456** | **1.446** |
-| 2025-06 | 28 | 4 |
+| | |
+|---|---|
+| oportunidades criadas em **26/05/2025** | **1.445** |
+| oportunidades perdidas em **27/05/2025** | **1.444** |
+| **pessoas distintas nelas** | **2** |
+| vida até a perda | **1 dia**, todas |
 
-**1.444 fecharam em 27/05/2025** e 99% delas estão em etapas que não existem mais. Isso é
-**reorganização de funil**, não perda comercial. Menor, mas do mesmo tipo: 96 em
-28/08/2024 e 61 em 20/01/2025.
+**São DUAS pessoas clonadas 1.445 vezes pela automação, criadas num dia e descartadas no
+seguinte.** Não é limpeza de CRM: é a automação de recuperação em laço — a mesma medida na
+seção da duplicação, no seu pior dia. Os picos menores são idênticos em natureza: 99
+oportunidades em 28/08/2024 são **6 pessoas** (`LETICIA`, `LETICIA FERN`, `Leticia`…), 52
+em 18/01/2025 são **2 pessoas** (`Renato Lisboa` repetido).
 
-⚠️ **O gráfico de perdas por mês NÃO pode sair cru.** Sem tratamento, 51% de todas as
-perdas caem numa barra de maio/2025 e o gráfico responde "a empresa quebrou em maio" —
-sobre um dia em que alguém arrumou o CRM. **Regra: dia com volume anômalo aparece
-separado e rotulado como limpeza de base, nunca somado à série.** Fora esses picos, a
-perda real roda entre 5 e 64 por mês.
+### ✅ E POR ISSO O PICO NÃO PRECISA DE REGRA ESPECIAL — a contagem por pessoa já resolve
+
+Perdas por mês, nas duas contagens:
+
+| mês | oportunidades | **pessoas** | fator |
+|---|---|---|---|
+| 2025-04 | 23 | 23 | 1,0× |
+| **2025-05** | **1.456** | **11** | **132×** |
+| 2025-06 | 28 | 27 | 1,0× |
+
+Contada por pessoa, a série inteira fica entre **3 e 152 por mês, mediana 29** — sem
+anomalia, sem exceção, sem dia especial. **O maior defeito da base é neutralizado pela
+regra que o painel já tem**, decidida antes e por outro motivo. No total: 2.835
+oportunidades perdidas são **1.020 pessoas** (2,8×).
+
+⚠️ **A ressalva continua valendo para a visão de OPORTUNIDADE.** O painel mostra as duas
+contagens, e a de oportunidade continua com 51% concentrado num dia. Lá, e só lá, o dia
+aparece marcado com o motivo — nunca somado cru à série. A regra geral fica: **anomalia
+que só existe na contagem por oportunidade é sintoma de clonagem, não de negócio.**
 
 ### ✅ A ETAPA da perda existe — mas o nome, só de 2026 em diante
 
