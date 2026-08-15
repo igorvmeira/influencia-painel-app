@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
@@ -76,9 +77,51 @@ function TooltipGrafico({ active, payload, label, fantasma }: {
   );
 }
 
-function ItemLegenda({ cor, tracejado = false, barra = false, texto }: { cor: string; tracejado?: boolean; barra?: boolean; texto: string }) {
+/** Quais séries o hover da legenda pode isolar. A fantasma NÃO é uma delas —
+ *  ver `opacidadeDe` abaixo. */
+type SerieDestacavel = "gasto" | "leads" | "cpl";
+
+/**
+ * ⚠️ RECUO DE 0,45, e NÃO os 0,25 do SlopeCpl. Não é descuido nem inconsistência:
+ * a regra da casa é "recuar as outras", e a INTENSIDADE acompanha quantas outras
+ * existem.
+ *
+ * No slope são 8 linhas se cruzando no mesmo espaço, e 0,25 é o que permite
+ * isolar uma. Aqui são 3 séries já distintas por FORMA — barra, linha cheia,
+ * linha tracejada — e recuar tanto faria o gasto praticamente sumir. As barras
+ * são a referência de escala de quem está olhando a linha de CPL; apagá-las tira
+ * o que dá sentido ao que sobrou.
+ *
+ * ⚠️ NÃO IGUALE OS DOIS VALORES achando que um deles está errado.
+ */
+const RECUO = 0.45;
+
+function ItemLegenda({
+  cor, tracejado = false, barra = false, texto, chave, destacado, onEntrar, onSair,
+}: {
+  cor: string; tracejado?: boolean; barra?: boolean; texto: string;
+  /** Ausente = item não interativo (é o caso da fantasma, que segue os leads). */
+  chave?: SerieDestacavel;
+  destacado: SerieDestacavel | null;
+  onEntrar?: (c: SerieDestacavel) => void;
+  onSair?: () => void;
+}) {
+  // A fantasma acompanha os leads, aqui também: a legenda dela não pode ficar
+  // acesa enquanto a linha recuou, nem o contrário.
+  const alvo = chave ?? "leads";
+  const recuado = destacado !== null && destacado !== alvo;
   return (
-    <span className="inline-flex items-center gap-1.5 text-[11px]" style={{ color: MUTED }}>
+    <span
+      className="inline-flex items-center gap-1.5 text-[11px]"
+      style={{
+        color: MUTED,
+        opacity: recuado ? RECUO : 1,
+        transition: "opacity 120ms",
+        cursor: chave ? "default" : undefined,
+      }}
+      onMouseEnter={chave && onEntrar ? () => onEntrar(chave) : undefined}
+      onMouseLeave={chave ? onSair : undefined}
+    >
       {barra
         ? <span style={{ width: 10, height: 10, background: cor, borderRadius: 2, display: "inline-block" }} />
         : <span style={{ width: 14, height: 0, borderTop: `2px ${tracejado ? "dashed" : "solid"} ${cor}`, display: "inline-block" }} />}
@@ -92,15 +135,37 @@ function ItemLegenda({ cor, tracejado = false, barra = false, texto }: { cor: st
 export default function HeroChart({ pontos, periodoLabel, fantasma = null }: {
   pontos: PontoGrafico[]; periodoLabel: string; fantasma?: Fantasma | null;
 }) {
+  const [destacado, setDestacado] = useState<SerieDestacavel | null>(null);
+
+  /**
+   * ⚠️ A FANTASMA SEGUE OS LEADS, e isto é o ponto do desenho inteiro.
+   *
+   * Ela não é uma quarta série: é o MESMO dado ("leads totais") do período
+   * anterior, e só existe para ser lida CONTRA a linha atual. Se destacar os
+   * leads apagasse a fantasma, a comparação sumiria justamente quando alguém
+   * está olhando de perto — que é o oposto do que o destaque serve para fazer.
+   *
+   * Então o par entra e recua junto, sempre.
+   */
+  const opacidadeDe = (serie: SerieDestacavel, base = 1) =>
+    destacado === null || destacado === serie ? base : base * RECUO;
+
   return (
     <div className="mb-10 p-5" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <p className="text-[13px] uppercase tracking-wider" style={{ color: MUTED }}>Tendência do período</p>
         <div className="flex flex-wrap items-center gap-3">
-          <ItemLegenda cor={BARRA} barra texto="Gasto (R$, esq.)" />
-          <ItemLegenda cor={LINHA_LEADS} texto="Leads totais (dir.)" />
-          <ItemLegenda cor={RED} tracejado texto="CPL do dia" />
-          {fantasma && <ItemLegenda cor={MUTED} tracejado texto={fantasma.rotulo} />}
+          {/* O hover vive AQUI, na legenda — não na área do gráfico, onde o
+              tooltip rico já mora. Duas interações no mesmo espaço brigariam, e o
+              tooltip é a mais útil das duas. */}
+          <ItemLegenda cor={BARRA} barra texto="Gasto (R$, esq.)"
+            chave="gasto" destacado={destacado} onEntrar={setDestacado} onSair={() => setDestacado(null)} />
+          <ItemLegenda cor={LINHA_LEADS} texto="Leads totais (dir.)"
+            chave="leads" destacado={destacado} onEntrar={setDestacado} onSair={() => setDestacado(null)} />
+          <ItemLegenda cor={RED} tracejado texto="CPL do dia"
+            chave="cpl" destacado={destacado} onEntrar={setDestacado} onSair={() => setDestacado(null)} />
+          {/* Sem `chave`: a fantasma não é isolável por si — ela segue os leads. */}
+          {fantasma && <ItemLegenda cor={MUTED} tracejado texto={fantasma.rotulo} destacado={destacado} />}
           <span className="text-[11px]" style={{ color: MUTED }}>· {periodoLabel}</span>
         </div>
       </div>
@@ -146,14 +211,40 @@ export default function HeroChart({ pontos, periodoLabel, fantasma = null }: {
                 não pegava; agora é token (`realceGrafico`). */}
             <Tooltip content={<TooltipGrafico fantasma={fantasma} />} cursor={{ fill: TEMA.realceGrafico }} />
 
-            <Bar yAxisId="gasto" dataKey="gasto" name="Gasto" fill={BARRA} radius={[2, 2, 0, 0]} maxBarSize={26} />
+            <Bar
+              yAxisId="gasto" dataKey="gasto" name="Gasto" fill={BARRA}
+              radius={[2, 2, 0, 0]} maxBarSize={26}
+              opacity={opacidadeDe("gasto")}
+              style={{ transition: "opacity 120ms" }}
+            />
             {fantasma && (
               // connectNulls={false} é o que faz a fantasma PARAR onde o período de
               // comparação acaba, em vez de emendar por cima do buraco.
-              <Line yAxisId="leads" type="monotone" dataKey="ghost" name={fantasma.rotulo} stroke={MUTED} strokeWidth={1.25} strokeDasharray="3 3" dot={false} connectNulls={false} opacity={0.7} />
+              // ⚠️ Opacidade base 0,7 MULTIPLICADA pelo recuo: ela já nasce discreta
+              // por ser referência, e no recuo fica proporcionalmente discreta —
+              // não some, porque some junto com os leads e o par tem que sobrar.
+              <Line
+                yAxisId="leads" type="monotone" dataKey="ghost" name={fantasma.rotulo}
+                stroke={MUTED} strokeWidth={1.25} strokeDasharray="3 3" dot={false}
+                connectNulls={false}
+                opacity={opacidadeDe("leads", 0.7)}
+                style={{ transition: "opacity 120ms" }}
+              />
             )}
-            <Line yAxisId="leads" type="monotone" dataKey="total" name="Leads totais" stroke={LINHA_LEADS} strokeWidth={2.5} dot={false} connectNulls={false} />
-            <Line yAxisId="cpl" type="monotone" dataKey="cpl" name="CPL" stroke={RED} strokeWidth={1.5} strokeDasharray="4 3" dot={false} connectNulls={false} />
+            <Line
+              yAxisId="leads" type="monotone" dataKey="total" name="Leads totais"
+              stroke={LINHA_LEADS} strokeWidth={2.5} dot={false} connectNulls={false}
+              opacity={opacidadeDe("leads")}
+              style={{ transition: "opacity 120ms" }}
+            />
+            {/* A linha que MAIS ganha com o destaque: fina, tracejada e sem eixo
+                visível, ela se perde entre as barras quando tudo está aceso. */}
+            <Line
+              yAxisId="cpl" type="monotone" dataKey="cpl" name="CPL"
+              stroke={RED} strokeWidth={1.5} strokeDasharray="4 3" dot={false} connectNulls={false}
+              opacity={opacidadeDe("cpl")}
+              style={{ transition: "opacity 120ms" }}
+            />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
