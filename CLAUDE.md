@@ -75,6 +75,15 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   acidente (o token era escuro sobre card branco) e no escuro a maioria das barras sumiria.
   **Mantenha dois tokens separados** — um para o sulco vazio, outro para o dado neutro — e
   diga no comentário de cada um o que ele NÃO é.
+- 🛑 **O caso mais grave dessa família não deixa o elemento feio: deixa o NÚMERO ERRADO.**
+  Numa barra empilhada, a fatia invisível não fica "meio apagada" — **vira uma barra
+  cheia**, e a tela passa a afirmar 100% onde havia 40%. Sempre que a cor participa de uma
+  PROPORÇÃO (barra dividida, pizza, área empilhada), medir cada fatia contra o fundo **e
+  contra a fatia vizinha**, antes de aprovar.
+- **Fatias que se separam por MATIZ e não por luminância só valem com canal redundante.**
+  Ouro contra off-white difere 1,6:1 — quem não distingue matiz não lê a divisão. Aceitável
+  quando existe legenda com rótulo, valor e percentual em texto; **se o componente for
+  reusado sem a legenda, o par precisa ser revisto antes.**
 - **Efeito visual também inverte com o tema, não só cor.** `hover:opacity-90` clareia sobre
   fundo claro e ESCURECE sobre fundo escuro — o gesto continua funcionando e passa a
   significar o contrário. Sombra some no escuro (não há luz para bloquear), então `shadow`

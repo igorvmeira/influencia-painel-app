@@ -6,6 +6,14 @@ import { num } from "@/lib/format";
 // Split formulário / WhatsApp como barra empilhada horizontal. CSS puro: são duas
 // fatias, não vale carregar biblioteca de gráfico. Sem pizza — o pedido é
 // comparar duas partes de um todo, e barra lê melhor que setor circular.
+//
+// ⚠️⚠️ AS DUAS FATIAS SE DISTINGUEM POR MATIZ, NÃO POR LUMINÂNCIA — 1,60:1 entre
+// elas. Isto só é aceitável porque a cor NÃO é o único canal: a legenda abaixo
+// traz rótulo, valor absoluto e percentual em texto, e cada fatia tem `title`.
+//
+// SE ESTA BARRA FOR REUSADA EM ALGUM LUGAR SEM A LEGENDA, o par precisa ser
+// revisto antes — sem os canais redundantes, quem não distingue matiz fica sem
+// nenhuma forma de ler a proporção.
 export default function BarraSplit({ b2b, b2c }: { b2b: number; b2c: number }) {
   const total = b2b + b2c;
   if (total === 0) {

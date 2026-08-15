@@ -64,7 +64,18 @@ export default function CardGestor({
           <span
             aria-hidden="true"
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold"
-            style={{ background: TEMA.navFundo, color: TEMA.navTexto }}
+            /* ⚠️ O fill era `navFundo`: sobre o card BRANCO do tema claro fazia um
+               círculo nítido, e sobre o escuro dá 1,15:1 — as iniciais continuavam
+               legíveis (15,12:1 contra o card), mas o círculo sumia e sobrava texto
+               solto ao lado do nome.
+               Medidas as sete opções de preenchimento, NENHUMA resolve: a melhor
+               chega a 1,47:1. Só dourado (9,44:1) ou um ANEL (3,19:1) fazem a forma
+               existir — e o dourado desta tela já tem dono, que é a borda do selo
+               "melhor evolução". Oito círculos dourados num grid gastariam o acento
+               sem destacar ninguém.
+               É a quarta vez nesta migração que a resposta é a mesma: no escuro, a
+               borda faz o que o preenchimento não faz. */
+            style={{ background: TEMA.chip, color: TEMA.texto, border: `1px solid ${TEMA.bordaForte}` }}
           >
             {iniciais(nome)}
           </span>
