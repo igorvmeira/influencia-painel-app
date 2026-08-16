@@ -71,6 +71,24 @@ export interface NivelAgregado {
   porEtapa: { etapaId: number; oportunidades: number }[] | null;
 }
 
+/**
+ * Uma medida de sucesso da recuperação, com a régua colada no número.
+ *
+ * ⚠️ `chave` é estável e o texto NÃO — a tela ordena e destaca pela chave, então
+ * reescrever `rotulo` ou `definicao` para ficar mais claro nunca quebra nada.
+ */
+export interface MedidaSucesso {
+  chave: "provado" | "venda" | "autoDeclarado";
+  rotulo: string;
+  /** A RÉGUA: o que exatamente foi contado, em uma frase. */
+  definicao: string;
+  pessoas: number;
+  /** Sobre o total de pessoas em recuperação. */
+  pct: number;
+  /** true = é reivindicação de sistema, não evidência observada. */
+  autoDeclarada: boolean;
+}
+
 export interface SerieMes {
   mes: string;
   pessoas: number;
@@ -89,7 +107,28 @@ export interface AgregadoComercial {
     pessoasNoFunil: number;
     niveis: NivelAgregado[];
   };
-  recuperacao: { pessoas: number; oportunidades: number; etapas: number[] };
+  recuperacao: {
+    pessoas: number;
+    oportunidades: number;
+    etapas: number[];
+    /** Uma linha por etapa de recuperação — [113] e [49] contam coisas diferentes. */
+    porEtapa: { etapaId: number; pessoas: number }[];
+    /**
+     * Quantas vezes o MESMO contato foi trabalhado, sobre o HISTÓRICO COMPLETO.
+     * ⚠️ Inclui as encerradas que o backfill trouxe: contar só as abertas
+     * subestima exatamente o que a métrica quer medir. Ver a correção em
+     * data/xmax-integracao.md.
+     */
+    distribuicao: { vezes: number; pessoas: number }[];
+    /**
+     * ⚠️ TRÊS MEDIDAS DE SUCESSO, e a diferença entre elas É a informação —
+     * mostrar só uma faria alguém decidir errado sobre manter a automação.
+     * Cada uma carrega a própria RÉGUA em `definicao`, aqui e não num doc
+     * separado: daqui a três meses quem recalcular precisa achar a régua junto
+     * do resultado.
+     */
+    sucesso: MedidaSucesso[];
+  };
   negociacao: { pessoas: number; etapas: number[] };
   conversaAvancada: { pessoas: number; etapas: number[] };
   foraDoFunil: {
@@ -285,6 +324,72 @@ export function montarAgregado(
     });
   })();
 
+  /**
+   * A RECUPERAÇÃO, com as três medidas de sucesso e a régua de cada uma.
+   *
+   * ⚠️ AS TRÊS VÃO PARA A TELA, decisão do Igor em 16/08/2026. A distância entre
+   * "a automação diz que recuperou" (11,8%) e "dá para provar que avançou" (1,3%)
+   * é justamente o que mostra o tamanho do problema — esconder uma delas faria
+   * alguém decidir sobre manter a automação com meia informação.
+   */
+  const recuperacao = (() => {
+    const emRec = comAberta.filter((p) => p.emRecuperacao);
+    const total = emRec.length || 1;
+
+    // ⚠️ HISTÓRICO COMPLETO, incluindo as encerradas do backfill. Contar só as
+    // abertas subestima exatamente o que "quantas vezes foi trabalhado" mede.
+    const contagem = new Map<number, number>();
+    emRec.forEach((p) => {
+      const v = Math.max(1, p.vezesTrabalhado);
+      contagem.set(v, (contagem.get(v) ?? 0) + 1);
+    });
+
+    const idsNaEtapa = (e: number) =>
+      new Set(abertas.filter((o) => Number(o.stageId) === e).map((o) => o.id));
+    const idsAutoDeclarado = idsNaEtapa(49);
+    const autoDeclarado = emRec.filter((p) => p.oportunidadeIds.some((i) => idsAutoDeclarado.has(i)));
+
+    // "Provado" = tem oportunidade ABERTA numa das 6 etapas do funil de captação.
+    // `nivel` só é preenchido por essas etapas — recuperação não entra nele.
+    const provado = emRec.filter((p) => p.nivel !== null);
+    const venda = emRec.filter((p) => p.ganhou);
+
+    const medida = (
+      chave: MedidaSucesso["chave"], rotulo: string, definicao: string,
+      lista: PessoaGravada[], autoDeclarada: boolean
+    ): MedidaSucesso => ({
+      chave, rotulo, definicao,
+      pessoas: lista.length,
+      pct: Number(((lista.length / total) * 100).toFixed(2)),
+      autoDeclarada,
+    });
+
+    return {
+      pessoas: emRec.length,
+      oportunidades: abertas.filter((o) =>
+        (ETAPAS_RECUPERACAO as readonly number[]).includes(Number(o.stageId))).length,
+      etapas: [...ETAPAS_RECUPERACAO],
+      porEtapa: (ETAPAS_RECUPERACAO as readonly number[]).map((e) => {
+        const ids = idsNaEtapa(e);
+        return { etapaId: e, pessoas: emRec.filter((p) => p.oportunidadeIds.some((i) => ids.has(i))).length };
+      }),
+      distribuicao: [...contagem.entries()]
+        .sort((a, b) => a[0] - b[0])
+        .map(([vezes, pessoas]) => ({ vezes, pessoas })),
+      sucesso: [
+        medida("provado", "Dá para provar que avançou",
+          "Pessoa em recuperação que TAMBÉM tem oportunidade aberta numa das seis etapas do funil de captação. É evidência observada — e é PISO, porque o CRM não guarda o caminho do lead: quem foi recuperado, avançou e fechou não deixa rastro nesta conta.",
+          provado, false),
+        medida("venda", "Chegou a virar venda",
+          "Pessoa em recuperação com alguma oportunidade marcada como ganha. Responde outra pergunta que não 'a recuperação funciona' — e herda a mesma limitação: marcar 'ganhou' no CRM não virou rotina.",
+          venda, false),
+        medida("autoDeclarado", "A automação marcou como recuperado",
+          "Pessoa numa oportunidade na etapa [49] LEAD RECUPERADO- AUTOMAÇÃO. ⚠️ É REIVINDICAÇÃO DO SISTEMA, não evidência: a automação se declara bem-sucedida sem que nada tenha avançado no funil.",
+          autoDeclarado, true),
+      ],
+    };
+  })();
+
   return {
     geradoEm: agora.toISOString(),
     fuso: MARCA.fuso,
@@ -294,12 +399,7 @@ export function montarAgregado(
       pessoasNoFunil: comAberta.filter((p) => p.nivel !== null).length,
       niveis,
     },
-    recuperacao: {
-      pessoas: comAberta.filter((p) => p.emRecuperacao).length,
-      oportunidades: abertas.filter((o) =>
-        (ETAPAS_RECUPERACAO as readonly number[]).includes(Number(o.stageId))).length,
-      etapas: [...ETAPAS_RECUPERACAO],
-    },
+    recuperacao,
     negociacao: {
       pessoas: comAberta.filter((p) => p.emNegociacao).length,
       etapas: [...ETAPAS_NEGOCIACAO],

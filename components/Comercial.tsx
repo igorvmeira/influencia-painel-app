@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useComercial } from "@/lib/useComercial";
 import type { SerieMes } from "@/lib/comercialAgregado";
 import { TEMA, MOVIMENTO } from "@/lib/brand";
@@ -329,6 +330,17 @@ export default function Comercial() {
               menor do que ela é.
             </Aviso>
           ) : null}
+
+          {/* ⚠️ O LINK É A CONDIÇÃO DA VARIANTE B. As etapas de recuperação saíram do
+              funil porque inflavam a leitura — mas tirar do funil e não dar caminho
+              seria apagar. Botão, não link de texto: precisa se anunciar. */}
+          <Link
+            href="/comercial/recuperacao"
+            className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-[12.5px] font-semibold transition hover:brightness-125"
+            style={{ background: TEMA.destaque, color: TEMA.textoSobreDestaque }}
+          >
+            Ver a recuperação em detalhe →
+          </Link>
 
           <div className="border-t pt-3" style={{ borderColor: LINE }}>
             <div className="flex items-baseline justify-between">

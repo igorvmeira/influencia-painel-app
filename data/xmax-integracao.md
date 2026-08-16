@@ -259,6 +259,34 @@ qualquer medição futura deste painel: **antes de comparar um percentual contra
 diga em voz alta sobre o que ele é percentual.** Um número correto sobre o denominador
 errado é mais perigoso que um número errado, porque passa na revisão.
 
+## ⚠️ CORREÇÃO: número medido ANTES do backfill não vale depois dele
+
+A distribuição de "quantas vezes o mesmo contato é trabalhado" foi medida duas vezes, e a
+segunda invalidou a primeira:
+
+| | antes do backfill | depois |
+|---|---|---|
+| trabalhado 1× | **736** | **611** |
+| trabalhado 2× | **65** | **148** |
+| máximo | 11× | 11× |
+
+**Não é deriva da base viva — é o backfill.** A primeira medição aconteceu quando só
+existiam oportunidades ABERTAS, porque a API não lista encerrada. O backfill trouxe 2.873
+encerradas, e o `vezesTrabalhado` de muita gente subiu: quem parecia trabalhado uma vez
+passou a mostrar 2, 3 ou 4 quando o histórico fechado apareceu.
+
+**O número novo é o certo.** "Quantas vezes o contato foi trabalhado" ignorando o que já
+encerrou subestima exatamente o que a métrica existe para medir — e subestima **na direção
+que faz a automação parecer melhor do que é**.
+
+⚠️ **LIÇÃO, irmã da do frame de data:** quando a fonte de dados muda de tamanho, todo
+número derivado dela precisa ser remedido, não conferido. E a diferença não se lê como
+deriva: 736 → 611 é grande demais para ser a base viva, e foi isso que denunciou.
+
+**Regra prática:** ao citar um número medido, cite também **quando** e **sobre que
+universo**. Os cinco números de conferência do sync (1.656 / 1.455 / 629 / 838 / 225)
+carregam `escopo: "abertas do funil de captação"` justamente por isso.
+
 ## DECISÃO: desqualificação conta AS DUAS formas
 
 O Marcos confirmou que o funil "LEADS NÃO QUALIFICADOS" (id 23) e a etiqueta
