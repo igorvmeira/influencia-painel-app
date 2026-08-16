@@ -4,6 +4,7 @@ import { buscarDiario, buscarLimiteConta } from "@/lib/meta";
 import { ContaMap, MetricaDiaria } from "@/lib/types";
 import { COL_AGREGADAS, RETENCAO_DIAS, cutoffRetencao, mesclarDias } from "@/lib/agregadas";
 import { checarCronSecret } from "@/lib/cronAuth";
+import { descobrirContas } from "@/lib/descobrirContas";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -33,6 +34,11 @@ const MAX_NOVAS_POR_CHAMADA = 3;
 const LIMITE_PADRAO = 20;
 // Abaixo do limite de 500 operações por batch do Firestore.
 const LOTE = 450;
+
+// Orçamento de tempo da descoberta de contas novas (etapa secundária — ver abaixo).
+// Curto de propósito: ela anda no bloco FINAL, que já é o mais barato, e mesmo assim
+// não pode empurrar a chamada para fora do teto da Vercel grátis.
+const DESCOBERTA_MS = 4000;
 
 export async function GET(req: Request) {
   const bloqueio = checarCronSecret(req);
@@ -195,6 +201,39 @@ export async function GET(req: Request) {
   // para não passar despercebido que uma conta entrou com histórico completo.
   const comJanelaCheia = sincronizadas.filter((s) => s.janelaCheia);
 
+  // =========================================================================
+  // ETAPA SECUNDÁRIA: DESCOBERTA DE CONTAS NOVAS (fila de aprovação)
+  // =========================================================================
+  // ⚠️ NUNCA CADASTRA NADA. Só lista o que o token enxerga e ainda não está no
+  // de-para, para uma pessoa decidir na tela /fila-contas.
+  //
+  // ⚠️ RODA NO ÚLTIMO BLOCO da varredura por offset, uma vez por sincronização.
+  // O último bloco é o mais barato (sobra da divisão), e assim a descoberta não se
+  // repete a cada chamada — cada candidata custa 2 requisições ao Meta.
+  //
+  // ⚠️ E FALHA SEM DERRUBAR O SYNC. Métrica errada faz o painel mentir; fila
+  // desatualizada só adia um cadastro. `descobrirContas` já não lança, e o try
+  // aqui é a segunda rede — o `catch` só existe para o sync nunca virar 500 por
+  // causa da etapa secundária. O resultado aparece no retorno de qualquer jeito.
+  const pediuDescoberta = url.searchParams.get("descobrir");
+  const rodarDescoberta = pediuDescoberta === "1"
+    || (pediuDescoberta !== "0" && !alvoParam && proximoOffset === null);
+  let descoberta: { ok: boolean; candidatas?: number; cortadas?: number; erro?: string | null } | null = null;
+  if (rodarDescoberta) {
+    try {
+      const fila = await descobrirContas(db, { orcamentoMs: DESCOBERTA_MS });
+      descoberta = {
+        ok: !fila.erro,
+        candidatas: fila.candidatas.length,
+        cortadas: fila.cortadasPeloTeto,
+        erro: fila.erro,
+      };
+    } catch (e) {
+      console.error("[sync-meta] descoberta de contas falhou:", e);
+      descoberta = { ok: false, erro: String(e).slice(0, 200) };
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     janelaPadrao: JANELA_DIAS,
@@ -217,6 +256,9 @@ export async function GET(req: Request) {
     adiadas: adiadas.map((c) => ({ accountId: c.accountId, cliente: c.cliente ?? "" })),
     sincronizadas,                 // identidade + estado do agregado, por conta
     erros,
+    // null = não rodou nesta chamada (não era o bloco final). ok:false NÃO reprova
+    // o sync — é etapa secundária, e o workflow só avisa.
+    descoberta,
     atualizadoEm,
   });
 }

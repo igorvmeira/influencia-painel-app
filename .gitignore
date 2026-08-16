@@ -6,3 +6,5 @@ node_modules
 *.log
 .vercel
 next-env.d.ts
+# Cache do `tsc --incremental` (aparece ao rodar `npx tsc --noEmit` para conferir tipos).
+tsconfig.tsbuildinfo

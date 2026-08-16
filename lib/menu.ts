@@ -19,6 +19,12 @@ export const MENU_PRINCIPAL: ItemMenu[] = [
   { rotulo: "Carteira de Contas", href: "/carteira", descricao: "Contas por gestor; edite o responsável (histórico datado)." },
   { rotulo: "Análise de Gestores", href: "/gestores", descricao: "Mês fechado vs mês fechado: evolução de CPL, gasto e conversões." },
   { rotulo: "Funil Comercial", href: "/comercial", descricao: "Captação de novos clientes: onde as pessoas estão, leads novos e perdas." },
+  // ⚠️ APARECE PARA TODOS, mas só abre para quem está na env FILA_EMAILS_PERMITIDOS —
+  // e a checagem é no servidor (/api/fila-contas), não aqui. Esconder o item seria
+  // proteção de mentira; o que ele faz é anunciar que a porta existe.
+  // Quem não tem acesso vê um painel NEUTRO explicando o porquê, não um erro
+  // vermelho — ver o comentário de MSG_RESTRITO em lib/filaContas.ts.
+  { rotulo: "Contas Novas", href: "/fila-contas", descricao: "Contas que o Meta mostra e que ainda não estão na carteira. Restrito." },
 ];
 
 export const MENU_EM_BREVE: ItemMenu[] = [

@@ -20,11 +20,14 @@ import { MARCA } from "@/lib/brand";
 export const DIAS_ATE_AVISAR = 2;
 
 export default function AvisoDadoVelho({
-  geradoEm, diasLimite = DIAS_ATE_AVISAR, oQue = "os dados",
+  geradoEm, diasLimite = DIAS_ATE_AVISAR, oQue = "os dados", workflow = "sync-comercial",
 }: {
   geradoEm: string | null | undefined;
   diasLimite?: number;
   oQue?: string;
+  /** Qual automação alimenta esta tela — o nome do workflow no GitHub Actions.
+      Sem isto o aviso mandaria conferir o sync errado, que é pior que não mandar. */
+  workflow?: string;
 }) {
   if (!geradoEm) return null;
   const d = new Date(geradoEm);
@@ -47,7 +50,7 @@ export default function AvisoDadoVelho({
       não de hoje.
       <br />
       A automação provavelmente falhou — vale conferir a execução do{" "}
-      <b>sync-comercial</b> no GitHub Actions antes de usar esta tela para decidir.
+      <b>{workflow}</b> no GitHub Actions antes de usar esta tela para decidir.
     </div>
   );
 }

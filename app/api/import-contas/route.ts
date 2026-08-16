@@ -193,10 +193,40 @@ export async function GET(req: Request) {
     }
   }
 
-  // Órfãs: docs no de-para que NÃO estão na fonte. Nunca apagadas nem alteradas.
-  const orfas = snap.docs
-    .map((d) => d.data() as Record<string, unknown>)
-    .filter((data) => !idsFonte.has((data.accountId as string) || ""))
+  // =========================================================================
+  // CONTAS CADASTRADAS PELA TELA (/fila-contas)
+  // =========================================================================
+  // ⚠️ ELAS NÃO SÃO ÓRFÃS, e essa distinção é o ponto todo. Órfã é doc que ninguém
+  // sabe de onde veio; estas nasceram no Firestore de propósito, com autor e data,
+  // marcadas por `origemCadastro: "tela"`. Chamá-las de órfãs treinaria quem lê o
+  // relatório a ignorar a lista de órfãs — que é justamente onde uma sujeira real
+  // apareceria.
+  //
+  // ⚠️ E A SEÇÃO APARECE SEMPRE, MESMO VAZIA (exigência do Igor, 16/08/2026). Vazia
+  // ela diz "zero cadastradas pela tela"; se sumisse quando não há nenhuma, ninguém
+  // aprenderia que a divergência entre o JSON e o Firestore é possível — e o dia em
+  // que ela existisse seria o primeiro em que alguém veria a seção.
+  const docs = snap.docs.map((d) => d.data() as Record<string, unknown>);
+  const naFonte = (data: Record<string, unknown>) => idsFonte.has((data.accountId as string) || "");
+
+  const cadastradasPelaTela = docs
+    .filter((data) => data.origemCadastro === "tela")
+    .map((data) => ({
+      accountId: (data.accountId as string) ?? null,
+      cliente: (data.cliente as string) ?? null,
+      gestor: (data.gestor as string) ?? null,
+      por: (data.cadastradaPor as string) ?? null,
+      em: dataBR(data.cadastradaEm),
+      // Já reconciliada = a linha foi colada no data/contas.json. A partir daí o
+      // import volta a gerenciar a conta normalmente; a marca só fica como origem.
+      noJson: naFonte(data),
+    }));
+  const foraDoJson = cadastradasPelaTela.filter((c) => !c.noJson);
+
+  // Órfãs: docs no de-para que NÃO estão na fonte e que ninguém declarou. Nunca
+  // apagadas nem alteradas — a lista existe para uma pessoa decidir.
+  const orfas = docs
+    .filter((data) => !naFonte(data) && data.origemCadastro !== "tela")
     .map((data) => ({ accountId: (data.accountId as string) ?? null, cliente: (data.cliente as string) ?? null }));
 
   // MODO APLICAR: grava criadas + atualizadas (merge). Inalteradas não geram escrita.
@@ -229,7 +259,23 @@ export async function GET(req: Request) {
       // Trocas que entram no gestorHistorico. Só REGISTRO: não carimba a conta,
       // o import continua mandando no campo `gestor` dela.
       trocasDeGestor: trocasGestor.length,
+      // Contas nascidas na tela /fila-contas. `foraDoJson` é o número que importa:
+      // é o tamanho da divergência entre o data/contas.json e o Firestore.
+      cadastradasPelaTela: cadastradasPelaTela.length,
+      cadastradasPelaTelaForaDoJson: foraDoJson.length,
       gravadas: aplicar ? gravadas : 0,
+    },
+    // SEÇÃO OBRIGATÓRIA — nunca some, nem quando é zero. Ver o comentário no laço.
+    cadastradasPelaTela: {
+      mensagem: cadastradasPelaTela.length === 0
+        ? "Zero contas cadastradas pela tela — o data/contas.json é a lista inteira da carteira."
+        : `${cadastradasPelaTela.length} conta(s) nasceram na tela /fila-contas. `
+          + (foraDoJson.length === 0
+            ? "Todas já estão no data/contas.json — não há divergência."
+            : `${foraDoJson.length} ainda NÃO está(ão) no data/contas.json: o arquivo não é mais a `
+              + "lista completa da carteira. Para reconciliar, cole a linha de cada uma no JSON "
+              + "(o botão 'copiar linha do JSON' está na própria tela) e rode este import de novo."),
+      contas: cadastradasPelaTela,
     },
     carimbadas: {
       mensagem: (carimbadasDivergentes.length + carimbadasConcordantes.length) === 0

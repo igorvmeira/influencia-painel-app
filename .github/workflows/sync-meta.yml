@@ -42,6 +42,21 @@ jobs:
 
             if [ "$PROXIMO" = "null" ] || [ -z "$PROXIMO" ]; then
               echo "proximoOffset=null — sincronização concluída."
+
+              # DESCOBERTA DE CONTAS NOVAS — etapa secundária, roda no bloco final.
+              # ⚠️ AVISA, NUNCA REPROVA O JOB. Métrica errada faz o painel mentir;
+              # fila desatualizada só adia um cadastro que uma pessoa faria à mão.
+              # Falhar o sync inteiro por causa dela treinaria a equipe a ignorar
+              # o alerta vermelho — que é o que precisa continuar significando algo.
+              DESC_OK=$(echo "$RESP" | jq -r '.descoberta.ok // "nao-rodou"')
+              if [ "$DESC_OK" = "true" ]; then
+                echo "Busca por contas novas: $(echo "$RESP" | jq -r '.descoberta.candidatas') candidata(s) na fila."
+              elif [ "$DESC_OK" = "nao-rodou" ]; then
+                echo "Busca por contas novas: não rodou nesta execução."
+              else
+                echo "::warning::A busca por contas novas falhou (o sync de métricas está OK): $(echo "$RESP" | jq -r '.descoberta.erro')"
+              fi
+
               break
             fi
 
