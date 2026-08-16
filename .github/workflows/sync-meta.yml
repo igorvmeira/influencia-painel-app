@@ -16,6 +16,13 @@ jobs:
         run: |
           set -euo pipefail
 
+          # ⚠️ O SEGREDO VAI NO CABEÇALHO, NUNCA NA URL — e isto não é preferência.
+          # Query string é registrada em log por todo mundo no caminho: o Next
+          # imprime a URL inteira no console do servidor, e proxy, CDN e histórico
+          # de navegador fazem o mesmo. Foi exatamente assim que o CRON_SECRET deste
+          # projeto apareceu num log em 16/08/2026.
+          # O `lib/cronAuth.ts` aceita as duas formas; `?key=` continua existindo só
+          # para chamada manual no navegador. Automação usa o cabeçalho.
           BASE="https://influencia-painel-app.vercel.app/api/sync-meta"
           LIMITE=10
           MAX_ITER=50
@@ -24,7 +31,7 @@ jobs:
           for i in $(seq 1 "$MAX_ITER"); do
             echo "== Iteração $i (offset=$OFFSET) =="
 
-            RESP=$(curl -sS "${BASE}?key=${CRON_SECRET}&offset=${OFFSET}&limite=${LIMITE}")
+            RESP=$(curl -sS -H "Authorization: Bearer ${CRON_SECRET}" "${BASE}?offset=${OFFSET}&limite=${LIMITE}")
 
             PROCESSADAS=$(echo "$RESP" | jq -r '.processadas // 0')
             REGISTROS=$(echo "$RESP" | jq -r '.registros // 0')

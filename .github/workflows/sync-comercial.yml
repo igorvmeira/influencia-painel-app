@@ -29,6 +29,10 @@ jobs:
         run: |
           set -euo pipefail
 
+          # ⚠️ O SEGREDO VAI NO CABEÇALHO, NUNCA NA URL — mesmo motivo do sync-meta:
+          # query string é registrada em log pelo Next, por proxy e por CDN, e foi
+          # assim que o CRON_SECRET apareceu num log em 16/08/2026. O `?key=` do
+          # lib/cronAuth.ts continua valendo, mas só para chamada manual.
           BASE="https://influencia-painel-app.vercel.app/api/comercial/sync"
 
           # ⚠️ Uma tentativa extra: o sync é IDEMPOTENTE (docId determinístico e
@@ -36,7 +40,7 @@ jobs:
           # latência do Xmax deixaria a tela um dia inteiro com a foto velha.
           for TENTATIVA in 1 2; do
             echo "== Tentativa ${TENTATIVA} =="
-            RESP=$(curl -sS --max-time 120 "${BASE}?key=${CRON_SECRET}&aplicar=1") || RESP='{"ok":false,"erro":"curl falhou"}'
+            RESP=$(curl -sS --max-time 120 -H "Authorization: Bearer ${CRON_SECRET}" "${BASE}?aplicar=1") || RESP='{"ok":false,"erro":"curl falhou"}'
 
             OK=$(echo "$RESP" | jq -r '.ok // false')
             if [ "$OK" = "true" ]; then
