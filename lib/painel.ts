@@ -187,6 +187,60 @@ export function montarPainel(
  * Cada cliente recebe o desvio percentual do seu CPL vs a média do próprio nicho.
  * Retorna os nichos ordenados por CPL (menor = melhor).
  */
+/** O que o modal de análise precisa de UMA conta, num período e contra o anterior. */
+export interface AnaliseDaConta {
+  gasto: number;
+  conversas: number;
+  cpl: number;
+  gastoVar: number;
+  conversasVar: number;
+  cplVar: number;
+  /** false = não houve gasto nem conversão em nenhum dos dois lados. */
+  temDado: boolean;
+}
+
+/**
+ * Análise de UMA conta: soma do período, soma do anterior e as três variações.
+ *
+ * ⚠️ NASCEU AQUI, e não no componente, porque isto é REGRA DE NEGÓCIO: a
+ * definição de janela, de âncora e de variação já existe neste módulo e é
+ * consumida pelo painel inteiro. Uma segunda implementação no modal divergiria
+ * na primeira mudança de definição — e divergiria em silêncio, porque os dois
+ * números pareceriam plausíveis.
+ *
+ * ⚠️ CUSTO ZERO: opera sobre o `daily` que a sessão já carregou. Nenhuma leitura
+ * nova de Firestore, nenhuma chamada à Meta.
+ *
+ * ⚠️ A ÂNCORA é o último dia COM DADO do conjunto todo, não o relógio — a mesma
+ * do resto do painel. Ancorar no relógio faria a conta parecer sem veiculação
+ * quando na verdade o sync ainda não rodou hoje.
+ */
+export function analiseDaConta(
+  daily: MetricaDiaria[],
+  contas: ContaMap[],
+  accountId: string,
+  periodoDias: number
+): AnaliseDaConta {
+  const mapaConta = new Map(contas.map((c) => [c.accountId, c]));
+  const registros = daily.filter((m) => mapaConta.has(m.accountId));
+  const ancoraMs = ancoraDe(registros);
+
+  const atual = somasPorJanela(registros, ancoraMs, 0, periodoDias - 1).get(accountId) ?? somaZero();
+  const ant = somasPorJanela(registros, ancoraMs, periodoDias, periodoDias * 2 - 1).get(accountId) ?? somaZero();
+
+  const conv = atual.conversas;
+  const convAnt = ant.conversas;
+  return {
+    gasto: atual.gasto,
+    conversas: conv,
+    cpl: cpl(atual.gasto, conv),
+    gastoVar: variacao(atual.gasto, ant.gasto),
+    conversasVar: variacao(conv, convAnt),
+    cplVar: variacao(cpl(atual.gasto, conv), cpl(ant.gasto, convAnt)),
+    temDado: atual.gasto > 0 || conv > 0 || ant.gasto > 0 || convAnt > 0,
+  };
+}
+
 export function montarNichos(
   daily: MetricaDiaria[],
   contas: ContaMap[],

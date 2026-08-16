@@ -5,6 +5,8 @@ import { ContaMap } from "@/lib/types";
 import { useContas, salvarGestor } from "@/lib/useContas";
 import { OPCOES_GESTOR, PAUSADO } from "@/lib/gestores";
 import { TEMA } from "@/lib/brand";
+import Modal from "./Modal";
+import AnaliseConta from "./AnaliseConta";
 
 const CARD = TEMA.card;
 const INK = TEMA.fundo;
@@ -34,6 +36,13 @@ export default function Carteira() {
   // Padrão: só ATIVAS (pedido da agência, 16/08/2026). A carteira tem 39 pausadas
   // de 117, e elas empurravam para baixo o que se opera todo dia.
   const [incluirPausadas, setIncluirPausadas] = useState(false);
+  /**
+   * ⚠️ O MODAL É QUEM PUXA O `/api/painel`, e só quando abre. A /carteira usa
+   * apenas `/api/contas` (117 docs) de propósito, para ser leve para quem só quer
+   * consultar quem cuida de quem. Quem abre a análise paga as ~352 leituras UMA
+   * vez por sessão — o cache de módulo do `useDadosPainel` serve as próximas.
+   */
+  const [analisando, setAnalisando] = useState<ContaMap | null>(null);
 
   // Os três filtros compõem: pausadas, gestor e busca. Separado em duas etapas só
   // para o contador de ocultas ser HONESTO — ele conta as pausadas que sobreviveram
@@ -120,7 +129,7 @@ export default function Carteira() {
 
           <div className="space-y-2">
             {listaFiltrada.map((c, i) => (
-              <LinhaConta key={c.accountId} conta={c} ordem={i + 1} />
+              <LinhaConta key={c.accountId} conta={c} ordem={i + 1} onAnalisar={setAnalisando} />
             ))}
             {listaFiltrada.length === 0 && (
               <p className="text-[13px]" style={{ color: MUTED }}>
@@ -133,6 +142,20 @@ export default function Carteira() {
           </div>
         </>
       )}
+
+      {/* A análise da conta, SOBRE a tela — sem sair da /carteira, que era o pedido. */}
+      <Modal
+        aberto={analisando !== null}
+        aoFechar={() => setAnalisando(null)}
+        titulo={analisando?.cliente ?? ""}
+        subtitulo={[
+          (analisando?.nicho && analisando.nicho.trim()) || "Sem nicho",
+          analisando?.gestor,
+          analisando?.pausado ? "pausada" : null,
+        ].filter(Boolean).join(" · ")}
+      >
+        {analisando && <AnaliseConta conta={analisando} />}
+      </Modal>
     </div>
   );
 }
@@ -142,7 +165,9 @@ export default function Carteira() {
 // LISTA COMO ELA ESTÁ NA TELA — depois da busca, do filtro e da ordenação. Serve para
 // contar e para achar a linha ("a 12ª"), não para identificar a conta: filtrar por um
 // gestor renumera de 1 a N. O identificador estável continua sendo o accountId.
-function LinhaConta({ conta, ordem }: { conta: ContaMap; ordem: number }) {
+function LinhaConta({ conta, ordem, onAnalisar }: {
+  conta: ContaMap; ordem: number; onAnalisar: (c: ContaMap) => void;
+}) {
   // Gestor "vivo": estado local que reflete a última edição sem esperar re-render do cache.
   const [gestorAtual, setGestorAtual] = useState(conta.gestor);
   const [sel, setSel] = useState(conta.gestor);
@@ -185,7 +210,18 @@ function LinhaConta({ conta, ordem }: { conta: ContaMap; ordem: number }) {
           <div className="flex items-center gap-2">
             {/* Largura fixa para os nomes alinharem mesmo com 1, 2 ou 3 dígitos. */}
             <span className="w-6 shrink-0 text-right text-[11px] tabular-nums" style={{ color: MUTED }}>{ordem}</span>
-            <p className="truncate text-sm font-medium text-brand-ink">{conta.cliente}</p>
+            {/* ⚠️ O NOME é o alvo do clique, não a linha inteira: a linha tem o
+                <select> de gestor e o botão Salvar, e um clique de container
+                engoliria a interação deles. Botão de verdade, não div com
+                onClick — precisa responder a teclado. */}
+            <button
+              type="button"
+              onClick={() => onAnalisar(conta)}
+              className="min-w-0 truncate rounded text-left text-sm font-medium text-brand-ink underline-offset-4 transition hover:underline hover:brightness-125"
+              title="Ver análise desta conta"
+            >
+              {conta.cliente}
+            </button>
             <span
               className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase"
               style={pausada

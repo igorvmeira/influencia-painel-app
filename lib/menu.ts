@@ -23,5 +23,8 @@ export const MENU_PRINCIPAL: ItemMenu[] = [
 
 export const MENU_EM_BREVE: ItemMenu[] = [
   { rotulo: "Relatórios Gerenciais", emBreve: true, descricao: "Relatórios consolidados por período e por gestor." },
-  { rotulo: "Análise de Clientes", emBreve: true, descricao: "Visão detalhada de desempenho por cliente." },
+  // "Análise de Clientes" SAIU daqui em 16/08/2026: ela existe, mas como MODAL —
+  // clicar no nome do cliente na /carteira abre a análise sobre a tela, que foi o
+  // caminho que a agência pediu. Deixar "em breve" no menu depois que a coisa
+  // existe é dívida de interface, e pior: faz o dono esperar pelo que já tem.
 ];
