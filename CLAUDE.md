@@ -180,6 +180,15 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
 - Uma feature secundária que falha **não pode derrubar** a tela principal: degrade com
   elegância (some o enfeite, o essencial continua).
 - Coleção que ainda não existe deve retornar lista vazia, não erro 500.
+- ⚠️ **ALARME QUE DISPARA TODO DIA VIRA RUÍDO QUE NINGUÉM LÊ.** Ao ligar uma verificação
+  automática, separe o que **deriva** do que **quebra**:
+  · comparação contra uma foto de referência **diverge sozinha** com o tempo (a base é
+    viva) — serve de contexto, nunca de alarme;
+  · **identidades** — soma das partes = total, subconjunto ⊆ conjunto, sem sobreposição —
+    valem em qualquer dia, e se uma quebrar é bug de verdade.
+  **Só a segunda derruba o job.** É o mesmo raciocínio do aviso de dado velho, que fica
+  invisível enquanto tudo funciona e só aparece quando algo está errado: **um aviso que
+  está sempre lá deixa de ser aviso.**
 - ⚠️ **`fetch` NÃO tem timeout, e carregamento eterno é pior que erro.** Se o servidor
   aceita a conexão e não responde, a promessa **nunca settla** — o `.catch` nunca roda e a
   tela fica em "Carregando…" indefinidamente **sem nunca dizer que falhou**. Erro visível é

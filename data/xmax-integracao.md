@@ -713,6 +713,29 @@ hoje — pouco para uma tela, suficiente para não jogar fora. Quando a agência
 acompanhar M&A, é **funil próprio**, com etapas e taxas próprias; misturar os dois faria a
 conversão de marketing parecer pior do que é e a de M&A desaparecer.
 
+## ⏳ PENDÊNCIA CONHECIDA: o sync pode estourar o teto da Vercel gratuita
+
+**Medido em 16/08/2026: o `/api/comercial/sync?aplicar=1` leva 8,2s numa rodada
+IDEMPOTENTE** — aquela em que nada mudou e quase nada é gravado. O plano gratuito da
+Vercel corta função em **~10s**, e o `maxDuration = 60` declarado na rota **só vale no
+Pro**.
+
+**Margem de 1,8 segundos**, e a rodada idempotente é o melhor caso: um dia com muitas
+oportunidades novas grava mais e demora mais.
+
+**Decisão do Igor (16/08/2026): não resolver agora.** O sync nunca rodou em produção, então
+o número real é desconhecido — 8,2s é medição local, com latência de rede diferente. Deixar
+rodar uma semana e medir o real vale mais que otimizar contra um palpite.
+
+⚠️ **GATILHO EXPLÍCITO — se o `sync-comercial` falhar por timeout, quebrar em blocos**, com
+o mesmo padrão que o `sync-meta` já usa: parâmetros de offset/limite, o workflow chamando
+em laço até `proximoOffset` vir nulo. O código para isso já existe e está testado na outra
+rotina; é adaptação, não invenção.
+
+**A rede de segurança já está no ar:** o aviso de dado velho aparece nas duas telas do
+comercial a partir de 2 dias sem sync. Se a automação falhar em silêncio, a tela avisa
+antes de alguém decidir com foto velha.
+
 ## Perguntas ainda abertas
 
 **Bloqueiam o desenho das coleções** — o modelo não é desenhado antes delas:
