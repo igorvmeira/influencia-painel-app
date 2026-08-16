@@ -51,6 +51,123 @@ export function contasPertoDoLimite(contas: ContaMap[], limites: LimiteConta[]):
   return out.sort((a, b) => b.usoPct - a.usoPct);
 }
 
+// ===========================================================================
+// A SEGUNDA RÉGUA — "pede ação" (tela Início)
+// ===========================================================================
+//
+// ⚠️ SÃO DUAS RÉGUAS DE PROPÓSITO, e apagar uma para "unificar" quebra a outra:
+//
+//     `contasPertoDoLimite`  →  ESTADO. Quantas contas estão perto do teto.
+//                               É o que o Dashboard mostra, e está aprovado.
+//     `limitesQuePedemAcao`  →  AÇÃO.   Quais exigem alguém fazer algo hoje.
+//
+// O motivo é medido, não estético. Em 16/08/2026 a carteira tinha **42 de 51
+// contas com teto em ≥90%** — 82%. Como estado isso é uma descrição correta; como
+// alerta é a regra do alarme que dispara todo dia e vira ruído que ninguém lê.
+// Um número que quase sempre está aceso não distingue o dia em que algo mudou.
+//
+// O que separa as duas é o RITMO: uma conta a 92% com R$ 40 mil de folga e gasto
+// baixo não vai estourar tão cedo; outra a 99% com R$ 25 de sobra estoura amanhã.
+// A régua de ação é `restante ÷ gasto por dia` — dias até bater —, e ela reduziu
+// as 42 a 10 já paradas + 11 na semana.
+//
+// ⚠️ A ORDEM IMPORTA NA LEITURA: quem já bateu não "vai estourar", já estourou —
+// a veiculação está parada AGORA e a ação é outra (subir o teto, não vigiar).
+// Misturar os dois grupos esconde o urgente dentro do iminente.
+
+/** Dias até bater no teto abaixo do qual a conta entra em "estoura esta semana". */
+export const DIAS_ESTOURO_URGENTE = 7;
+
+export interface AlertaLimiteAcao extends AlertaLimite {
+  /** Gasto médio por dia na janela observada — o ritmo que define a urgência. */
+  ritmoDia: number;
+  /**
+   * Dias até zerar o restante nesse ritmo. `null` = não gastou nada na janela, e
+   * então NÃO vai estourar: sem ritmo não há previsão, e chutar "infinito" ou
+   * "zero" seria inventar. Conta sem ritmo fica fora dos dois grupos.
+   */
+  diasAteEstourar: number | null;
+}
+
+/**
+ * Os limites que pedem ação hoje, separados pelo que a pessoa precisa FAZER.
+ *
+ * @param gastoPorConta gasto por accountId na janela (vem do painel já montado —
+ *   nenhuma leitura nova, e a definição de janela continua sendo a de lib/painel).
+ * @param diasDaJanela tamanho da janela desse gasto, para virar ritmo diário.
+ */
+export function limitesQuePedemAcao(
+  contasAtivas: ContaMap[],
+  limites: LimiteConta[],
+  gastoPorConta: Map<string, number>,
+  diasDaJanela: number
+): { jaBateram: AlertaLimiteAcao[]; estouramEmBreve: AlertaLimiteAcao[] } {
+  const enriquecidas: AlertaLimiteAcao[] = contasPertoDoLimite(contasAtivas, limites).map((a) => {
+    const ritmoDia = (gastoPorConta.get(a.accountId) ?? 0) / Math.max(1, diasDaJanela);
+    return {
+      ...a,
+      ritmoDia,
+      diasAteEstourar: ritmoDia > 0 ? a.restante / ritmoDia : null,
+    };
+  });
+
+  // JÁ BATERAM: uso >= 100%. Entram mesmo sem ritmo — uma conta parada no teto é
+  // justamente a que precisa de ação, e exigir gasto recente a esconderia.
+  const jaBateram = enriquecidas
+    .filter((a) => a.usoPct >= 1)
+    .sort((x, y) => y.amountSpent - x.amountSpent);
+
+  // ESTOURAM EM BREVE: ainda têm folga, e o ritmo atual a consome dentro da semana.
+  const estouramEmBreve = enriquecidas
+    .filter((a) => a.usoPct < 1 && a.diasAteEstourar !== null && a.diasAteEstourar < DIAS_ESTOURO_URGENTE)
+    .sort((x, y) => (x.diasAteEstourar ?? 0) - (y.diasAteEstourar ?? 0));
+
+  return { jaBateram, estouramEmBreve };
+}
+
+/** Uma conta ativa com os números da janela — base dos dois alertas por CONTA. */
+export interface ContaEmAlerta {
+  accountId: string;
+  cliente: string;
+  gestor: string;
+  gasto: number;
+  conversas: number;
+  /** `null` quando não houve conversa: CPL indefinido, jamais zero. */
+  cpl: number | null;
+}
+
+/**
+ * Contas com CPL acima do teto.
+ *
+ * ⚠️ POR CONTA, e não por gestor — e a diferença não é de granularidade, é de
+ * resultado. Medido em 16/08/2026 na janela de 7 dias: **por gestor, 0 de 8
+ * passavam do teto; por conta, 6 passavam.** A média do gestor dilui a conta ruim
+ * dentro de uma carteira boa, então a Início dizia "tudo sob controle" enquanto
+ * seis contas estouravam. O resumo por gestor continua existindo para o Dashboard,
+ * onde a pergunta é outra.
+ */
+export function contasComCplAlto(linhas: ContaEmAlerta[], teto = CPL_ALERTA): ContaEmAlerta[] {
+  return linhas
+    .filter((l) => l.cpl !== null && l.cpl >= teto)
+    .sort((a, b) => (b.cpl ?? 0) - (a.cpl ?? 0));
+}
+
+/**
+ * Contas que GASTARAM e não converteram nada na janela.
+ *
+ * ⚠️ ELAS SOMEM DE QUALQUER ALERTA DE CPL, e são o pior caso possível. CPL sem
+ * conversão é **indefinido**, não é um número alto: dividir por zero não dá um
+ * valor grande, dá coisa nenhuma — então um filtro `cpl >= 31` nunca as pega, por
+ * mais que gastem. É a mesma família do `situacaoDoAnuncio`, que devolve `null` e
+ * não "pausado" quando a Meta não responde: **ausência de dado não é evidência de
+ * ausência do fato.** Por isso linha própria, com o gasto exposto.
+ */
+export function contasQueGastaramSemConverter(linhas: ContaEmAlerta[]): ContaEmAlerta[] {
+  return linhas
+    .filter((l) => l.gasto > 0 && l.conversas === 0)
+    .sort((a, b) => b.gasto - a.gasto);
+}
+
 export interface ResumoAtencao {
   cplAltoCount: number;      // gestores com CPL >= CPL_ALERTA
   pertoCount: number;        // contas perto do teto

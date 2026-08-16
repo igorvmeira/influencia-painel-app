@@ -44,16 +44,32 @@ const SHARE_LOTE = 0.7;
 /** Mês YYYY-MM no fuso da marca. ⚠️ Nunca `slice(0,7)` do ISO cru: em UTC, um
  *  fechamento das 22h de 31/07 em Brasília cai em agosto e muda o mês do número. */
 export function mesLocal(iso: string | null | undefined): string | null {
+  return parteLocal(iso, false);
+}
+
+/** Dia YYYY-MM-DD no fuso da marca — mesma armadilha do `mesLocal`, um nível abaixo:
+ *  um contato das 22h de 15/08 em Brasília cai em 16/08 no UTC e muda de dia. */
+export function diaLocal(iso: string | null | undefined): string | null {
+  return parteLocal(iso, true);
+}
+
+function parteLocal(iso: string | null | undefined, comDia: boolean): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (isNaN(d.getTime())) return null;
   const p = new Intl.DateTimeFormat("en-CA", {
-    timeZone: MARCA.fuso, year: "numeric", month: "2-digit",
+    timeZone: MARCA.fuso, year: "numeric", month: "2-digit", day: "2-digit",
   }).formatToParts(d);
   const ano = p.find((x) => x.type === "year")?.value;
   const mes = p.find((x) => x.type === "month")?.value;
-  return ano && mes ? `${ano}-${mes}` : null;
+  const dia = p.find((x) => x.type === "day")?.value;
+  if (!ano || !mes) return null;
+  return comDia ? (dia ? `${ano}-${mes}-${dia}` : null) : `${ano}-${mes}`;
 }
+
+/** Janela da série diária de leads novos. 30 dias cobre o "últimos 7" da Início
+ *  com folga e ainda dá forma para uma sparkline, sem inchar o documento. */
+export const DIAS_SERIE_LEADS = 30;
 
 const diasAte = (iso: string | null | undefined, ref: Date): number | null => {
   if (!iso) return null;
@@ -147,6 +163,23 @@ export interface AgregadoComercial {
     entrouEmFechamentoNoMes: { mes: string; pessoas: number; mrrCent: number }[];
   };
   leadsNovos: SerieMes[];
+  /**
+   * Leads novos DIA A DIA nos últimos DIAS_SERIE_LEADS dias — a série que responde
+   * "e nos últimos 7 dias?" sem a tela varrer `comercial_pessoas` (2.657 docs).
+   *
+   * ⚠️ MESMA DEFINIÇÃO DA SÉRIE MENSAL: pessoa cujo PRIMEIRO CONTATO caiu no dia.
+   * Não é oportunidade criada — com a clonagem da automação a mesma pessoa
+   * apareceria várias vezes.
+   *
+   * ⚠️ E A JANELA TERMINA EM `ate`, NÃO NO RELÓGIO DE QUEM LÊ. A série é congelada
+   * no instante do sync; se o sync falhar por dois dias, "últimos 7 dias" na tela
+   * seria uma janela deslocada e ninguém perceberia. Quem consome soma para trás a
+   * partir de `ate` e ROTULA o intervalo — nunca diz "hoje".
+   *
+   * Dias sem nenhum lead aparecem com `pessoas: 0` (a série é densa, não esparsa):
+   * buraco na série viraria linha ligando dois pontos distantes na sparkline.
+   */
+  leadsNovosPorDia: { ate: string; dias: { dia: string; pessoas: number }[] };
   perdas: SerieMes[];
   /** ⚠️ `closedat` é a data do CLIQUE, não da venda — ver o comentário no cálculo.
    *  `mesmoDia` marca o mês em que a maioria fechou num dia só (sessão de marcação). */
@@ -281,6 +314,31 @@ export function montarAgregado(
       mes, pessoas: x.pes, oportunidades: x.ops,
       clonagem: x.pes > 0 && x.ops / x.pes >= RAZAO_CLONAGEM,
     }));
+  })();
+
+  /**
+   * A MESMA definição de lead novo, dia a dia — para a Início responder "últimos 7
+   * dias" lendo o mesmo documento, sem varrer `comercial_pessoas`.
+   *
+   * ⚠️ SÉRIE DENSA: todo dia da janela entra, inclusive com zero. Pular os dias
+   * vazios faria a sparkline ligar dois pontos distantes como se fosse uma queda
+   * suave, e faria a soma de 7 dias depender de quantos dias existem no array.
+   */
+  const leadsNovosPorDia = (() => {
+    const porDia = new Map<string, number>();
+    for (const p of pessoasFunil4) {
+      const d = diaLocal(p.primeiroContato);
+      if (d) porDia.set(d, (porDia.get(d) ?? 0) + 1);
+    }
+    // A janela termina no dia do sync (`agora`), no fuso da marca — nunca em UTC.
+    const ate = diaLocal(agora.toISOString())!;
+    const fimMs = Date.parse(ate + "T12:00:00Z"); // meio-dia evita virada por DST
+    const dias: { dia: string; pessoas: number }[] = [];
+    for (let i = DIAS_SERIE_LEADS - 1; i >= 0; i--) {
+      const dia = new Date(fimMs - i * 86400000).toISOString().slice(0, 10);
+      dias.push({ dia, pessoas: porDia.get(dia) ?? 0 });
+    }
+    return { ate, dias };
   })();
 
   /**
@@ -433,6 +491,7 @@ export function montarAgregado(
         .map(([mes, x]) => ({ mes, ...x })),
     },
     leadsNovos,
+    leadsNovosPorDia,
     // ⚠️ maio/2025 vale 11 pessoas e 1.456 oportunidades — a razão marca clonagem.
     perdas: serie(perdidas.map((o) => ({ mes: mesLocal(o.fechadaEm), pessoaId: o.pessoaId }))),
     vendasConfirmadasPorMes,

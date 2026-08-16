@@ -291,6 +291,69 @@ export function montarNichos(
   }).sort((a, b) => a.cpl - b.cpl);
 }
 
+/**
+ * PISO DUPLO dos destaques de nicho — e o segundo piso existe por um caso real.
+ *
+ * ⚠️ PISO DE CONVERSÕES NÃO PEGA FURO NO NUMERADOR. A régua "≥ 5 conversas"
+ * protege contra a conta que converteu pouco e produz percentual gigante. Ela não
+ * protege contra o contrário: em 16/08/2026, na janela de 15 dias, a **ARP TELECOM
+ * apareceu em 1º lugar da carteira com CPL R$ 0 e −100% vs o nicho** — 5 conversas
+ * (passou no piso) e **zero gasto**. CPL zero é o mínimo matemático, então uma
+ * conta assim é sempre a campeã, e o pódio inteiro vira mentira.
+ *
+ * Na janela de 7 dias ela não aparecia. Ou seja: entraria sozinha num dia
+ * qualquer, sem ninguém ter mexido em nada — que é o modo de falha mais caro,
+ * porque não há mudança para investigar.
+ *
+ * Os dois pisos medem coisas diferentes e nenhum substitui o outro:
+ *   · conversas → o denominador tem massa suficiente para a razão significar algo;
+ *   · gasto ....→ a razão EXISTE. Sem gasto não há custo por lead para comparar.
+ */
+export const MIN_CONVERSAS_DESTAQUE_NICHO = 5;
+export const MIN_GASTO_DESTAQUE_NICHO = 0.01;
+
+/** Uma conta que se destaca (para bem) contra a média do próprio nicho. */
+export interface DestaqueNicho {
+  accountId: string;
+  cliente: string;
+  nicho: string;
+  cpl: number;
+  cplNicho: number;
+  /** Negativo = melhor que a média do nicho. */
+  desvioPct: number;
+  conversas: number;
+}
+
+/**
+ * As contas com melhor CPL relativo ao próprio nicho, já filtradas pelo piso duplo
+ * e ordenadas da melhor para a pior. Opera sobre a saída de `montarNichos` — custo
+ * zero, nenhuma leitura nova.
+ *
+ * ⚠️ Comparar contra o NICHO e não contra a carteira é o que torna o ranking justo:
+ * um CPL de R$ 7 num provedor de internet é bom; o mesmo R$ 7 noutro ramo pode ser
+ * caro. Sem isso o pódio seria sempre o mesmo nicho.
+ */
+export function destaquesVsNicho(nichos: LinhaNicho[]): DestaqueNicho[] {
+  const out: DestaqueNicho[] = [];
+  for (const n of nichos) {
+    if (!(n.cpl > 0)) continue; // nicho sem CPL não tem média para comparar
+    for (const c of n.clientes) {
+      if (c.conversas < MIN_CONVERSAS_DESTAQUE_NICHO) continue;
+      if (c.gasto < MIN_GASTO_DESTAQUE_NICHO) continue; // ver o comentário do piso duplo
+      out.push({
+        accountId: c.accountId,
+        cliente: c.cliente,
+        nicho: n.nicho,
+        cpl: c.cpl,
+        cplNicho: n.cpl,
+        desvioPct: c.desvioPct,
+        conversas: c.conversas,
+      });
+    }
+  }
+  return out.sort((a, b) => a.desvioPct - b.desvioPct);
+}
+
 // Gasto total por conta na janela dos últimos `periodoDias` dias.
 // Usado para escolher as contas de maior gasto ao ranquear criativos por nicho.
 export function gastoPorContaNoPeriodo(

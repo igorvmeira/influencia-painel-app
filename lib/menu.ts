@@ -12,8 +12,12 @@ export const MENU_PRINCIPAL: ItemMenu[] = [
   // ESCONDIDO a pedido do Roberto (05/08/2026): a /reunioes mostra a agenda pessoal
   // do Thiago, não a da equipe. Só a ENTRADA saiu — a rota, o componente Reunioes,
   // /api/agenda, lib/googleAgenda.ts e as envs GOOGLE_* continuam intactos, e quem
-  // digitar /reunioes entra normalmente. REEXIBIR = descomentar a linha abaixo e
-  // devolver o card em components/Inicio.tsx (procure por "ESCONDIDO" lá).
+  // digitar /reunioes entra normalmente. REEXIBIR = descomentar a linha abaixo.
+  // ⚠️ O ponteiro que havia aqui para um card na Início MORREU em 16/08/2026: a
+  // Início deixou de ser menu e virou painel-resumo, e os cards de navegação (o de
+  // reuniões inclusive) saíram junto. Não há mais card para devolver — a sidebar é
+  // a única navegação. O commit que escondeu a /reunioes ainda tem o bloco antigo,
+  // se um dia alguém quiser o resumo da agenda de volta em algum lugar.
   // { rotulo: "Pautas e Reuniões", href: "/reunioes", descricao: "Reuniões da agenda da agência (Google Agenda)." },
   { rotulo: "Orientações Gerenciais", href: "/orientacoes", descricao: "Observações por conta, com histórico." },
   { rotulo: "Carteira de Contas", href: "/carteira", descricao: "Contas por gestor; edite o responsável (histórico datado)." },

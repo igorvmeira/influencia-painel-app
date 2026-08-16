@@ -1,5 +1,6 @@
 import { ContaMap, LinhaCliente, MetricaDiaria } from "./types";
-import { JanelaMes } from "./periodo";
+import { JanelaMes, coberturaMes, janelaMesFechado, mesesDisponiveis } from "./periodo";
+import { montarPainel } from "./painel";
 
 // ===========================================================================
 // DESTAQUES CALCULADOS POR REGRA — Análise de Gestores
@@ -151,6 +152,96 @@ export function elegibilidadeDestaque(
     };
   }
   return { elegivel: true, motivo: null };
+}
+
+/** Uma linha do ranking de evolução mensal de CPL, já com a elegibilidade resolvida. */
+export interface EvolucaoGestor {
+  gestor: string;
+  cplAtual: number;
+  cplAnterior: number;
+  /** Negativo = CPL caiu = melhorou. */
+  variacaoPct: number;
+  conversoes: number;
+  elegivel: boolean;
+  motivoInelegivel: string | null;
+}
+
+export interface RankingEvolucao {
+  /** Mês analisado e mês de comparação, prontos para rótulo (ex.: "07/2026"). */
+  mes: { ano: number; mes: number };
+  mesAnterior: { ano: number; mes: number };
+  /** Ordenado da MAIOR queda de CPL para a maior alta. Inclui inelegíveis. */
+  linhas: EvolucaoGestor[];
+}
+
+/**
+ * O ranking de evolução de CPL entre dois meses FECHADOS.
+ *
+ * ⚠️ MORA AQUI, e não na tela, porque duas telas o consomem: a /gestores (que
+ * mostra a decomposição conta a conta) e a Início (que mostra só o pódio). Se cada
+ * uma escolhesse o mês e aplicasse a elegibilidade do seu jeito, as duas exibiriam
+ * pódios diferentes para a mesma pergunta — e divergiriam em silêncio, porque os
+ * dois números pareceriam plausíveis. A regra do selo é `elegibilidadeDestaque`, e
+ * há uma só.
+ *
+ * ⚠️ O MÊS É O MAIS RECENTE QUE TEM O ANTERIOR INTEIRO NA JANELA — sem o mês de
+ * comparação completo não há evolução, só número solto. Devolve `null` quando a
+ * retenção ainda não alcança dois meses fechados.
+ *
+ * Custo: zero leituras. Opera sobre o `daily` que a sessão já carregou.
+ */
+export function rankingEvolucaoGestores(
+  daily: MetricaDiaria[],
+  contasAtivas: ContaMap[]
+): RankingEvolucao | null {
+  const comparaveis = mesesDisponiveis(daily, contasAtivas).filter((m) => m.cobreMesAnterior);
+  if (!comparaveis.length) return null;
+
+  const { ano, mes } = comparaveis[0];
+  const ant = mes === 1 ? { ano: ano - 1, mes: 12 } : { ano, mes: mes - 1 };
+
+  const jAtual = janelaMesFechado(daily, contasAtivas, ano, mes);
+  const jAnt = janelaMesFechado(daily, contasAtivas, ant.ano, ant.mes);
+  if (!jAtual || !jAnt) return null;
+
+  const pAtual = montarPainel(daily, contasAtivas, jAtual.D, jAtual.espec);
+  const pAnt = montarPainel(daily, contasAtivas, jAnt.D, jAnt.espec);
+
+  // Cobertura por conta nos DOIS meses — mês quebrado em qualquer um dos lados
+  // torna a evolução da conta enganosa, e é o que barra o selo.
+  const incompletas = new Set<string>();
+  for (const c of contasAtivas) {
+    const a = coberturaMes(daily, c.accountId, ano, mes);
+    const b = coberturaMes(daily, c.accountId, ant.ano, ant.mes);
+    if (a.primeiroDiaSerie !== null && (!a.completo || !b.completo)) incompletas.add(c.accountId);
+  }
+
+  const linhas: EvolucaoGestor[] = [];
+  for (const g of pAtual.gestores) {
+    const atuais = pAtual.detalhes.find((d) => d.gestor === g.nome)?.clientes ?? [];
+    const anteriores = new Map<string, { gasto: number; conversas: number }>();
+    for (const c of pAnt.detalhes.find((d) => d.gestor === g.nome)?.clientes ?? []) {
+      anteriores.set(c.accountId, { gasto: c.gasto, conversas: c.conversas });
+    }
+    const d = calcularDestaques(atuais, anteriores, incompletas);
+    // Sem CPL nos dois meses não há evolução para ranquear — a linha simplesmente
+    // não entra (é diferente de "evoluiu 0%", que seria uma afirmação).
+    if (!d || d.cplAtual === null || d.cplAnterior === null || d.deltaPct === null) continue;
+
+    const eleg = elegibilidadeDestaque(g.conversas, d);
+    linhas.push({
+      gestor: g.nome,
+      cplAtual: d.cplAtual,
+      cplAnterior: d.cplAnterior,
+      variacaoPct: d.deltaPct,
+      conversoes: g.conversas,
+      elegivel: eleg.elegivel,
+      motivoInelegivel: eleg.motivo,
+    });
+  }
+
+  linhas.sort((a, b) => a.variacaoPct - b.variacaoPct); // maior queda primeiro
+  return { mes: { ano, mes }, mesAnterior: ant, linhas };
 }
 
 /**

@@ -52,14 +52,18 @@ function ancoraMin(daily: MetricaDiaria[], contas: ContaMap[]): { ancoraMs: numb
 export function intervaloLabel(
   daily: MetricaDiaria[],
   contas: ContaMap[],
-  periodoDias: number
+  periodoDias: number,
+  // Quantos dias recuar a janela inteira. 0 = o período atual; `periodoDias` = o
+  // período anterior de mesmo tamanho. Existe para a tela poder escrever os DOIS
+  // intervalos que um Δ compara, sem uma segunda cópia desta conta de datas.
+  deslocamentoDias = 0
 ): string | null {
   const set = new Set(contas.map((c) => c.accountId));
   let max = "";
   for (const m of daily) if (set.has(m.accountId) && m.data > max) max = m.data;
   if (!max) return null;
 
-  const fimMs = Date.parse(max + "T00:00:00Z");
+  const fimMs = Date.parse(max + "T00:00:00Z") - deslocamentoDias * DIA_MS;
   const iniMs = fimMs - (periodoDias - 1) * DIA_MS;
   const dd = (ms: number) => String(new Date(ms).getUTCDate()).padStart(2, "0");
   const mm = (ms: number) => String(new Date(ms).getUTCMonth() + 1).padStart(2, "0");
