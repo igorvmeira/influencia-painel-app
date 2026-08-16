@@ -25,6 +25,8 @@ import Sparkline from "./Sparkline";
 import KpiCard from "./KpiCard";
 import DeltaChip from "./DeltaChip";
 import BarraDado from "./BarraDado";
+import Modal from "./Modal";
+import OrientacaoDoCliente from "./OrientacaoDoCliente";
 import { useEntrada } from "@/lib/useEntrada";
 import NumeroAnimado from "./NumeroAnimado";
 import IndicadorFrescor from "./IndicadorFrescor";
@@ -506,6 +508,14 @@ export default function Dashboard(
    *   que o usuário pediu ao trocar o período.
    */
   const { ref: refRanking, entrou: entrouRanking } = useEntrada<HTMLDivElement>();
+  /**
+   * A orientação aberta no modal. ⚠️ Custo zero: a orientação ATUAL já está no
+   * mapa que o Dashboard carregou (é como ele sabe desenhar o balão). Só o
+   * histórico é buscado, e só ao abrir.
+   */
+  const [vendoOrientacao, setVendoOrientacao] = useState<
+    { cliente: LinhaCliente; orientacao: EntradaOrientacao } | null
+  >(null);
   // Abre a aba de alertas já filtrada pelo tipo do chip clicado.
   function abrirAlertas(tipo: TipoAlerta | "todos") {
     setCentralFiltro(tipo);
@@ -1096,7 +1106,7 @@ export default function Dashboard(
                   </tr>
                 ) : (
                   clientes.map((c, i) => (
-                    <LinhaClienteRow key={c.accountId} c={c} ordem={i + 1} limite={limitesPorConta.get(c.accountId)} orientacao={orientacoes?.[c.accountId] ?? null} par={i % 2 === 1} />
+                    <LinhaClienteRow key={c.accountId} c={c} ordem={i + 1} limite={limitesPorConta.get(c.accountId)} orientacao={orientacoes?.[c.accountId] ?? null} par={i % 2 === 1} onVerOrientacao={(cl, o) => setVendoOrientacao({ cliente: cl, orientacao: o })} />
                   ))
                 )}
               </tbody>
@@ -1118,6 +1128,22 @@ export default function Dashboard(
 
       {/* Assistente de IA — só aparece se NEXT_PUBLIC_IA_ATIVA = "true" */}
       <IAChat periodoDias={diasEfetivos} />
+
+      {/* A orientação do cliente, SOBRE a tabela — sem perder posição, período
+          nem rolagem, que era o custo de ir para a /orientacoes inteira. */}
+      <Modal
+        aberto={vendoOrientacao !== null}
+        aoFechar={() => setVendoOrientacao(null)}
+        titulo={vendoOrientacao?.cliente.cliente ?? ""}
+        subtitulo="Orientação gerencial"
+      >
+        {vendoOrientacao && (
+          <OrientacaoDoCliente
+            accountId={vendoOrientacao.cliente.accountId}
+            atual={vendoOrientacao.orientacao}
+          />
+        )}
+      </Modal>
     </div>
   );
 }
@@ -1260,8 +1286,9 @@ function Th({ children, right, onClick }: { children: React.ReactNode; right?: b
   );
 }
 
-function LinhaClienteRow({ c, ordem, limite, orientacao, par }: {
+function LinhaClienteRow({ c, ordem, limite, orientacao, par, onVerOrientacao }: {
   c: LinhaCliente; ordem: number; limite?: LimiteConta; orientacao: EntradaOrientacao | null; par?: boolean;
+  onVerOrientacao: (c: LinhaCliente, o: EntradaOrientacao) => void;
 }) {
   return (
     // Zebra sutil (linhas alternadas) melhora a leitura horizontal em tabela densa;
@@ -1272,12 +1299,20 @@ function LinhaClienteRow({ c, ordem, limite, orientacao, par }: {
         <span className="inline-flex items-center gap-1.5">
           {c.cliente}
           {orientacao && (
-            // O `color` que havia aqui era estilo MORTO: o conteúdo é um emoji, que
-            // renderiza com as próprias cores e ignora `color`. Sobreviveu a alguma
-            // refatoração pintando nada.
-            <Link href="/orientacoes" title={orientacao.texto} className="text-[12px] leading-none transition hover:brightness-125" aria-label="Ver orientação">
+            // ⚠️ ERA UM <Link> PARA A /orientacoes INTEIRA, e sair da tela custava a
+            // sessão de leitura: posição na tabela, período selecionado e rolagem.
+            // Agora abre a orientação DESTE cliente sobre a tela.
+            // (O `color` que havia aqui era estilo morto: o conteúdo é emoji, que
+            // renderiza com as próprias cores e ignora `color`.)
+            <button
+              type="button"
+              onClick={() => onVerOrientacao(c, orientacao)}
+              title={orientacao.texto}
+              className="rounded text-[12px] leading-none transition hover:brightness-125"
+              aria-label={`Ver orientação de ${c.cliente}`}
+            >
               💬
-            </Link>
+            </button>
           )}
           {/* ⚠️ SEMÁFORO ≠ ALERTA DE CPL, e a tela precisa deixar isso claro.
               O alerta (coluna CPL / central de alertas) é CÁLCULO e muda sozinho a
