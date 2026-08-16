@@ -27,6 +27,7 @@ import DeltaChip from "./DeltaChip";
 import BarraDado from "./BarraDado";
 import Modal from "./Modal";
 import OrientacaoDoCliente from "./OrientacaoDoCliente";
+import BalaoOrientacao from "./BalaoOrientacao";
 import { useEntrada } from "@/lib/useEntrada";
 import NumeroAnimado from "./NumeroAnimado";
 import IndicadorFrescor from "./IndicadorFrescor";
@@ -261,7 +262,7 @@ export default function Dashboard(
   const pausadas = useMemo(() => contas.filter((c) => c.pausado), [contas]);
 
   // Orientações (indicador discreto na linha da conta). Degrada gracioso se falhar.
-  const { mapa: orientacoes } = useOrientacoes();
+  const { mapa: orientacoes, recarregar: recarregarOrientacoes } = useOrientacoes();
 
   // ---- Limites do histórico disponível (janela móvel do agregado, ~95 dias) ----
   // Só contas ATIVAS: o mínimo global pegaria dias órfãos de conta pausada
@@ -514,7 +515,7 @@ export default function Dashboard(
    * histórico é buscado, e só ao abrir.
    */
   const [vendoOrientacao, setVendoOrientacao] = useState<
-    { cliente: LinhaCliente; orientacao: EntradaOrientacao } | null
+    { cliente: LinhaCliente; orientacao: EntradaOrientacao | null } | null
   >(null);
   // Abre a aba de alertas já filtrada pelo tipo do chip clicado.
   function abrirAlertas(tipo: TipoAlerta | "todos") {
@@ -1141,6 +1142,10 @@ export default function Dashboard(
           <OrientacaoDoCliente
             accountId={vendoOrientacao.cliente.accountId}
             atual={vendoOrientacao.orientacao}
+            // ⚠️ Recarrega o MAPA, não a tela: sem isto o balão continuaria vazado
+            // depois de alguém escrever a primeira orientação, e a pessoa acharia
+            // que não salvou. É uma leitura leve (55 docs) e só acontece ao salvar.
+            aoSalvar={() => { void recarregarOrientacoes(); }}
           />
         )}
       </Modal>
@@ -1288,7 +1293,7 @@ function Th({ children, right, onClick }: { children: React.ReactNode; right?: b
 
 function LinhaClienteRow({ c, ordem, limite, orientacao, par, onVerOrientacao }: {
   c: LinhaCliente; ordem: number; limite?: LimiteConta; orientacao: EntradaOrientacao | null; par?: boolean;
-  onVerOrientacao: (c: LinhaCliente, o: EntradaOrientacao) => void;
+  onVerOrientacao: (c: LinhaCliente, o: EntradaOrientacao | null) => void;
 }) {
   return (
     // Zebra sutil (linhas alternadas) melhora a leitura horizontal em tabela densa;
@@ -1298,22 +1303,17 @@ function LinhaClienteRow({ c, ordem, limite, orientacao, par, onVerOrientacao }:
       <td className="px-4 py-3" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>
         <span className="inline-flex items-center gap-1.5">
           {c.cliente}
-          {orientacao && (
-            // ⚠️ ERA UM <Link> PARA A /orientacoes INTEIRA, e sair da tela custava a
-            // sessão de leitura: posição na tabela, período selecionado e rolagem.
-            // Agora abre a orientação DESTE cliente sobre a tela.
-            // (O `color` que havia aqui era estilo morto: o conteúdo é emoji, que
-            // renderiza com as próprias cores e ignora `color`.)
-            <button
-              type="button"
-              onClick={() => onVerOrientacao(c, orientacao)}
-              title={orientacao.texto}
-              className="rounded text-[12px] leading-none transition hover:brightness-125"
-              aria-label={`Ver orientação de ${c.cliente}`}
-            >
-              💬
-            </button>
-          )}
+          {/* ⚠️ O BALÃO APARECE EM TODA LINHA, com ou sem orientação — pedido do
+              Roberto (16/08/2026). Ele quer bater o olho na tabela e ver quais
+              contas ninguém comentou, para poder comentar. Balão só onde já existe
+              orientação transforma a ferramenta de escrever em prêmio de quem já
+              escreveu. */}
+          <BalaoOrientacao
+            cliente={c.cliente}
+            temOrientacao={orientacao !== null}
+            semaforo={orientacao?.semaforo ?? null}
+            onClick={() => onVerOrientacao(c, orientacao)}
+          />
           {/* ⚠️ SEMÁFORO ≠ ALERTA DE CPL, e a tela precisa deixar isso claro.
               O alerta (coluna CPL / central de alertas) é CÁLCULO e muda sozinho a
               cada sync; este selo é JULGAMENTO do Roberto e só muda quando alguém

@@ -7,6 +7,7 @@ import { useOrientacoes, salvarOrientacao, buscarHistorico } from "@/lib/useOrie
 import { haQuanto } from "@/lib/tempo";
 import { SEMAFOROS, estiloDe, type Semaforo } from "@/lib/semaforo";
 import { TEMA } from "@/lib/brand";
+import FormularioOrientacao from "./FormularioOrientacao";
 
 const CARD = TEMA.card;
 const INK = TEMA.fundo;
@@ -213,30 +214,17 @@ function LinhaOrientacao({ conta, atual, ordem, aoSalvar }: {
 
       {editando && (
         <div className="mt-3">
-          <textarea
-            value={texto}
-            onChange={(e) => setTexto(e.target.value.slice(0, MAX))}
-            rows={3}
-            placeholder="Ex.: CPL levemente alto. Fazer mais 4 criativos."
-            className="w-full rounded-lg px-3 py-2 text-[13px] outline-none placeholder:text-brand-placeholder"
-            style={{ background: INK, color: TEMA.texto, border: `1px solid ${LINE}` }}
+          {/* ⚠️ MESMO componente que o modal do Dashboard usa. Extraído em
+              16/08/2026: dois formulários criariam duas verdades sobre como se
+              escreve orientação, e é por isso que o modal podia ser só leitura
+              antes. Com um só, escrever nos dois lugares é a mesma coisa. */}
+          <FormularioOrientacao
+            accountId={conta.accountId}
+            inicial={atual}
+            // A tela recarrega o mapa inteiro; o `aoSalvar` daqui não recebe a nova.
+            aoSalvar={() => { setEditando(false); aoSalvar?.(); }}
+            aoCancelar={() => setEditando(false)}
           />
-          <SeletorSemaforo valor={semaforo} onChange={setSemaforo} />
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-            <span className="text-[11px]" style={{ color: MUTED }}>{texto.length}/{MAX}</span>
-            <div className="flex items-center gap-2">
-              {erroLocal && <span className="text-[12px]" style={{ color: RED }}>{erroLocal}</span>}
-              <button onClick={() => setEditando(false)} className="rounded-full px-3 py-1.5 text-[12px] font-medium" style={{ color: MUTED }}>Cancelar</button>
-              <button
-                onClick={salvar}
-                disabled={salvando || !texto.trim()}
-                className="rounded-full px-4 py-1.5 text-[12px] font-semibold transition-opacity disabled:opacity-40"
-                style={{ background: YELLOW, color: TEMA.textoSobreDestaque }}
-              >
-                {salvando ? "Salvando…" : "Salvar"}
-              </button>
-            </div>
-          </div>
         </div>
       )}
 
@@ -291,51 +279,3 @@ export function SeloSemaforo({ s }: { s: Semaforo | null }) {
   );
 }
 
-/**
- * Escolha do julgamento na hora de escrever.
- *
- * ⚠️ "SEM CLASSIFICAR" É UMA OPÇÃO EXPLÍCITA, não a ausência de clique. Sem ela,
- * quem abrisse uma orientação já classificada não teria como voltar atrás, e o
- * julgamento viraria irreversível por acidente de interface.
- *
- * ⚠️ O rótulo diz o QUE a cor significa. Cor sozinha não sobrevive a daltonismo
- * nem a print em preto e branco — os dois acontecem em reunião de agência.
- */
-function SeletorSemaforo({ valor, onChange }: {
-  valor: Semaforo | null; onChange: (s: Semaforo | null) => void;
-}) {
-  const opcoes: (Semaforo | null)[] = [...SEMAFOROS, null];
-  return (
-    <div className="mt-2">
-      <p className="mb-1 text-[11px]" style={{ color: MUTED }}>
-        Desempenho do cliente — seu julgamento, independente do alerta automático de CPL.
-      </p>
-      <div className="flex flex-wrap gap-1.5">
-        {opcoes.map((o) => {
-          const e = estiloDe(o);
-          const ativo = valor === o;
-          return (
-            <button
-              key={o ?? "neutro"}
-              type="button"
-              onClick={() => onChange(o)}
-              title={e.descricao}
-              className="rounded-full px-3 py-1 text-[12px] font-medium transition hover:brightness-125"
-              // ⚠️ A opção NÃO selecionada precisa parecer clicável. Em `borda`
-              // (1,23:1) o contorno sumia no escuro e as três viravam texto solto —
-              // logo na interação que o semáforo acabou de estrear. `bordaForte` dá
-              // 3,19:1, o piso da WCAG 1.4.11 para limite de componente.
-              // Sem preenchimento de propósito: quatro pills lado a lado, só a
-              // selecionada tem cor, e o contorno é o que diz "isto é um botão".
-              style={ativo
-                ? { background: e.fundo, color: e.cor, border: `1.5px solid ${e.cor}` }
-                : { background: "transparent", color: MUTED, border: `1px solid ${TEMA.bordaForte}` }}
-            >
-              {o ? e.rotulo : "Sem classificar"}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}

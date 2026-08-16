@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { buscarHistorico } from "@/lib/useOrientacoes";
+import FormularioOrientacao from "./FormularioOrientacao";
 import { mensagemErro } from "@/lib/erros";
 import { estiloDe } from "@/lib/semaforo";
 import { haQuanto } from "@/lib/tempo";
@@ -24,13 +25,31 @@ const MUTED = TEMA.muted;
  * ninguém abre 55 modais.
  */
 export default function OrientacaoDoCliente({
-  accountId, atual,
+  accountId, atual: atualInicial, aoSalvar,
 }: {
   accountId: string;
   atual: EntradaOrientacao | null;
+  /** Avisa a tela para atualizar o balão sem recarregar tudo. */
+  aoSalvar?: (nova: EntradaOrientacao) => void;
 }) {
   const [historico, setHistorico] = useState<EntradaOrientacao[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [atual, setAtual] = useState(atualInicial);
+  /**
+   * ⚠️ Conta SEM orientação já abre ESCREVENDO. O objetivo do Roberto é "ver a
+   * linha, clicar, escrever" — abrir uma janela para dizer "não tem nada aqui" e
+   * exigir mais um clique seria transformar o convite em obstáculo.
+   */
+  const [editando, setEditando] = useState(atualInicial === null);
+
+  function salvou(nova: EntradaOrientacao) {
+    setAtual(nova);
+    setEditando(false);
+    // O histórico ganhou uma entrada — recarrega para a lista ficar coerente.
+    setHistorico(null);
+    buscarHistorico(accountId).then(setHistorico).catch(() => setHistorico([]));
+    aoSalvar?.(nova);
+  }
 
   useEffect(() => {
     let vivo = true;
@@ -42,13 +61,18 @@ export default function OrientacaoDoCliente({
     return () => { vivo = false; };
   }, [accountId]);
 
+  // Sem orientação nenhuma: o modal É o formulário, sem passo intermediário.
   if (!atual) {
     return (
       <div>
-        <p className="rounded-lg px-4 py-3 text-[12.5px]" style={{ background: TEMA.chip, color: MUTED }}>
-          Esta conta ainda não tem orientação escrita.
+        <p className="mb-3 text-[12.5px]" style={{ color: MUTED }}>
+          Esta conta ainda não tem orientação. Escreva a primeira:
         </p>
-        <LinkParaGerenciar />
+        <FormularioOrientacao
+          accountId={accountId}
+          aoSalvar={salvou}
+          rotuloSalvar="Salvar a primeira"
+        />
       </div>
     );
   }
@@ -60,6 +84,14 @@ export default function OrientacaoDoCliente({
   return (
     <div>
       {/* ================= A ATUAL ================= */}
+      {editando ? (
+        <FormularioOrientacao
+          accountId={accountId}
+          inicial={atual}
+          aoSalvar={salvou}
+          aoCancelar={() => setEditando(false)}
+        />
+      ) : (
       <div className="px-5 py-4" style={{ background: TEMA.card, border: `1px solid ${TEMA.borda}`, borderRadius: TEMA.raioCard }}>
         <div className="mb-2.5 flex flex-wrap items-center gap-2">
           {/* ⚠️ O selo traz o RÓTULO em texto, não só a cor: cor sozinha não
@@ -78,7 +110,16 @@ export default function OrientacaoDoCliente({
         <p className="whitespace-pre-wrap text-[13px] leading-relaxed" style={{ color: TEMA.texto }}>
           {atual.texto}
         </p>
+        <button
+          type="button"
+          onClick={() => setEditando(true)}
+          className="mt-3 rounded-full px-3 py-1.5 text-[12px] font-medium transition hover:brightness-125"
+          style={{ background: TEMA.fundo, color: TEMA.texto, border: `1px solid ${TEMA.bordaForte}` }}
+        >
+          Editar
+        </button>
       </div>
+      )}
 
       {/* ⚠️ SEMÁFORO ≠ ALERTA DE CPL, e o modal repete isso porque aqui ele aparece
           sozinho, sem a tabela ao lado onde os dois convivem rotulados. */}
@@ -129,25 +170,6 @@ export default function OrientacaoDoCliente({
         )}
       </div>
 
-      <LinkParaGerenciar />
     </div>
-  );
-}
-
-/**
- * ⚠️ O modal é SÓ LEITURA, de propósito. Escrever orientação tem seletor de
- * semáforo, validação e histórico que se empilha — replicar isso numa janela
- * sobreposta duplicaria o formulário e criaria duas verdades sobre como se
- * escreve. Quem quer editar vai para a tela que já faz isso bem.
- */
-function LinkParaGerenciar() {
-  return (
-    <Link
-      href="/orientacoes"
-      className="mt-4 inline-flex items-center gap-1.5 text-[12.5px] underline underline-offset-2 transition hover:brightness-125"
-      style={{ color: TEMA.ouroTexto }}
-    >
-      Escrever ou editar em Orientações →
-    </Link>
   );
 }
