@@ -62,6 +62,18 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
 - Sem gradientes/sombras pesadas; layout limpo, tipografia forte, uma cor de destaque.
 - A cor de destaque é para **ação e ênfase**, não decoração. Verde/vermelho só com
   significado (bom/ruim). Cuidado com semântica invertida: CPL subindo é **ruim** (vermelho).
+- ⚠️ **BLOQUEIO DE PERMISSÃO NÃO É PANE — 403 desenhado como erro vermelho faz a pessoa
+  reportar bug.** Uma tela de admin deste painel (`/fila-contas`) fica atrás de uma
+  allowlist, e o item de menu aparece para os 8 gestores de propósito: esconder não é
+  proteção, a checagem é no servidor. Se o 403 saísse no mesmo card vermelho de "falhou ao
+  carregar", **7 pessoas por dia veriam o painel quebrado** e alguém iria procurar defeito
+  onde não há. Sai em painel NEUTRO, com o texto que explica de quem é a tela e por quê.
+  **A régua: vermelho é para o que está QUEBRADO, não para o que está NEGADO.** É o mesmo
+  raciocínio do alarme que dispara todo dia (ver *Robustez*) noutro eixo — vermelho gasto
+  onde nada está errado é vermelho que ninguém lê quando algo estiver.
+  **Corolário prático:** a mensagem do 403 vira **constante compartilhada** entre a rota e a
+  tela, porque é o TEXTO que decide o desenho; textos duplicados divergem, e no dia em que
+  divergirem o bloqueio volta a se parecer com pane, sem ninguém ter mexido no CSS.
 - Números em tabelas e KPIs com `tabular-nums` (evita as colunas "dançarem").
 - Ao trocar a identidade de um cliente, peça uma **auditoria de cores "chumbadas"** fora dos
   tokens — é isso que mantém o starter realmente reutilizável.
@@ -180,6 +192,23 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
 - Uma feature secundária que falha **não pode derrubar** a tela principal: degrade com
   elegância (some o enfeite, o essencial continua).
 - Coleção que ainda não existe deve retornar lista vazia, não erro 500.
+- ⚠️ **LISTA VAZIA AMBÍGUA PRECISA DIZER O QUE O VAZIO *NÃO* SIGNIFICA.** Quando a fonte de
+  uma listagem é sabidamente incompleta, "nenhum resultado" tem duas leituras — *não existe*
+  e *não apareceu* — e a tela mostra a mesma coisa nas duas. **A leitura errada é sempre a
+  tranquilizadora**, e por isso ela vence: vazio parece "está tudo em dia".
+  Caso real: a fila de contas novas usa `me/adaccounts`, que **não lista conta vinda de
+  parceria de BM**. Medido em 16/08/2026 — o token lista 111 contas e **9 das 117
+  cadastradas estão fora dessa listagem**; antes disso, 8 contas com **R$ 45.943,25 em 120
+  dias** ficaram fora do painel exatamente assim. Fila vazia ali significa "o token não
+  listou nada novo", nunca "não há contas novas". **O aviso vai na tela, junto do vazio** —
+  documentar no código não protege ninguém, porque quem lê a tela não lê o código.
+  É a mesma família do `situacaoDoAnuncio`, que devolve `null` (e não "pausado") quando a
+  Meta não responde: **ausência de dado não é evidência de ausência do fato.** Antes de
+  escrever "nenhum X encontrado", pergunte se a fonte enxerga todos os X — e se não
+  enxergar, o vazio precisa vir acompanhado do que ele não prova.
+  ⚠️ E esse aviso é **estado permanente, não alerta**: vai em cor de ênfase (dourado), nunca
+  em vermelho. Não é uma falha que alguém vá consertar — é o limite da ferramenta, e ele
+  estará lá em toda visita.
 - ⚠️ **ALARME QUE DISPARA TODO DIA VIRA RUÍDO QUE NINGUÉM LÊ.** Ao ligar uma verificação
   automática, separe o que **deriva** do que **quebra**:
   · comparação contra uma foto de referência **diverge sozinha** com o tempo (a base é

@@ -158,6 +158,46 @@ chamadas**: as três primeiras sincronizam com janela cheia e as demais são **a
 travaria a conta como truncada em definitivo). Repita a mesma chamada até
 `adiadas` voltar vazio, conferindo `novasComJanelaCheia` no retorno.
 
+## A tela `/fila-contas` — e por que este arquivo pode não ser mais a lista inteira
+
+Desde **16/08/2026** existe uma segunda porta de entrada para a carteira: a tela
+**Contas Novas** (`/fila-contas`). O `sync-meta` lista o que o token expõe, tira o que
+já está cadastrado, sonda moeda/status/gasto do que sobra e grava em
+`sistema/filaContas`. **Uma pessoa decide; nada é cadastrado automaticamente.**
+
+O cadastro pela tela grava **direto no Firestore**, marcado com
+`origemCadastro: "tela"`, `cadastradaPor` e `cadastradaEm`.
+
+> ⚠️ **Consequência: `contas.json` deixa de ser necessariamente a lista completa.**
+> Ele continua sendo a fonte que o import gerencia, mas passa a ser *uma* fonte, não
+> *a* fonte. A divergência é **declarada, nunca silenciosa**:
+>
+> - o relatório do `/api/import-contas` tem uma seção **`cadastradasPelaTela` que
+>   aparece SEMPRE**, inclusive dizendo "zero" — é ela que ensina que a divergência
+>   é possível antes de a primeira existir;
+> - conta com `origemCadastro: "tela"` **não é listada como órfã** (órfã é doc que
+>   ninguém declarou; estas têm autor e data);
+> - a tela tem um botão **"copiar linha do JSON"** para reconciliar quando se quiser
+>   o git como histórico da carteira. Colada a linha e rodado o import, o campo
+>   `noJson` daquela conta vira `true` no relatório.
+
+Acesso: env **`FILA_EMAILS_PERMITIDOS`** (falha fechado — vazia, ninguém entra). Mesma
+trava temporária do `IA_EMAILS_PERMITIDOS`, pelo mesmo motivo: as rotas checam se o
+usuário está logado, não o papel dele. Sai quando o sistema de papéis entrar.
+
+### ⚠️ Fila vazia NÃO quer dizer "não há contas novas"
+
+A descoberta usa `me/adaccounts`, e **essa listagem é comprovadamente incompleta**: em
+15/08/2026, **8 contas somando R$ 45.943,25 em 120 dias** respondiam à consulta direta
+e não apareciam nela — vinham de parceria de Business Manager. Medido de novo em
+16/08/2026: o token lista **111** contas, e **9 das 117 cadastradas** estão fora dessa
+listagem.
+
+Para essas o caminho continua sendo o de sempre: pedir o `accountId` **em texto**
+(nunca transcrever de print) e sondar por consulta direta —
+`/api/diagnostico-contas?accountId=act_1,act_2`. Este aviso está na própria tela, no
+rodapé, e é a parte dela que não pode ser cortada.
+
 ## Pendências de cadastro
 
 Contas identificadas na conciliação de 06/08/2026 que **não** foram cadastradas, com
