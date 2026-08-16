@@ -7,6 +7,7 @@ import { TEMA, MOVIMENTO } from "@/lib/brand";
 import SecaoHeader from "./SecaoHeader";
 import KpiCard from "./KpiCard";
 import BarraDado from "./BarraDado";
+import AvisoDadoVelho from "./AvisoDadoVelho";
 
 const MUTED = TEMA.muted;
 const GOLD = TEMA.destaque;
@@ -85,6 +86,8 @@ export default function Recuperacao() {
           </Link>
         </p>
       </div>
+
+      <AvisoDadoVelho geradoEm={agregado.geradoEm} oQue="a recuperação" />
 
       {/* ================= O TAMANHO ================= */}
       <SecaoHeader

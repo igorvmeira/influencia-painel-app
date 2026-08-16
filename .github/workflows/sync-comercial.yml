@@ -1,0 +1,80 @@
+name: sync-comercial
+
+# Sincroniza o funil comercial do Xmax e REGRAVA o pré-agregado.
+#
+# ⚠️ É UMA CHAMADA SÓ, e não duas: o `/api/comercial/sync?aplicar=1` grava as
+# coleções granulares E o documento `comercial_agregados/funil` na mesma execução.
+# Não existe passo separado de "regravar o agregado" — se o sync passou, a tela
+# já está com a foto nova.
+#
+# ⚠️ O BACKFILL POR VARREDURA DE ID NÃO ENTRA AQUI, de propósito. Ele são ~19 mil
+# chamadas à API do Xmax para recuperar histórico que já foi recuperado uma vez;
+# rodar de novo custaria a mesma varredura para achar o que o sync diário já traz.
+# Se um dia for preciso (base restaurada, coleção perdida), é execução manual.
+
+on:
+  schedule:
+    # 09:30 UTC = 06:30 em Brasília. Meia hora depois do sync-meta, para os dois
+    # não disputarem a janela de função nem o mesmo minuto de cron do GitHub.
+    - cron: "30 9 * * *"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Rodar sync comercial (grava coleções + pré-agregado)
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+
+          BASE="https://influencia-painel-app.vercel.app/api/comercial/sync"
+
+          # ⚠️ Uma tentativa extra: o sync é IDEMPOTENTE (docId determinístico e
+          # gravação só do que mudou), então repetir é seguro. Sem isso, um pico de
+          # latência do Xmax deixaria a tela um dia inteiro com a foto velha.
+          for TENTATIVA in 1 2; do
+            echo "== Tentativa ${TENTATIVA} =="
+            RESP=$(curl -sS --max-time 120 "${BASE}?key=${CRON_SECRET}&aplicar=1") || RESP='{"ok":false,"erro":"curl falhou"}'
+
+            OK=$(echo "$RESP" | jq -r '.ok // false')
+            if [ "$OK" = "true" ]; then
+              break
+            fi
+
+            echo "Falhou:"
+            echo "$RESP" | jq '.' || echo "$RESP"
+            if [ "$TENTATIVA" = "2" ]; then
+              exit 1
+            fi
+            sleep 20
+          done
+
+          # O log do Actions é o único lugar onde alguém vê isto quando dá errado —
+          # então ele mostra as métricas, não só "ok".
+          echo "$RESP" | jq '{
+            oportunidades: .gravacao.oportunidades,
+            pessoas: .gravacao.pessoas,
+            conferencia: .conferencia.linhas,
+            tudoBate: .conferencia.tudoBate,
+            coerencia: .conferencia.coerencia.tudoCoerente,
+            ordemDivergiu: .ordemDoDonoVsXmax.divergem
+          }'
+
+          # ⚠️ FALHA O JOB SE A COERÊNCIA QUEBRAR. `tudoBate` compara com uma foto de
+          # 14/08 e diverge todo dia (a agência cria lead) — não serve de alarme.
+          # `coerencia` são identidades que valem em QUALQUER dia: se uma quebrar, a
+          # regra mudou de comportamento e alguém precisa olhar.
+          COERENTE=$(echo "$RESP" | jq -r '.conferencia.coerencia.tudoCoerente // false')
+          if [ "$COERENTE" != "true" ]; then
+            echo "::error::A coerência do funil quebrou — soma dos níveis, contenção ou sobreposição."
+            exit 1
+          fi
+
+          # A ordem do Xmax divergir da do dono não derruba o sync, mas precisa
+          # aparecer: significa que a agência reordenou as etapas por lá.
+          DIVERGIU=$(echo "$RESP" | jq -r '.ordemDoDonoVsXmax.divergem // false')
+          if [ "$DIVERGIU" = "true" ]; then
+            echo "::warning::A ordem das etapas no Xmax divergiu da ordem de negócio — confira NIVEIS_FUNIL."
+          fi

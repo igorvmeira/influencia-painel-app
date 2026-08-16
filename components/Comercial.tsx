@@ -10,6 +10,7 @@ import SecaoHeader from "./SecaoHeader";
 import BarraDado from "./BarraDado";
 import KpiCard from "./KpiCard";
 import ColunasComMedia from "./ColunasComMedia";
+import AvisoDadoVelho from "./AvisoDadoVelho";
 
 const CARD = TEMA.card;
 const LINE = TEMA.borda;
@@ -149,6 +150,9 @@ export default function Comercial() {
           {new Date(agregado.geradoEm).toLocaleString("pt-BR", { timeZone: agregado.fuso, dateStyle: "short", timeStyle: "short" })}.
         </p>
       </div>
+
+      {/* ⚠️ A data acima é carimbo, não garantia — ver AvisoDadoVelho. */}
+      <AvisoDadoVelho geradoEm={agregado.geradoEm} oQue="o funil comercial" />
 
       {/* ================= O FUNIL ================= */}
       <Bloco
