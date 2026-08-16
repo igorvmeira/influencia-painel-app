@@ -185,6 +185,30 @@ Acesso: env **`FILA_EMAILS_PERMITIDOS`** (falha fechado — vazia, ninguém entr
 trava temporária do `IA_EMAILS_PERMITIDOS`, pelo mesmo motivo: as rotas checam se o
 usuário está logado, não o papel dele. Sai quando o sistema de papéis entrar.
 
+### ⚠️ Conta REMOVIDA volta a aparecer como novidade — e a fila agora avisa
+
+A fila lista o que o token enxerga e não está no de-para. **Conta que já esteve na
+carteira e foi removida cai exatamente nesse filtro**, e até 16/08/2026 aparecia
+indistinguível de uma conta nunca vista. Quem recadastrasse desfaria uma decisão sem
+nunca saber que houve decisão.
+
+Caso real: **BAUMAN CA 02** (`act_2060095867813465`, gestor LUCAS) saiu do
+`contas.json` em **18/07/2026** (commit `13a44e7`) e apareceu na primeira fila como
+candidata nova. Está registrada em `sistema/contasIgnoradas` com o motivo escrito.
+
+Como a fila detecta: `limitesConta` e `metricasAgregadas` só são escritos pelo sync
+para contas do de-para, então **doc lá para conta fora do de-para é sobra de quando
+ela esteve**. Custo: ≤2 leituras por candidata no sync, zero na tela. O campo
+`ultimaSincronizacao` é **piso, não data de remoção** — a conta saiu em algum momento
+depois dela.
+
+> 🛑 **Não limpe os docs órfãos dessas duas coleções.**
+> `limitesConta/act_2060095867813465` é hoje a única evidência em runtime de que a
+> BAUMAN esteve na carteira, e é ele que acende o aviso. Apagar destrói o sinal.
+> Para poder limpar, a remoção de conta precisa antes gravar uma **lápide própria**
+> (ex.: `sistema/contasRemovidas`, com quem removeu e quando) — aí o rastro deixa de
+> depender de sobra, a data vira exata, e os órfãos saem sem perder nada.
+
 ### ⚠️ Fila vazia NÃO quer dizer "não há contas novas"
 
 A descoberta usa `me/adaccounts`, e **essa listagem é comprovadamente incompleta**: em

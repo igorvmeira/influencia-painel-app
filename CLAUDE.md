@@ -209,6 +209,23 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   ⚠️ E esse aviso é **estado permanente, não alerta**: vai em cor de ênfase (dourado), nunca
   em vermelho. Não é uma falha que alguém vá consertar — é o limite da ferramenta, e ele
   estará lá em toda visita.
+- ⚠️ **AUSÊNCIA DE REGISTRO NÃO É AUSÊNCIA DE HISTÓRIA — a terceira da mesma família.**
+  Uma listagem "do que não está cadastrado" mistura duas populações que exigem decisões
+  opostas: o que **nunca existiu** e o que foi **removido de propósito**. Sem separar, quem
+  recadastra desfaz a decisão de outra pessoa sem nunca saber que houve decisão.
+  Caso real: a fila de contas novas mostrou a BAUMAN CA 02 como candidata nova; ela tinha
+  saído da carteira 29 dias antes. **O erro é assimétrico** — deixar de cadastrar algo novo
+  se corrige na próxima varredura; recadastrar o que alguém tirou não se percebe nunca.
+  **A evidência costuma já existir de graça, em sobra:** coleções que só são escritas para
+  itens ativos guardam o rastro de quem saiu. Antes de escrever "novo", pergunte se a fonte
+  distingue *novo* de *voltou*.
+  🛑 **E o corolário que quase custou caro:** ao "limpar registros órfãos" para economizar,
+  confira se eles não SÃO o sinal que alguma tela lê. A limpeza que parece higiene apaga a
+  memória — e o aviso some sem nada quebrar. Rastro por sobra é frágil por natureza: quando
+  a informação passar a valer, grave uma **lápide explícita** (quem removeu, quando) em vez
+  de depender do que não foi apagado.
+  Junto com o vazio ambíguo e o `situacaoDoAnuncio`: **a tela nunca deve afirmar mais do que
+  a fonte sabe.**
 - ⚠️ **ALARME QUE DISPARA TODO DIA VIRA RUÍDO QUE NINGUÉM LÊ.** Ao ligar uma verificação
   automática, separe o que **deriva** do que **quebra**:
   · comparação contra uma foto de referência **diverge sozinha** com o tempo (a base é
@@ -319,6 +336,28 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   numa string, passaria.
 - **Antes de comparar um percentual contra um limiar, diga sobre o que ele é percentual.**
   Um número correto sobre o denominador errado passa na revisão, porque a conta fecha.
+- ⚠️ **PISO SIMPLES NÃO PEGA FURO NO NUMERADOR — todo ranking de razão precisa de piso
+  nos DOIS lados.** A régua "mínimo de N conversões" existe para barrar a conta que
+  converteu pouco e produz percentual gigante: ela protege o DENOMINADOR. Não protege o
+  contrário. Caso real: no ranking de melhor CPL vs a média do nicho, a **ARP TELECOM
+  apareceu em 1º lugar da carteira com CPL R$ 0 e −100%** — tinha 5 conversões (passou no
+  piso) e **zero gasto**. Custo zero é o mínimo matemático, então uma conta assim é sempre
+  a campeã e o pódio inteiro vira mentira.
+  **E o modo de falha é o mais caro que existe: ela não aparecia na janela de 7 dias e
+  aparecia na de 15.** Entraria sozinha num dia qualquer, sem ninguém ter mexido em nada —
+  não há mudança para investigar, e o defeito não é reportado como bug, é lido como "esse
+  ranking está estranho".
+  **A régua: em `a ÷ b`, pergunte o que acontece quando `a` é zero e quando `b` é zero.**
+  Os dois pisos medem coisas diferentes e nenhum substitui o outro — um garante que a razão
+  SIGNIFICA algo, o outro garante que ela EXISTE.
+- ⚠️ **DUAS RÉGUAS PARA O MESMO DADO É DESENHO, NÃO DUPLICAÇÃO — quando respondem a
+  perguntas diferentes.** "Quantas contas estão perto do teto de gasto" (ESTADO) e "quais
+  exigem alguém fazer algo hoje" (AÇÃO) saem dos mesmos dois campos e não são a mesma
+  pergunta: medido em 16/08/2026, **42 de 51 contas com teto estavam em ≥90%** — como
+  estado, uma descrição correta; como alerta, o alarme diário que vira ruído. O que separa
+  é o RITMO (`restante ÷ gasto por dia`), e ele reduziu as 42 a 10 já paradas + 11 na
+  semana. As duas funções convivem no mesmo módulo, cada uma com o nome do que responde, e
+  o comentário diz por que apagar uma para "unificar" quebra a outra.
 - **Nunca compare dois números em frames de data diferentes.** Cada um pode estar certo
   sozinho e a comparação medir coisas distintas — "criados este ano" contra "fechados este
   ano" não é a mesma pergunta, e a conclusão sai maior que o dado.
