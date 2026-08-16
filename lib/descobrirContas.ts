@@ -32,6 +32,29 @@ export const DOC_IGNORADAS = "contasIgnoradas";
 const DIAS_GASTO = 120;
 /** Teto de sondagens por execução. O corte é REPORTADO, nunca silencioso. */
 const MAX_SONDAS = 25;
+
+/**
+ * Coleções que o sync escreve APENAS para contas do de-para. Doc aqui para uma
+ * conta que não está no de-para é sobra de quando ela esteve — é o que permite a
+ * fila distinguir "nunca vista" de "removida de propósito".
+ *
+ * ⚠️ AS DUAS, e não só uma: quando a BAUMAN CA 02 saiu da carteira em 18/07/2026, o
+ * doc de `metricasAgregadas` dela foi apagado junto e o de `limitesConta` ficou.
+ * Olhar só a agregada teria perdido justamente o caso que originou a checagem.
+ *
+ * 🛑 NÃO LIMPE ESSES DOCS ÓRFÃOS "PARA ECONOMIZAR LEITURA". Um deles —
+ * `limitesConta/act_2060095867813465`, a BAUMAN — é hoje a ÚNICA evidência em
+ * runtime de que aquela conta esteve na carteira, e é ele que faz a marca acender.
+ * Apagar destrói o sinal que esta função lê: o aviso some, e a conta volta a
+ * parecer novidade.
+ *
+ * A condição para ele poder sair NÃO é "a fila sinaliza" — a fila sinaliza LENDO
+ * o doc. É a remoção de conta passar a gravar uma **lápide própria** (algo como
+ * `sistema/contasRemovidas`, com quem removeu e quando). Aí o rastro deixa de
+ * depender de sobra de sincronização, a data vira exata em vez de piso, e os
+ * órfãos podem ser limpos sem perder nada.
+ */
+const COLECOES_RASTRO = ["limitesConta", "metricasAgregadas"] as const;
 /** Sondas simultâneas — mesmo valor do /api/diagnostico-contas. */
 const LOTE_SONDA = 8;
 
@@ -199,6 +222,37 @@ export async function descobrirContas(
   let cortadas = ordenadas.length - aSondar.length;
   let motivoCorte: FilaContas["motivoCorte"] = cortadas > 0 ? "teto" : null;
 
+  /**
+   * RASTRO DE PASSAGEM PELA CARTEIRA — ver COLECOES_RASTRO.
+   *
+   * ⚠️ CUSTO: no máximo 2 leituras por candidata (≤50 por execução do sync), e
+   * ZERO na tela. Vale de sobra pela classe de erro que evita: recadastrar uma
+   * conta que alguém removeu de propósito, sem nunca saber que houve decisão.
+   *
+   * ⚠️ FALHA ABERTO. Se a leitura do rastro der erro, a descoberta continua e as
+   * candidatas saem sem a marca — perder o aviso é ruim, perder a fila inteira por
+   * causa de um enfeite é pior. Mesma regra da etapa secundária no sync-meta.
+   */
+  const rastro = new Map<string, string | null>();
+  try {
+    const refs = COLECOES_RASTRO.flatMap((col) =>
+      aSondar.map((m) => db.collection(col).doc(m.id || `act_${m.account_id}`))
+    );
+    if (refs.length) {
+      for (const snap of await db.getAll(...refs)) {
+        if (!snap.exists) continue;
+        const id = snap.id;
+        // Vence a data MAIS RECENTE entre as coleções: é o piso mais apertado para
+        // "a conta saiu depois disto".
+        const em = (snap.data()?.atualizadoEm as string | undefined) ?? null;
+        const atual = rastro.get(id);
+        rastro.set(id, atual && em && atual > em ? atual : (em ?? atual ?? null));
+      }
+    }
+  } catch (e) {
+    console.error("[descobrirContas] rastro indisponível (segue sem a marca):", e);
+  }
+
   // ------------------------------------------------------------- 3) SONDAGEM
   const candidatas: CandidataFila[] = [];
   for (let i = 0; i < aSondar.length; i += LOTE_SONDA) {
@@ -228,6 +282,10 @@ export async function descobrirContas(
           diasComGasto: gasto.diasComGasto,
           ultimoDiaComGasto: gasto.ultimoDiaComGasto,
           erro: ident.erro ?? gasto.erro,
+          // `has`, não truthiness: o rastro pode existir com `atualizadoEm` ausente,
+          // e aí a conta esteve na carteira mesmo sem data para mostrar.
+          jaEsteveNaCarteira: rastro.has(accountId),
+          ultimaSincronizacao: rastro.get(accountId) ?? null,
         };
       })
     );

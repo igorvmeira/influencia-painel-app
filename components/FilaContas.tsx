@@ -40,6 +40,12 @@ function gasto(c: CandidataFila): string {
 const dataBR = (iso: string | null) =>
   iso ? new Date(iso + "T12:00:00").toLocaleDateString("pt-BR", { timeZone: MARCA.fuso }) : "—";
 
+/** ISO completo (com hora) → data no fuso da marca. Usado no rastro de carteira. */
+const dataHoraBR = (iso: string) => {
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? "—" : d.toLocaleDateString("pt-BR", { timeZone: MARCA.fuso });
+};
+
 export default function FilaContas() {
   const { fila, erro, recarregar, aplicar } = useFilaContas();
   const { contas } = useContas();
@@ -359,6 +365,24 @@ function CardCandidata({ c, nichos, tipos, nomesExistentes, aoDecidir, aoErrar }
           )}
         </div>
       </div>
+
+      {/*
+        ⚠️ VEM ANTES DE TUDO NO CARD, e em `atencao` — não em vermelho.
+        Não é falha nem bloqueio: é um fato que muda o julgamento, e precisa ser
+        lido ANTES dos números, senão a pessoa já decidiu olhando o gasto.
+        Ver o porquê da marca em lib/filaContas.ts.
+      */}
+      {c.jaEsteveNaCarteira && (
+        <p className="mt-3 rounded-lg px-3 py-2 text-[12px] leading-relaxed"
+          style={{ background: TEMA.limiteFundo, color: TEMA.atencao }}>
+          <b>⚠ Esta conta já esteve na carteira.</b>{" "}
+          {c.ultimaSincronizacao
+            ? <>O painel sincronizou dados dela até <b>{dataHoraBR(c.ultimaSincronizacao)}</b> — ela saiu
+              da carteira em algum momento <b>depois</b> disso (a data exata não está no dado).</>
+            : <>Sobrou dado de sincronização dela, sem data.</>}
+          {" "}Recadastrar desfaz uma decisão que alguém tomou. Confirme com a agência antes.
+        </p>
+      )}
 
       {/* GASTO — a única prova de veiculação. */}
       <div className="mt-3 flex flex-wrap items-baseline gap-x-5 gap-y-1 text-[12.5px]">

@@ -49,6 +49,42 @@ export interface CandidataFila {
   ultimoDiaComGasto: string | null;
   /** Erro da sondagem, quando houve. Conta com erro entra marcada, não some. */
   erro: string | null;
+  /**
+   * ⚠️⚠️ ESTA CONTA JÁ ESTEVE NA CARTEIRA E FOI REMOVIDA.
+   *
+   * A fila não sabia distinguir **"nunca vista"** de **"removida de propósito"**, e
+   * mostrava as duas do mesmo jeito: como novidade. É a terceira tela desta base a
+   * afirmar mais do que sabe — depois da lista vazia ambígua e do
+   * `situacaoDoAnuncio` que devolvia "pausado" no lugar de `null`.
+   *
+   * O custo do erro é assimétrico e silencioso: quem recadastra desfaz uma decisão
+   * que alguém tomou, sem nunca saber que houve decisão. Caso real: a BAUMAN CA 02
+   * (`act_2060095867813465`) saiu da carteira em 18/07/2026 e apareceu na primeira
+   * fila como candidata nova, indistinguível das outras duas.
+   *
+   * A EVIDÊNCIA é sobra de sincronização: `limitesConta` e `metricasAgregadas` são
+   * escritos pelo sync apenas para contas do de-para. Doc lá para conta que não
+   * está no de-para significa que ela esteve.
+   *
+   * 🛑 **`false` NÃO PROVA QUE A CONTA É NOVA** — e ignorar isto seria repetir, no
+   * sinal novo, o defeito que ele veio consertar. A detecção depende de a limpeza
+   * ter sido INCOMPLETA. A conta fantasma `act_191616327202757` esteve na carteira,
+   * foi apagada das três coleções em 12/08/2026 e por isso aparece aqui como
+   * `false`: verdadeiro para o dado, falso para o fato.
+   *
+   * Ou seja: `true` é afirmação, `false` é silêncio. A marca ACRESCENTA informação
+   * quando existe e nunca autoriza a conclusão contrária — o que só se resolve com
+   * a lápide explícita descrita em `lib/descobrirContas.ts`.
+   */
+  jaEsteveNaCarteira: boolean;
+  /**
+   * Última vez que o sync tocou nesta conta.
+   *
+   * ⚠️ É PISO, NÃO A DATA DA REMOÇÃO — e o rótulo na tela precisa dizer isso. A
+   * conta saiu da carteira em algum momento **depois** desta data; o quanto depois,
+   * o dado não conta. Chamar de "removida em" seria inventar precisão.
+   */
+  ultimaSincronizacao: string | null;
 }
 
 export interface FilaContas {
@@ -80,6 +116,13 @@ export interface Ignorada {
  * ⚠️ Acesso é a CONSULTA DIRETA, nunca a presença em `me/adaccounts` — o sync
  * consulta `/{accountId}/insights` direto e nunca olha a listagem. Aqui a conta já
  * chegou por ter sido listada, mas quem prova que dá para cadastrar é a sonda.
+ */
+/**
+ * ⚠️ `jaEsteveNaCarteira` NÃO ENTRA AQUI de propósito. Ter sido removida não é
+ * impedimento TÉCNICO — é informação que muda o julgamento humano, e o julgamento é
+ * exatamente o que esta fila nunca automatiza. Bloquear o cadastro faria a fila
+ * decidir no lugar de quem sabe se o cliente voltou; omitir faria ela esconder a
+ * decisão anterior. O caminho é o terceiro: mostrar, com destaque, e deixar passar.
  */
 export function podeCadastrar(c: CandidataFila): { ok: boolean; motivo: string | null } {
   if (c.erro) return { ok: false, motivo: `a sondagem falhou: ${c.erro}` };
