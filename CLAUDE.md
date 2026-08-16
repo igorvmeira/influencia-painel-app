@@ -257,6 +257,14 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   Do mesmo jeito, **card de MÉTRICA e card de ENTIDADE são naturezas distintas**: o de
   entidade tem avatar, é clicável e carrega selos; forçá-lo no molde do de métrica custa
   exatamente o que ele tem de próprio.
+- ⚠️ **Antes de manter uma restrição, pergunte de que ela era PROXY.** Um modal deste painel
+  nasceu "só leitura" — e a razão escrita não era "modal não deve escrever", era **"dois
+  formulários criariam duas verdades sobre como se escreve"**. Quando a tela passou a
+  precisar escrever, a saída não foi quebrar a regra nem obedecê-la: foi **EXTRAIR o
+  formulário**, e aí a razão da restrição simplesmente deixou de existir.
+  **Restrição bem escrita carrega o porquê, e é o porquê que diz quando ela expira.** Se o
+  motivo original não estiver anotado, a regra vira superstição — mantida por quem não sabe
+  se ainda vale, ou quebrada por quem não sabe o que ela protegia.
 - ⚠️ **Regra que mora no PONTO DE CHAMADA se perde na terceira tela.** Um card fazia
   `delta={semComparacao ? null : delta}` no render: funcionava, e dependia de todo uso
   futuro lembrar. Regra que define o comportamento do componente mora **dentro** dele.
