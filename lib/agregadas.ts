@@ -57,11 +57,17 @@ export interface DocAgregado {
    */
   porGrupo?: GrupoDia[];
   /**
-   * Último dia coberto por `porGrupo` — quem consome a quebra ROTULA a janela por
-   * este campo. Assumir que ela cobre o mesmo período de `dias` produziria uma
-   * comparação entre janelas diferentes, que é o erro que a casa já pagou uma vez
-   * ("nunca compare dois números em frames de data diferentes").
+   * A janela de `porGrupo`, nos DOIS extremos — quem consome a quebra ROTULA por eles.
+   * Assumir que ela cobre o mesmo período de `dias` produziria comparação entre janelas
+   * diferentes, que é o erro que a casa já pagou uma vez ("nunca compare dois números em
+   * frames de data diferentes").
+   *
+   * ⚠️ Ela é MENOR que `dias` nos dois lados, por motivos distintos:
+   *   · no topo, porque o dia mais recente é parcial e não é conferido;
+   *   · na base, porque a retenção guarda 95 dias e a busca pede 94 — o dia da fronteira
+   *     sobrevive em `dias` e nunca tem quebra. Ele sai sozinho no dia seguinte.
    */
+  porGrupoDe?: string | null;
   porGrupoAte?: string | null;
 }
 

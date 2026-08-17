@@ -247,14 +247,70 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   cancela o que o servidor já gravou, e a retentativa duplicaria o registro.
 
 ## Sincronização e tarefas longas
-- Vercel grátis corta funções em ~10s. Para uso **comercial**, prefira **Vercel Pro**
-  (mais tempo + cron nativo).
+- ⚠️ **O TETO DE TEMPO DA VERCEL: MEÇA, NÃO ASSUMA.** Esta linha dizia "grátis corta em
+  ~10s", herdado da documentação, e **está errado para este projeto**. Medido em
+  17/08/2026, em 117 chamadas reais ao `/api/sync-meta` em produção: mediana **4,2s**,
+  p90 9,3s, p99 14,9s, e a maior que **completou** foi **33,7s** — com **zero estouros**.
+  O que vale é o `maxDuration` declarado na rota (60s aqui), não o número da doc.
+  **Continue projetando sync incremental** — resumível é bom por si, e o dia em que o
+  plano ou o runtime mudar o teto volta a apertar. Mas **não desenhe em volta de um teto
+  que você não mediu**: premissa de infraestrutura envelhece, e uma linha errada no
+  arquivo de regras orienta desenho por meses. Este projeto quase quebrou um sync em
+  blocos por causa de um limite que não existia.
+- Para uso **comercial**, prefira **Vercel Pro** (mais tempo + cron nativo).
 - Se estiver no grátis: torne o sync **incremental/resumível** (parâmetros de offset/limite,
   grava cada item ao terminar) e automatize com **GitHub Actions** (workflow em cron que chama
   o endpoint em blocos até terminar).
 - Sync **idempotente**: rodar de novo atualiza (merge), não duplica. Use docId determinístico.
 - Ao mudar o sync, valide que ele **continua gravando tudo que já gravava** — ele alimenta o
   app inteiro. Campo ausente na fonte grava `null`, nunca `0` (zero é um valor real).
+
+## O QUE NÃO É CONFERIDO NÃO É GRAVADO
+- ⚠️ **Regra geral, não detalhe de um sync.** Quando uma rotina calcula um número E o
+  confere, os dois lados precisam cobrir **exatamente o mesmo recorte**. Conferir menos do
+  que se grava deixa dado não verificado no banco; gravar menos do que se confere é
+  desperdício inofensivo. É o primeiro que morde.
+- **Como o erro aparece:** a conferência ganha uma exclusão legítima — "o dia mais recente
+  é parcial, não dá para comparar" — e a gravação não ganha a mesma. O banco passa a
+  guardar justamente a parte que ninguém validou. Caso real: a quebra por conjunto ficou
+  com 2 conversões num dia em que o total dizia 0, porque as duas fontes foram amostradas
+  a ~1s de distância e a Meta atribuiu no meio.
+- 🛑 **E o pior modo de falha é a soma que não fecha.** Duas somas na mesma tela que
+  divergem por pouco não parecem erro, parecem arredondamento — ninguém investiga. É a
+  mesma família da fatia invisível na barra empilhada: o número está errado e a tela
+  continua plausível.
+- **Corolário do merge:** se o recorte fresco exclui um período, o merge precisa **APAGAR**
+  o que estava lá naquele período — senão o valor antigo, escrito antes da regra existir,
+  nunca mais é reescrito e vira imortal. O dado fresco define o teto; o que está acima
+  dele é resíduo.
+- **E diga na estrutura até onde o número vale** (um campo como `porGrupoAte`), porque a
+  parte conferida costuma cobrir menos que o resto do documento — e quem consome precisa
+  rotular a janela em vez de assumir que é a mesma.
+- ⚠️ **CONFERÊNCIA QUE TRATA AUSÊNCIA COMO APROVAÇÃO É CONFERÊNCIA QUE NÃO CONFERE.** Ao
+  comparar duas fontes, é tentador pular o que existe num lado e não no outro — "não há o
+  que comparar". Isso abre um buraco do tamanho de um registro inteiro: se a segunda fonte
+  responder 200 com dado vazio, a entidade passa com ZERO itens conferidos e o relatório
+  diz verde. **Separe "ausente e inativo" (nada a comparar, pule) de "ausente com
+  atividade" (a fonte veio incompleta, é divergência).**
+  É a mesma família do vazio ambíguo, aplicada à própria régua — o lugar onde ela é mais
+  difícil de ver, porque quem escreve a conferência confia nela.
+- ⚠️ **`ok: true` NO ENVELOPE NÃO SIGNIFICA QUE TUDO FOI.** Rotina que processa N itens e
+  tolera falha individual devolve sucesso com os fracassos numa lista à parte. Quem lê só
+  o envelope recebe "deu certo". Caso real: uma conta com R$ 9.079 de gasto lançou exceção
+  no meio de um backfill, entrou em `.erros`, a resposta veio `ok: true`, e o laço registrou
+  como bloco vazio — a conta ficou sem o dado novo e só apareceu numa conferência manual.
+  **Todo consumidor de resposta parcial checa a lista de falhas, não o booleano.** E a
+  severidade é assimétrica: em rotina que se repete (sync diário), falha individual AVISA,
+  porque amanhã refaz; em rotina de tiro único (backfill, migração), REPROVA, porque item
+  perdido fica perdido.
+- ⚠️ **REGRA QUE FUNCIONA POR ACASO NÃO É REGRA — confira se ela cobre a CLASSE ou só o
+  caso.** Um piso de "mínimo de 100 conversões" barrava corretamente o gestor sem campanha
+  de geração de lead… porque ele tinha 5 conversões, não porque tinha zero elegíveis. Um
+  gestor com 500 conversões, todas em grupos fora da régua, passaria no piso e entraria no
+  ranking com CPL indefinido. **A correção não foi uma regra nova: foi trocar o INSUMO** da
+  regra existente (conversões elegíveis em vez de totais), e aí ela passa a cobrir a classe.
+  Quando uma proteção parece já funcionar, pergunte por que — se a resposta for um valor
+  específico da base de hoje, ela vai falhar quando a base mudar.
 
 ## Mudanças estruturais em dados (migração segura)
 - Quando trocar a fonte de leitura de uma tela, faça em **duas etapas**:
@@ -383,4 +439,43 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
 - Diante de um problema, **descubra a causa real** antes de propor correção — e diga quando
   não souber, em vez de chutar. Um erro de infraestrutura (cota, permissão, credencial) se
   parece com bug de código, mas o conserto é outro.
+- ⚠️ **REPETIR A PREMISSA DO PEDIDO SEM MEDIR É COMO O ERRO ENTRA.** O pedido chega com um
+  diagnóstico embutido, e ele é *plausível* — foi escrito por quem conhece o sistema. Aceitá-lo
+  é o caminho mais rápido para construir a coisa errada com competência.
+  Dois erros da MESMA tarefa vieram daí, os dois medidos depois:
+  · **o defeito não era o descrito.** O pedido era quebrar o sync por objetivo de campanha
+    "porque o painel soma formulário e WhatsApp juntos". Ele não somava: os dois já eram
+    campos separados, derivados do `action_type`, e essa separação é EXATA porque vem do
+    evento. Agrupar por rótulo de objetivo seria menos preciso — o mesmo valor
+    (`OUTCOME_ENGAGEMENT`) produziu 911 linhas de WhatsApp e 3 de formulário. O problema
+    real (gasto sem atribuição) estava ao lado, valia mais, e ninguém tinha pedido.
+  · **o custo não era o afirmado.** "Zero chamadas a mais, é a mesma requisição com outro
+    parâmetro" — eu repeti isso no plano sem conferir. Não fecha: `reach` é métrica
+    DEDUPLICADA, e derivar o total da conta somando conjuntos empilharia dupla contagem num
+    campo gravado há meses. É uma chamada a mais, e admitir isso melhorou o desenho (duas
+    fontes independentes viram conferência de verdade).
+  **A régua: antes de implementar o conserto pedido, meça se o defeito é o descrito.**
+  Confirmar o diagnóstico é parte da tarefa, não etapa opcional antes dela. E quando a
+  medição contraria quem pediu, isso se diz — com o número na mão, antes do código.
+- ⚠️ **A PREMISSA NÃO MEDIDA TAMBÉM MORA NO TAMANHO DA AMOSTRA, não só no conteúdo.**
+  Apresentar uma lista como completa quando ela veio de uma janela curta é a mesma falha,
+  um nível abaixo — e é pior, porque a lista *parece* dado, não opinião.
+  Caso real: levantei os grupos de otimização numa janela de 7 dias e reportei "são 10".
+  Em 95 dias eram **14**, e o maior grupo excluído aparecia com R$ 309 na amostra curta
+  contra **R$ 10.322** no período inteiro — o suficiente para mudar a decisão de negócio
+  que se tomou em cima do número.
+  **Diga sempre de que recorte a lista veio, e pergunte se o recorte é grande o bastante
+  para a lista fechar.** Item raro é justamente o que uma amostra curta esconde.
+- ⚠️ **NÚMERO QUE VAI PARA FORA SE MEDE UMA VEZ, NA POPULAÇÃO INTEIRA.** Corrigir o mesmo
+  número duas vezes para quem vai levá-lo a uma reunião gasta a confiança nele — na
+  terceira, ninguém acredita em nenhum. Se o cálculo depende de uma base que está sendo
+  preenchida, **o script se recusa a rodar incompleto** em vez de você lembrar de conferir:
+  uma trava no começo (`if (faltando.length) process.exit(1)`) custa três linhas e evita a
+  correção seguinte.
+- ⚠️ **EXEMPLO ERRADO É PIOR QUE NENHUM EXEMPLO.** Ao registrar uma lição, confira se o
+  caso citado é o que realmente aconteceu. Eu quase registrei "a conta X passou verde na
+  conferência de identidade" — a lição estava certa, o mecanismo estava certo, e o caso era
+  outro (ela nunca chegou à conferência; falhou antes, num ponto diferente). Um exemplo
+  falso vira referência: alguém vai desenhar em cima dele. **Lição sem exemplo é honesta;
+  lição com exemplo inventado é dívida.**
 - Ao mexer em algo que já está no ar sendo usado, mostre o **plano antes do código**.

@@ -94,7 +94,20 @@ function conferir(
   c: ContaMap,
   registros: MetricaDiaria[],
   conjuntos: Awaited<ReturnType<typeof buscarDiarioPorConjunto>>,
-  maisRecente: string
+  maisRecente: string,
+  /**
+   * Primeiro dia que a busca de CONJUNTO cobriu. Dia mais antigo que isto está em
+   * `dias` por herança do merge e nunca foi pedido no nível de conjunto — acusá-lo
+   * seria acusar a própria aritmética de janela.
+   *
+   * ⚠️ ESTE PARÂMETRO EXISTE PORQUE A MEDIÇÃO PEGOU UM OFF-BY-ONE MEU. `cutoffRetencao`
+   * guarda 95 dias; `buscarDiario`/`buscarDiarioPorConjunto` pedem `dias - 1` para trás,
+   * ou seja 94. O dia da fronteira sobrevive em `dias` e nunca tem conjunto — e a regra
+   * de "ausência com atividade é divergência" acusaria **51 dia-conta todo dia**, todos
+   * na mesma data. Seria o alarme diário que vira ruído, criado dentro da conferência
+   * feita para evitá-lo.
+   */
+  desde: string
 ): { diasConferidos: number; divergencias: Divergencia[] } {
   const porDiaConjunto = somarPorDia(conjuntos);
   const divergencias: Divergencia[] = [];
@@ -102,8 +115,30 @@ function conferir(
 
   for (const r of registros) {
     if (r.data === maisRecente) continue;
+    if (r.data < desde) continue; // fora da janela que o conjunto cobriu — ver `desde`
     const a = porDiaConjunto.get(r.data);
-    if (!a) continue; // ver a nota sobre dia ausente
+    if (!a) {
+      /**
+       * ⚠️ AUSÊNCIA COM ATIVIDADE É DIVERGÊNCIA, não "nada a comparar".
+       *
+       * A versão anterior pulava todo dia ausente de um dos lados, e isso abria um
+       * buraco do tamanho de uma conta: se o `level=adset` respondesse 200 com dado
+       * vazio, a conta inteira passaria na identidade com ZERO dias conferidos —
+       * silêncio lido como aprovação. **Conferência que trata ausência como
+       * aprovação é conferência que não confere.**
+       *
+       * A distinção que importa: dia SEM gasto e SEM conversão realmente não tem o
+       * que comparar (o level=account pode simplesmente não devolver a linha). Dia
+       * COM atividade e sem nenhum conjunto significa que a quebra veio incompleta.
+       */
+      if (r.gasto > TOLERANCIA_GASTO || r.leadsForm > 0 || r.convWhats > 0) {
+        divergencias.push({
+          accountId: c.accountId, cliente: c.cliente ?? "", data: r.data,
+          campo: "gasto", conta: r.gasto, conjuntos: 0,
+        });
+      }
+      continue;
+    }
     diasConferidos++;
     const base = { accountId: c.accountId, cliente: c.cliente ?? "", data: r.data };
     if (Math.abs(r.gasto - a.gasto) > TOLERANCIA_GASTO) {
@@ -240,6 +275,7 @@ export async function GET(req: Request) {
     let conjuntos: Awaited<ReturnType<typeof buscarDiarioPorConjunto>> = [];
     let porGrupoFresco: GrupoDia[] = [];
     let diaParcial: string | null = null;
+    let desdeConjunto: string | null = null;
     let conferencia: { diasConferidos: number; divergencias: Divergencia[] } = {
       diasConferidos: 0, divergencias: [],
     };
@@ -255,7 +291,13 @@ export async function GET(req: Request) {
       diaParcial = maisRecente || null;
 
       porGrupoFresco = somarPorGrupoDia(conjuntos).filter((g) => g.data < maisRecente);
-      conferencia = conferir(c, registros, conjuntos, maisRecente);
+      // O piso da janela que a busca de conjunto cobriu — a MESMA aritmética das duas
+      // funções de busca (`dias - 1` dias para trás). Derivada aqui e não do menor dia
+      // devolvido: uma conta sem gasto nos dias antigos devolveria um piso alto demais e
+      // a conferência deixaria de olhar dias que ela deveria olhar.
+      desdeConjunto = new Date(Date.now() - (janelaDaConta - 1) * 86400000)
+        .toISOString().slice(0, 10);
+      conferencia = conferir(c, registros, conjuntos, maisRecente, desdeConjunto);
 
       for (let i = 0; i < conjuntos.length; i += LOTE) {
         const batch = db!.batch();
@@ -292,13 +334,21 @@ export async function GET(req: Request) {
       ? gruposAntigos.filter((g) => g.data >= cutoffRetencao())
       : mesclarGrupos(gruposAntigos, porGrupoFresco, cutoffRetencao(), diaParcial);
 
-    // Até onde a quebra vale. Fica UM dia atrás de `dias` de propósito — ver
-    // `conferir`. Quem consumir a quebra rotula a janela por este campo, nunca
-    // assumindo que ela cobre o mesmo período que o total.
+    /**
+     * A JANELA DA QUEBRA, nos dois extremos — e ela NÃO é a de `dias`.
+     *
+     * `porGrupoAte` fica um dia atrás do total (o parcial não é conferido, ver
+     * `conferir`). `porGrupoDe` existe pelo motivo simétrico: o dia mais antigo de
+     * `dias` sobrevive um dia além do que a busca cobre (retenção de 95 vs janela de
+     * 94), então a quebra começa depois. Dizer só um dos dois lados faria quem consome
+     * supor que o outro coincide com `dias` — e comparar janelas diferentes é o erro que
+     * a casa já pagou uma vez.
+     */
     const porGrupoAte = porGrupo.length ? porGrupo[porGrupo.length - 1].data : null;
+    const porGrupoDe = porGrupo.length ? porGrupo[0].data : null;
 
     await aggRef.set({
-      accountId: c.accountId, dias, porGrupo, porGrupoAte,
+      accountId: c.accountId, dias, porGrupo, porGrupoDe, porGrupoAte,
       atualizadoEm: new Date().toISOString(),
     });
 

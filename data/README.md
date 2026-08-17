@@ -237,20 +237,136 @@ na carteira inteira (115 contas legíveis):
 
 São **6,8% do gasto da carteira** em conjuntos que nunca tentaram gerar lead —
 alcance, visita a perfil, impressão. Esse dinheiro está hoje no **denominador do CPL**,
-invisível, puxando o número para cima:
+invisível, puxando o número para cima.
 
-- CPL da carteira como o painel calcula hoje: **R$ 13,22**
-- Excluindo os conjuntos que não buscam lead: **R$ 12,39**
-
-Diferença de **6,3%** no número que a agência usa para avaliar gestor.
-
-> ⚠️ **NÃO MUDE O CÁLCULO DO CPL POR CONTA DISSO.** Decisão do Igor em 16/08/2026: a
-> /gestores está aprovada e embasa bonificação. Trocar a régua sem alinhar com o Roberto
-> mudaria a nota de todos os gestores de um dia para o outro, e a mudança pareceria uma
-> correção técnica quando é uma mudança de critério.
+> 🛑 **O IMPACTO DE ~~6,3%~~ NÃO É O NÚMERO FINAL — não use este parágrafo para decidir.**
 >
-> Fica registrado como **pendência de decisão**, não como bug. O gatilho é a conversa
-> com a agência; o Igor vai levar o número.
+> ~~CPL R$ 13,22 → R$ 12,39, diferença de 6,3%.~~
+>
+> Aquele cálculo tinha **dois defeitos de recorte**, os dois do mesmo tipo:
+> 1. **janela de 7 dias** (06 a 12/08), não a retida inteira;
+> 2. **lista de grupos incompleta** — excluía só 4 grupos, e a régua final do Roberto exclui
+>    10. Entre os que a amostra curta não mostrou estava o `OFFSITE_CONVERSIONS`, que ENTRA
+>    no CPL e traz muita conversão junto.
+>
+> O impacto pela régua final foi medido em 17/08/2026 na carteira toda (78 contas ativas,
+> 6.165 dia-conta, 15/05 a 16/08) e é **muito menor**. **O número está apurado e ainda NÃO
+> foi registrado aqui de propósito:** ele muda se a decisão sobre o caso do CPL indefinido
+> mexer na régua, e este número já foi corrigido duas vezes para quem o leva à agência.
+> Entra quando a decisão do Roberto sobre o gestor sem campanha de lead fechar.
+>
+> **A lição de recorte está no CLAUDE.md** (*a premissa não medida também mora no tamanho
+> da amostra*). O que este parágrafo continua provando, e é o que originou a conversa: existe
+> gasto relevante fora da geração de lead, e ele estava invisível.
+
+> ⚠️ **A régua mudou — ver a decisão do Roberto abaixo.** O registro acima é a MEDIÇÃO que
+> originou a conversa; a decisão que saiu dela está na seção seguinte.
+
+### A DECISÃO DO ROBERTO (17/08/2026) — a régua nova do CPL
+
+Três respostas, e elas são a especificação da Etapa 2:
+
+**1. Quatro grupos entram no CPL.** `REPLIES`, `QUALITY_LEAD`, `LEAD_GENERATION` e
+`OFFSITE_CONVERSIONS`.
+
+Ficam **fora**: `LINK_CLICKS`, `IMPRESSIONS`, `REACH`, `PROFILE_VISIT`,
+`VISIT_INSTAGRAM_PROFILE`, `POST_ENGAGEMENT`, `THRUPLAY`, `AUTOMATIC_OBJECTIVE`,
+`PROFILE_AND_PAGE_ENGAGEMENT`, `LANDING_PAGE_VIEWS` e qualquer grupo novo que a Meta
+inventar.
+
+> **`OFFSITE_CONVERSIONS` ENTROU por decisão do Roberto em 17/08/2026.** Ele ficou fora na
+> primeira versão da régua e a revisão o trouxe: é **conversão de pixel** — o lead acontece
+> no site do cliente —, e **97% do volume dele é formulário**. É diferente de IMPRESSIONS e
+> REACH, que não tentam gerar lead: esse tenta e consegue, só que fora da Meta.
+>
+> Ele era o **maior grupo excluído** da versão anterior: R$ 10.322 na janela retida, contra
+> R$ 309 na amostra de 7 dias que originou a primeira lista. Foi a amostra curta que quase
+> o deixou de fora.
+>
+> **`LINK_CLICKS` continua FORA, também por decisão** — apesar de ter gerado **132
+> conversas** na janela medida.
+>
+> ⚠️ **Os dois casos juntos são o ponto: a lista é JULGAMENTO DA AGÊNCIA, não consequência
+> mecânica do dado.** Um grupo que gera lead está dentro, outro que gera lead está fora.
+> Sem isso escrito, alguém no futuro "corrige" um dos dois olhando só as conversões, e
+> muda a nota de bonificação de todos sem saber que está revertendo uma decisão.
+
+> ⚠️ A lista de dentro é **fechada**, a de fora é **o resto** — e essa assimetria é
+> deliberada. Grupo novo que a Meta inventar cai automaticamente **fora** do CPL, que é o
+> lado seguro: um grupo desconhecido entrando no denominador mudaria a nota de gestor sem
+> ninguém ter decidido nada. Para incluir um grupo novo, alguém precisa escrevê-lo na
+> lista — e é essa a intenção.
+
+> ⚠️ `LINK_CLICKS` está fora **por decisão**, não por não gerar lead: ele gerou 132
+> conversas na janela medida. A régua é do Roberto, não uma consequência do dado.
+
+**2. O gasto excluído APARECE À PARTE — nunca some da tela.** O gestor continua vendo
+quanto está investido fora da geração de lead. Sem isso o dinheiro desaparece e ninguém
+percebe que existe — que é o defeito que a medição dos R$ 3.556 revelou, e repetir isso
+com o número na mão seria pior que a primeira vez.
+
+**3. Vale A PARTIR DA DATA DE CORTE. O retroativo NÃO muda.** Os meses que já embasaram
+bonificação ficam exatamente como estão. Antes do corte, o CPL é calculado como sempre
+foi (todo o gasto no denominador); a partir dele, pela régua nova.
+
+> ⚠️ E a tela precisa **DIZER** isso onde os dois períodos se encontram. Série mensal que
+> troca de régua no meio sem avisar é pior que duas séries separadas: alguém vai ler a
+> queda do CPL como melhora de desempenho, quando é mudança de denominador.
+
+**A data de corte é `2026-09-01`**, aprovada em 17/08/2026. Quatro motivos, e o terceiro
+decide:
+
+1. **É fronteira de mês, e a /gestores compara meses fechados.** Corte no meio do mês
+   deixaria um mês metade régua velha, metade nova — internamente inconsistente, pior que
+   qualquer das duas.
+2. **Nada que alguém já viu muda.** Agosto fecha com a régua com que começou.
+3. **Dá ~15 execuções do sync diário com a conferência de identidade verde antes da régua
+   ligar.** O backfill é tiro único; o diário só reverifica 30 dias. Ligar a régua no dia
+   em que o dado nasceu seria confiar em dado que não sobreviveu a um único dia de sync.
+4. Dá tempo de resolver o caso do CPL indefinido (abaixo).
+
+### Como a fronteira é marcada na tela
+
+1. **A comparação que cruza o corte NÃO mostra percentual** — mostra `—` com o motivo, pelo
+   `motivo` do `DeltaChip`, que já força o "—" e já explica. Percentual com asterisco
+   continua sendo lido como percentual.
+2. **Marcador na fronteira da série mensal**, no vocabulário que já existe (o ⚠ âmbar de
+   maio/2025 na /comercial).
+3. **Cada ponto carrega a régua no tooltip** — quem passa o mouse num ponto isolado não vê
+   o marcador da fronteira.
+4. **Nunca cor diferente antes/depois.** Cor neste painel significa bom/ruim; gastá-la em
+   "régua" faria alguém ler a régua velha como estado ruim.
+
+### 🛑 CPL SEM CONVERSÃO ELEGÍVEL É INDEFINIDO, NUNCA ZERO
+
+Medido em 17/08/2026: o gestor **MATHEUS** tem as duas contas ativas rodando
+**inteiramente** em grupos excluídos (AW ONLINE em `PROFILE_VISIT`; RODA MINEIRA em `REACH`
+e `VISIT_INSTAGRAM_PROFILE`), somando R$ 2.184,41. Pela régua nova ele tem **zero gasto
+elegível e zero conversão elegível**.
+
+O `cpl()` da casa devolve **0 quando não há conversão**. Sem conserto, ele apareceria com
+**CPL R$ 0,00 — o mínimo matemático — e viraria o melhor gestor da agência** numa tela que
+embasa bônus. É a mesma família da ARP TELECOM (ver *piso duplo* no CLAUDE.md): `a ÷ b` com
+`a` zero.
+
+Decisão do Igor: é **conserto técnico, não decisão de negócio**. Onde não há conversão
+elegível o valor é **indefinido**, a tela mostra `—` com o motivo ("nenhuma campanha de
+geração de lead no período"), e o gestor não entra em ranking nem recebe selo.
+
+**E o mecanismo de exclusão não é regra nova: é o piso que já existe, recebendo o insumo
+certo.** O `PISO_CONVERSOES_GESTOR` (100) barra o MATHEUS hoje — mas **por acaso**, porque
+ele tem 5 conversões, não porque tem zero elegíveis. Um gestor com 500 conversões, todas em
+grupos fora da régua, passaria no piso e entraria no ranking com CPL indefinido. Alimentar
+o piso com **conversões elegíveis** cobre a classe, e não muda a elegibilidade de ninguém
+hoje (os 7 gestores com volume têm elegíveis muito acima de 100).
+
+> ⚠️ **O PISO E O `indefinido` SOBEM COM A RÉGUA, EM 01/09 — NUNCA ANTES, E ATRÁS DA MESMA
+> CONSTANTE.** O `motivo` do piso imprime o número (`Volume baixo no mês (N conversões)`).
+> Se o piso passasse a contar elegíveis enquanto o CPL ainda usa o total, a /gestores
+> mostraria "Volume baixo no mês (0 conversões)" ao lado de uma linha com 5 conversões e
+> CPL R$ 128,49 — o número menor **dentro da explicação** de por que o maior não conta.
+> Duas chaves separadas deixariam os dois divergirem; uma constante só torna a troca
+> atômica.
 
 ## Lição de método: eu pedi a coisa errada e a medição mostrou
 

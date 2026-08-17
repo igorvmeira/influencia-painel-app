@@ -62,6 +62,18 @@ jobs:
               echo "Identidade OK em $(echo "$RESP" | jq -r '.conferencia.diasConferidos') dia-conta."
             fi
 
+            # ⚠️ `ok: true` NAO SIGNIFICA "todas as contas foram". O sync devolve ok
+            # true e coloca as contas que falharam em `.erros` — e foi assim que a OBBU
+            # ficou sem quebra por conjunto no backfill sem ninguem ver: quem lia so o
+            # `.ok` recebia sucesso.
+            # AVISA e nao reprova, de proposito: no sync DIARIO a proxima execucao
+            # refaz a conta. No backfill e o contrario (tiro unico), e la reprova.
+            ERROS=$(echo "$RESP" | jq -r '.erros | length')
+            if [ "${ERROS:-0}" != "0" ]; then
+              echo "::warning::${ERROS} conta(s) FALHARAM nesta chamada (o ok=true nao cobre isso):"
+              echo "$RESP" | jq -r '.erros[] | "  - \(.accountId): \(.erro)"'
+            fi
+
             # Falha de rede na quebra por conjunto NAO e divergencia: nao houve o que
             # comparar, e a linha conta-dia (que alimenta o app) ja foi gravada. Avisa.
             FALHAS=$(echo "$RESP" | jq -r '.conferencia.falhasNaQuebra | length')

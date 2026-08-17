@@ -59,13 +59,30 @@ jobs:
               || RESP='{"ok":false,"erro":"curl falhou"}'
 
             OK=$(echo "$RESP" | jq -r '.ok // false')
-            if [ "$OK" != "true" ]; then
-              echo "::warning::Falhou na posicao ${OFFSET} — segue para a proxima."
-              echo "$RESP" | jq '.' || echo "$RESP"
+
+            # ⚠️ `ok: true` NAO BASTA, e ignorar isso custou uma conta neste backfill.
+            # O sync devolve ok=true e coloca as contas que falharam em `.erros`. A OBBU
+            # (R$ 9.079 de gasto, gestora JOAO PEDRO) lancou excecao no offset 32, a
+            # resposta veio ok=true, e o laco registrou como se fosse bloco vazio: ela
+            # ficou sem quebra por conjunto e so apareceu numa conferencia manual.
+            # AQUI REPROVA, ao contrario do sync diario: backfill e tiro unico, e conta
+            # perdida fica perdida para sempre.
+            ERROS=$(echo "$RESP" | jq -r '.erros | length // 0')
+            # E bloco que nao sincronizou NINGUEM tambem e falha: com limite=1 sempre
+            # deveria vir uma conta. Zero significa erro, adiamento ou offset vazio.
+            FEZ=$(echo "$RESP" | jq -r '.sincronizadas | length // 0')
+
+            if [ "$OK" != "true" ] || [ "${ERROS:-0}" != "0" ]; then
+              echo "::warning::Falhou na posicao ${OFFSET} (ok=${OK}, erros=${ERROS}) — segue para a proxima."
+              echo "$RESP" | jq '{ok, erros}' || echo "$RESP"
               FALHOU="${FALHOU} ${OFFSET}"
               OFFSET=$((OFFSET + LIMITE))
               sleep 4
               continue
+            fi
+            if [ "${FEZ:-0}" = "0" ]; then
+              echo "::warning::Posicao ${OFFSET} nao sincronizou nenhuma conta — anotando para repique."
+              FALHOU="${FALHOU} ${OFFSET}"
             fi
 
             echo "$RESP" | jq -r '.sincronizadas[] | "  \(.cliente): \(.registros) dias, \(.conjuntos) linhas de conjunto, \(.grupos) grupo(s)"'
