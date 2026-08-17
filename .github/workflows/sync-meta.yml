@@ -47,6 +47,29 @@ jobs:
 
             echo "Contas processadas nesta chamada: ${PROCESSADAS} (registros gravados: ${REGISTROS})"
 
+            # ⚠️ IDENTIDADE: soma dos conjuntos = total da conta, dia a dia. As duas
+            # fontes sao requisicoes INDEPENDENTES a Meta (level=account e level=adset)
+            # sobre a mesma janela, entao a soma fecha em qualquer dia — para sempre.
+            # Se quebrar e bug (apelido contado duas vezes, paginacao truncada), nao
+            # deriva sozinha com o tempo. Por isso DERRUBA O JOB.
+            IDENT=$(echo "$RESP" | jq -r '.conferencia.identidadeOk // "ausente"')
+            if [ "$IDENT" = "false" ]; then
+              echo "::error::A identidade conjunto vs conta QUEBROU — a quebra por conjunto nao fecha com o total. Nao troque a leitura."
+              echo "$RESP" | jq '.conferencia'
+              exit 1
+            fi
+            if [ "$IDENT" = "true" ]; then
+              echo "Identidade OK em $(echo "$RESP" | jq -r '.conferencia.diasConferidos') dia-conta."
+            fi
+
+            # Falha de rede na quebra por conjunto NAO e divergencia: nao houve o que
+            # comparar, e a linha conta-dia (que alimenta o app) ja foi gravada. Avisa.
+            FALHAS=$(echo "$RESP" | jq -r '.conferencia.falhasNaQuebra | length')
+            if [ "${FALHAS:-0}" != "0" ]; then
+              echo "::warning::${FALHAS} conta(s) sem a quebra por conjunto nesta chamada (a metrica da conta foi gravada normalmente)."
+              echo "$RESP" | jq -r '.conferencia.falhasNaQuebra[] | "  - \(.cliente): \(.erro)"'
+            fi
+
             if [ "$PROXIMO" = "null" ] || [ -z "$PROXIMO" ]; then
               echo "proximoOffset=null — sincronização concluída."
 

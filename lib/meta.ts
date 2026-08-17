@@ -1,4 +1,4 @@
-import { ContaMap, Criativo, MetricaDiaria } from "./types";
+import { ContaMap, Criativo, GrupoDia, MetricaConjunto, MetricaDiaria } from "./types";
 
 const API = process.env.META_API_VERSION || "v21.0";
 const TOKEN = process.env.META_ACCESS_TOKEN || "";
@@ -161,6 +161,112 @@ export async function buscarDiario(accountId: string, dias = 30): Promise<Metric
 }
 
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
+
+/**
+ * O MESMO diário, quebrado por CONJUNTO DE ANÚNCIOS (`level=adset`).
+ *
+ * ⚠️ É UMA CHAMADA A MAIS, não a mesma com outro parâmetro — e o motivo é o `reach`.
+ * A ideia original era trocar `level=account` por `level=adset` e derivar a linha da
+ * conta somando os conjuntos, a custo zero de requisição. Isso funciona para gasto,
+ * formulário e WhatsApp (provado: 115 de 115 contas bateram exatamente), e NÃO
+ * funciona para `reach`, que é métrica deduplicada — a mesma pessoa alcançada por
+ * dois conjuntos contaria duas vezes. O `reach` já é somado por DIA e já fica ~69%
+ * acima da BM; empilhar uma segunda dupla contagem degradaria em silêncio um campo
+ * gravado há meses.
+ *
+ * Então `buscarDiario` (level=account) continua sendo a fonte da linha conta-dia,
+ * intocada, e esta função ACRESCENTA a quebra. O ganho é maior que a chamada extra:
+ * as duas fontes são INDEPENDENTES, e comparar uma com a outra vira conferência de
+ * verdade a cada execução — em vez de uma soma comparada consigo mesma.
+ *
+ * ⚠️ SEM `reach`/`impressions` nos campos pedidos: ver MetricaConjunto em types.
+ * ⚠️ A REGRA DOS APELIDOS VALE IGUAL AQUI — um representante por família. Conferido
+ * em 16/08/2026: com os mesmos FORM_LEAD_ACTIONS/WHATS_ACTIONS, a soma dos conjuntos
+ * bateu com o total da conta nas 115 contas legíveis. Se houvesse apelido duplicado
+ * neste nível, a soma estouraria o total.
+ */
+export async function buscarDiarioPorConjunto(
+  accountId: string,
+  dias = 30
+): Promise<MetricaConjunto[]> {
+  const until = new Date();
+  const since = new Date();
+  since.setDate(since.getDate() - (dias - 1));
+  const params = new URLSearchParams({
+    fields: [
+      "adset_id", "adset_name", "campaign_id", "campaign_name",
+      "objective", "optimization_goal", "spend", "actions",
+    ].join(","),
+    time_range: JSON.stringify({ since: ymd(since), until: ymd(until) }),
+    time_increment: "1",
+    level: "adset",
+    limit: "500",
+    access_token: TOKEN,
+  });
+  let url: string | undefined = `https://graph.facebook.com/${API}/${accountId}/insights?${params}`;
+  const out: MetricaConjunto[] = [];
+  // ⚠️ AQUI A PAGINAÇÃO ACONTECE DE VERDADE, ao contrário do level=account. Uma
+  // conta com 20 conjuntos e janela de 95 dias dá ~1.900 linhas = 4 páginas. É por
+  // isso que MAX_NOVAS_POR_CHAMADA caiu para 1 no sync.
+  let paginas = 0;
+  while (url) {
+    const res: Response = await fetch(url, { cache: "no-store" });
+    if (!res.ok) {
+      throw new Error(`Meta API ${res.status} (conjunto) para ${accountId}: ${(await res.text()).slice(0, 200)}`);
+    }
+    const json = await res.json();
+    for (const r of (json?.data ?? []) as any[]) {
+      out.push({
+        accountId,
+        data: r.date_start,
+        adsetId: String(r.adset_id ?? ""),
+        adsetNome: r.adset_name ?? "",
+        campanhaId: String(r.campaign_id ?? ""),
+        campanhaNome: r.campaign_name ?? "",
+        // Ausente vira rótulo explícito, nunca string vazia: "(sem grupo)" aparece na
+        // tela como o que é, e string vazia viraria um grupo invisível.
+        grupo: r.optimization_goal ?? "(sem grupo)",
+        objetivoCampanha: r.objective ?? "(sem objetivo)",
+        gasto: Number(r.spend || 0),
+        leadsForm: somaActions(r.actions, FORM_LEAD_ACTIONS),
+        convWhats: somaActions(r.actions, WHATS_ACTIONS),
+      });
+    }
+    url = json?.paging?.next;
+    if (++paginas > 30) break; // trava: 30 páginas × 500 = 15 mil linhas
+  }
+  return out;
+}
+
+/** Soma as linhas conjunto-dia em grupo-dia — o que entra no doc agregado. */
+export function somarPorGrupoDia(linhas: MetricaConjunto[]): GrupoDia[] {
+  const m = new Map<string, GrupoDia>();
+  for (const l of linhas) {
+    const k = `${l.data}|${l.grupo}`;
+    const g = m.get(k) ?? { data: l.data, grupo: l.grupo, gasto: 0, leadsForm: 0, convWhats: 0 };
+    g.gasto += l.gasto;
+    g.leadsForm += l.leadsForm;
+    g.convWhats += l.convWhats;
+    m.set(k, g);
+  }
+  // Arredonda o gasto no fim, não a cada soma: somar valores já arredondados acumula
+  // erro e a conferência de identidade passaria a falhar por centavos.
+  for (const g of m.values()) g.gasto = Math.round(g.gasto * 100) / 100;
+  return [...m.values()].sort((a, b) => a.data.localeCompare(b.data) || a.grupo.localeCompare(b.grupo));
+}
+
+/** Soma as linhas conjunto-dia por DIA — usado só pela conferência de identidade. */
+export function somarPorDia(linhas: MetricaConjunto[]): Map<string, { gasto: number; leadsForm: number; convWhats: number }> {
+  const m = new Map<string, { gasto: number; leadsForm: number; convWhats: number }>();
+  for (const l of linhas) {
+    const a = m.get(l.data) ?? { gasto: 0, leadsForm: 0, convWhats: 0 };
+    a.gasto += l.gasto;
+    a.leadsForm += l.leadsForm;
+    a.convWhats += l.convWhats;
+    m.set(l.data, a);
+  }
+  return m;
+}
 
 // Busca AO VIVO os criativos/anúncios de uma conta (level=ad) nos últimos `dias`,
 // calculando gasto, conversas (form + WhatsApp) e CPL por anúncio. As miniaturas

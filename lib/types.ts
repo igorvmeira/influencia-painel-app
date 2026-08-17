@@ -75,6 +75,57 @@ export interface MetricaDiaria {
   impressions?: number | null; // impressões do dia
 }
 
+/**
+ * Uma linha CONJUNTO-DIA — a granularidade nova, trazida por `level=adset`.
+ *
+ * ⚠️ COLEÇÃO PRÓPRIA (`metricasConjuntos`), nunca dentro de `metricasDiarias`. Duas
+ * granularidades na mesma coleção fariam qualquer varredura existente contar cada
+ * gasto duas vezes — a conta-dia e os conjuntos que a compõem. Coleção separada é o
+ * que garante que nada que já existe muda de comportamento.
+ *
+ * ⚠️ SEM `reach`/`impressions` de propósito: `reach` é métrica DEDUPLICADA e somar
+ * conjuntos empilharia uma segunda camada de dupla contagem sobre a que já existe
+ * (ver a ressalva em LinhaCliente). Guardar um número que ninguém pode somar é pior
+ * que não guardar.
+ */
+export interface MetricaConjunto {
+  accountId: string;
+  data: string;      // YYYY-MM-DD
+  adsetId: string;
+  adsetNome: string;
+  campanhaId: string;
+  campanhaNome: string;
+  /**
+   * `adset.optimization_goal` CRU, como a Meta devolve.
+   *
+   * ⚠️ É O QUE O CONJUNTO OTIMIZA, NÃO A FAMÍLIA DO RESULTADO — e a distinção é o
+   * achado que definiu este campo. Medido em 16/08/2026: o grupo `REPLIES` produziu
+   * 940 linhas de WhatsApp **e 1 de formulário**; `QUALITY_LEAD` produziu 25 de
+   * formulário **e 1 de WhatsApp** (14,8% do volume dele). E 43 linhas conjunto-dia
+   * tiveram AS DUAS famílias no mesmo conjunto no mesmo dia — nenhum rótulo separa
+   * essas.
+   *
+   * Logo: a tela nomeia o grupo pelo que ele É ("conjuntos que otimizam para
+   * REPLIES"), nunca "WhatsApp". Traduzir aqui seria carimbar a mentira no banco.
+   * `campaign.objective` foi DESCARTADO como agrupador: é ainda mais ambíguo —
+   * WhatsApp aparece sob ENGAGEMENT, SALES, LINK_CLICKS e AWARENESS.
+   */
+  grupo: string;
+  objetivoCampanha: string;
+  gasto: number;
+  leadsForm: number;
+  convWhats: number;
+}
+
+/** Um grupo de otimização num dia, já somado — o que vai no doc agregado. */
+export interface GrupoDia {
+  data: string;
+  grupo: string;
+  gasto: number;
+  leadsForm: number;
+  convWhats: number;
+}
+
 export interface Totais {
   gasto: number;
   conversas: number;

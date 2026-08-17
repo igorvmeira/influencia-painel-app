@@ -1,0 +1,97 @@
+name: backfill-conjuntos
+
+# Backfill da quebra por CONJUNTO DE ANÚNCIOS (Etapa 1 do dual-write).
+#
+# ⚠️ MANUAL, sem cron, de propósito. É execução de UMA vez: preenche os 95 dias de
+# histórico por conjunto que o sync diário não alcança (ele só olha 30 dias). Depois
+# disso o sync mantém sozinho, e rodar de novo só gastaria chamada para reescrever o
+# que já está lá.
+#
+# ⚠️ MAIS GENTIL QUE O SYNC, e o motivo é medido: a sondagem de 16/08/2026 tomou
+# "Application request limit reached" duas vezes varrendo a carteira, porque o limite
+# da Meta pesa VOLUME de dado e `level=adset` devolve ~3x mais. Aqui vai UMA conta por
+# chamada (`limite=1`), com 4s de pausa — em vez das 10 em paralelo do sync.
+#
+# ⚠️ NÃO ABORTA NA PRIMEIRA FALHA. Uma conta grande pode estourar o tempo da função
+# (a OctorLink tem 20 conjuntos: 95 dias = ~1.900 linhas = 4 páginas). O bloco continua,
+# registra o offset que falhou e reprova o job no fim — assim uma conta ruim não
+# desperdiça o backfill das outras 116, e ainda fica visível o que precisa de repique.
+#
+# Reexecução pontual depois: chame o sync direto com
+#   /api/sync-meta?accountId=act_XXX&dias=95   (Authorization: Bearer <CRON_SECRET>)
+
+on:
+  workflow_dispatch:
+    inputs:
+      offsetInicial:
+        description: "De qual posição começar (para retomar de onde parou)"
+        required: false
+        default: "0"
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    # Passo longo por natureza: ~117 contas x (chamada + pausa).
+    timeout-minutes: 45
+    steps:
+      - name: Backfill por conjunto, uma conta por chamada
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          OFFSET_INICIAL: ${{ inputs.offsetInicial }}
+        run: |
+          set -uo pipefail   # SEM -e: uma conta que falha nao aborta o bloco
+
+          BASE="https://influencia-painel-app.vercel.app/api/sync-meta"
+          # 95 = RETENCAO_DIAS (lib/agregadas.ts). Mais que isso o mesclarDias descarta.
+          DIAS=95
+          LIMITE=1
+          MAX_ITER=130
+          OFFSET="${OFFSET_INICIAL:-0}"
+          FALHOU=""
+
+          for i in $(seq 1 "$MAX_ITER"); do
+            echo "== Conta na posicao ${OFFSET} =="
+
+            # O segredo vai no CABECALHO, nunca na URL — query string entra em log.
+            RESP=$(curl -sS --max-time 120 \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              "${BASE}?offset=${OFFSET}&limite=${LIMITE}&dias=${DIAS}&descobrir=0") \
+              || RESP='{"ok":false,"erro":"curl falhou"}'
+
+            OK=$(echo "$RESP" | jq -r '.ok // false')
+            if [ "$OK" != "true" ]; then
+              echo "::warning::Falhou na posicao ${OFFSET} — segue para a proxima."
+              echo "$RESP" | jq '.' || echo "$RESP"
+              FALHOU="${FALHOU} ${OFFSET}"
+              OFFSET=$((OFFSET + LIMITE))
+              sleep 4
+              continue
+            fi
+
+            echo "$RESP" | jq -r '.sincronizadas[] | "  \(.cliente): \(.registros) dias, \(.conjuntos) linhas de conjunto, \(.grupos) grupo(s)"'
+
+            # A identidade vale aqui tambem, e aqui ela e mais importante: e este bloco
+            # que escreve o historico que a Etapa 2 vai ler.
+            IDENT=$(echo "$RESP" | jq -r '.conferencia.identidadeOk // "ausente"')
+            if [ "$IDENT" = "false" ]; then
+              echo "::error::Identidade quebrou na posicao ${OFFSET}. Parando: historico errado e pior que historico faltando."
+              echo "$RESP" | jq '.conferencia'
+              exit 1
+            fi
+
+            PROXIMO=$(echo "$RESP" | jq -r '.proximoOffset')
+            if [ "$PROXIMO" = "null" ] || [ -z "$PROXIMO" ]; then
+              echo "proximoOffset=null — backfill concluido."
+              break
+            fi
+
+            OFFSET="$PROXIMO"
+            sleep 4
+          done
+
+          if [ -n "$FALHOU" ]; then
+            echo "::error::Posicoes que falharam e precisam de repique:${FALHOU}"
+            echo "Rode de novo com offsetInicial na primeira delas, ou chame o sync por accountId."
+            exit 1
+          fi
+          echo "Backfill completo, sem falhas."
