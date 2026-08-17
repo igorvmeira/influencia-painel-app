@@ -60,42 +60,70 @@ muda 5 pessoas; a regra tem que existir antes de a base crescer.
 
 ---
 
-## 3. O que significam as 35 tags? (e as de tamanho de provedor)
+## 3. O nome de 17 etiquetas — as outras 18 a API já entregou
 
-**Medido: 35 tags distintas em uso** — não 21, como estava anotado. 2.912 das 4.881
-oportunidades têm ao menos uma tag (60%).
+**Resolvido em 17/08/2026 pela própria spec**, sem depender de ninguém. Existem **dois**
+endpoints de etiqueta, em namespaces diferentes — era isso que faltava:
 
-As de maior volume:
-
-| tag | oportunidades | pessoas |
+| endpoint | grupo na spec | devolve |
 |---|---|---|
-| 4 | 2.594 | 2.144 |
-| 26 | 1.515 | 1.483 |
-| 27 | 182 | 180 |
-| 17 | 123 | 103 |
-| 34 | 96 | 93 |
+| `getTags` | Contatos | 15 etiquetas (id + nome) |
+| `getChatTags` | **Fila** | 3 etiquetas (6, 12, 13) |
 
-**As candidatas a faixa de tamanho de provedor** (`[39]` a `[43]`, que a agência descreveu
-como "menos de 1k" até "mais de 10k"):
+União: **18 dos 35 ids em uso**. Varridos os 140 operationIds do arquivo — não existe
+terceiro endpoint. E as etiquetas são **globais da instância**: as filas 17 e 19 devolvem
+exatamente a mesma lista da 7.
 
-| tag | oportunidades | pessoas |
+### 🎉 As faixas de porte estão nomeadas — e são SEIS
+
+| tag | nome | oportunidades |
 |---|---|---|
-| 39 | 95 | 94 |
-| 40 | 43 | 43 |
-| 41 | 19 | 19 |
-| 42 | 21 | 21 |
-| 43 | 35 | 35 |
-| **total** | **213** | **~212** |
+| 39 | menos de 1k | 106 |
+| 40 | 1k a 3k | 44 |
+| 41 | 3k a 5k | 19 |
+| 42 | 5k a 10k | 21 |
+| 43 | Mais de 10k | 40 |
+| **38** | **Sem Perfil** | 18 |
 
-> 🛑 **ISTO MUDA O TAMANHO DA FEATURE DE QUALIFICAÇÃO POR PORTE.** Só **~212 das 2.670
-> pessoas** (8%) têm alguma faixa. Uma tela de qualificação por tamanho mostraria **92% em
-> "sem faixa"** — e aí o gráfico descreve o preenchimento do CRM, não a carteira.
+`[38] Sem Perfil` não estava na lista original da agência e pertence à família.
+
+> 🛑 **A PERGUNTA DA DEMANDA 2 MUDOU DE NATUREZA.** Não é mais "não sabemos o nome" — é
+> **quase ninguém etiqueta**. Só **~212 das 2.670 pessoas (8%)** têm faixa; uma tela de
+> qualificação por porte mostraria **92% em "sem faixa"**, descrevendo o preenchimento do
+> CRM e não a carteira.
 >
-> Antes de construir: a agência quer (a) passar a etiquetar sempre, (b) uma tela que
-> assume que a maioria não tem faixa e diz isso, ou (c) esperar o preenchimento subir.
+> **Pergunta para o dono:** (a) passar a etiquetar sempre, (b) uma tela que assume que a
+> maioria não tem faixa e diz isso, ou (c) esperar o preenchimento subir.
 
-**O que precisamos:** o nome das 35, e a confirmação de que `[39]`–`[43]` são as faixas e
-em que ordem.
+### Outras que a API resolveu
+
+`[4] Trafego Pago - FaceAds - Provedor` (2.596) · `[26] MARCO - NE` (1.516) ·
+`[27] Andre - NE` (182) · `[19] Indicacao` (66) · `[6] GUILHERME` (40) ·
+`[10] LEAD RECUPERADO- PROVEDOR DE INTERNET` (25) · `[9] LEAD RECUPERADO- AUTOMACAO
+AUTORIDADE` (15) · `[18] No-Show` (14) · `[11] REMARKETING - WHATSAPP` (5) ·
+`[12] GOOGLE` (4) · `[13] ABRINT` (4) · `[29] Plano Start` (1)
+
+### ❌ As 17 que faltam — e por que o BI NÃO resolve
+
+**7, 8, 14, 15, 17, 20, 21, 23, 28, 31, 32, 33, 34, 35, 36, 37, 44.** As de maior volume:
+`[17]` com 123 oportunidades, `[34]` com 96, `[8]` com 63, `[44]` com 50.
+
+> 🛑 **NÃO TENTE PELO POWER BI — verificado em 17/08/2026, não funciona.**
+>
+> A ideia natural é usar o BI publicado do dono, que mostra etiquetas. Duas razões:
+>
+> 1. **O BI não mostra ID em lugar nenhum** — nem na tabela, nem no filtro. Só nomes. E
+>    nome sem ID não serve: casar por nome é a regra que esta casa não quebra.
+> 2. **Pior: o BI não conhece essas etiquetas.** A coluna `Etiqueta` dele é a família de
+>    PORTE (a mesma que a aba Comercial chama de `temperatura`). Medido percorrendo a
+>    tabela: **613 amostras de linha, 4 rótulos distintos** — "menos de 1k", "1k a 3k",
+>    "3k a 5k" e "Etiquetar" (o valor de não-etiquetado). Todos já nomeados pela API.
+>
+> Havia um caminho rigoroso — juntar por `id_oportunidade`, que é chave única e não nome —
+> mas ele morre na razão 2: **não há o que juntar.** A única fonte para as 17 é a agência.
+
+**O que precisamos:** o nome das 17 acima, e a confirmação de que `[38]`–`[43]` são as
+faixas de porte e em que ordem.
 
 ---
 
