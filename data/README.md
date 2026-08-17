@@ -222,6 +222,68 @@ Para essas o caminho continua sendo o de sempre: pedir o `accountId` **em texto*
 `/api/diagnostico-contas?accountId=act_1,act_2`. Este aviso está na própria tela, no
 rodapé, e é a parte dela que não pode ser cortada.
 
+## 🛑 PENDÊNCIA DE DECISÃO: 6,8% do gasto está em conjuntos que não buscam lead
+
+**Medido em 16/08/2026**, janela de 06 a 12/08 (7 dias assentados), com `level=adset`
+na carteira inteira (115 contas legíveis):
+
+| conjuntos que otimizam para | gasto 7d | conversas geradas |
+|---|---|---|
+| IMPRESSIONS | R$ 2.173 | 21 |
+| PROFILE_VISIT | R$ 673 | 2 |
+| VISIT_INSTAGRAM_PROFILE | R$ 654 | 1 |
+| REACH | R$ 56 | 0 |
+| **total** | **R$ 3.556** | **24** |
+
+São **6,8% do gasto da carteira** em conjuntos que nunca tentaram gerar lead —
+alcance, visita a perfil, impressão. Esse dinheiro está hoje no **denominador do CPL**,
+invisível, puxando o número para cima:
+
+- CPL da carteira como o painel calcula hoje: **R$ 13,22**
+- Excluindo os conjuntos que não buscam lead: **R$ 12,39**
+
+Diferença de **6,3%** no número que a agência usa para avaliar gestor.
+
+> ⚠️ **NÃO MUDE O CÁLCULO DO CPL POR CONTA DISSO.** Decisão do Igor em 16/08/2026: a
+> /gestores está aprovada e embasa bonificação. Trocar a régua sem alinhar com o Roberto
+> mudaria a nota de todos os gestores de um dia para o outro, e a mudança pareceria uma
+> correção técnica quando é uma mudança de critério.
+>
+> Fica registrado como **pendência de decisão**, não como bug. O gatilho é a conversa
+> com a agência; o Igor vai levar o número.
+
+## Lição de método: eu pedi a coisa errada e a medição mostrou
+
+Registro porque a lição é sobre COMO investigar, não sobre este dado.
+
+O pedido foi migrar o sync para `level=adset` **para consertar a separação de
+conversão** em conta mista — a mesma conta rodando campanha de mensagem e de
+formulário. A premissa era que o painel "soma tudo junto".
+
+**Ele não soma.** `leadsForm` e `convWhats` já são campos separados, derivados do
+`action_type` do evento — e essa separação é **exata**, porque vem do próprio evento.
+
+E agrupar por objetivo seria **menos** preciso, não mais. Medido nas 1.573 linhas
+conjunto-dia da janela:
+
+- `campaign.objective`: `OUTCOME_ENGAGEMENT` produziu **911 linhas de WhatsApp e 3 de
+  formulário**. WhatsApp aparece sob quatro objetivos diferentes (ENGAGEMENT, SALES,
+  LINK_CLICKS, AWARENESS) — quem lesse o rótulo concluiria que a conta faz engajamento.
+- `adset.optimization_goal`: melhor, e ainda ambíguo. `REPLIES` → 940 WhatsApp + 1
+  formulário; `QUALITY_LEAD` → 25 formulário + 1 WhatsApp (**14,8% do volume dele**).
+- **43 linhas conjunto-dia tiveram AS DUAS famílias no mesmo conjunto no mesmo dia.**
+  Nenhum rótulo separa essas.
+
+**O que a migração compra é outra coisa, e mais valiosa: a ATRIBUIÇÃO DE CUSTO.** Hoje
+sabe-se que a PRO3 ACADEMIA teve 25 formulários e 695 WhatsApp, e **não** quanto do
+gasto foi para cada um. Com a quebra por conjunto sai **CPL por família**, que era
+impossível. São 17 contas nessa situação.
+
+**A generalização:** antes de implementar o conserto pedido, medir se o defeito é o
+descrito. Aqui o dado separado já existia e era mais preciso que a solução proposta —
+e o problema real (custo sem atribuição) estava ao lado, valia mais, e ninguém tinha
+pedido. **Confirmar o diagnóstico é parte da tarefa, não etapa opcional antes dela.**
+
 ## Pendências de cadastro
 
 Contas identificadas na conciliação de 06/08/2026 que **não** foram cadastradas, com
