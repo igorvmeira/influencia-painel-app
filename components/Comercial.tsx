@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useComercial } from "@/lib/useComercial";
-import type { SerieMes } from "@/lib/comercialAgregado";
+import type { AgregadoComercial, SerieMes } from "@/lib/comercialAgregado";
 import { TEMA, MOVIMENTO } from "@/lib/brand";
 import { useEntrada, atrasoDe } from "@/lib/useEntrada";
 import SecaoHeader from "./SecaoHeader";
@@ -305,6 +305,15 @@ export default function Comercial() {
         </div>
       </Bloco>
 
+      {/* ============ DINHEIRO PARADO E VALOR FALTANDO, POR ETAPA ============ */}
+      <Bloco
+        titulo="Dinheiro parado por etapa"
+        icone="◫"
+        sub="Da Negociação para frente — onde está o MRR e onde falta informar o valor."
+      >
+        <DinheiroPorEtapa itens={agregado.porEtapaAvancada ?? []} />
+      </Bloco>
+
       {/* ================= FORA DO FUNIL — visível, nunca sumiço ================= */}
       <Bloco
         titulo="Fora do funil de captação"
@@ -416,6 +425,96 @@ export default function Comercial() {
  * histórico dela está no commit que trouxe as colunas, se um dia a comparação
  * visual voltar a pesar mais que a forma.
  */
+/**
+ * As demandas 4 e 5 do dono, numa seção só — porque são a mesma forma: MRR parado e
+ * valor faltando, etapa por etapa, da Negociação para frente.
+ *
+ * ⚠️⚠️ A PREMISSA DO DONO NÃO SE CONFIRMOU, e isso mudou o que a tela É. A régua dele era
+ * "95% das vezes vai ter valor a partir dali", o que faria de valor faltando uma EXCEÇÃO
+ * — coisa de alerta vermelho. Medido em 17/08/2026, POR PESSOA (a unidade da tela):
+ * **79 de 111 = 71,2%** têm valor. São **32 sem valor**.
+ *
+ * 32 não é exceção, é FILA DE TRABALHO. Então isto aparece como pendência a preencher, em
+ * `atencao`, e nunca como alarme: alarme que acende em 29% dos casos é o alarme diário que
+ * ninguém lê. A régua MEDIDA vai escrita na tela, sempre com o denominador — percentual
+ * sem denominador é a armadilha do "sobre o que ele é percentual".
+ *
+ * 🛑 E O MRR É PISO, NUNCA TOTAL. Ele soma só quem tem valor informado; as pessoas sem
+ * valor têm MRR **desconhecido**, não zero. Escrever "R$ 226.530 parados" afirmaria que
+ * 29% da fila vale zero — que é a família do "ausência de dado não é evidência de ausência
+ * do fato". Por isso o número vem sempre com o denominador ao lado.
+ */
+function DinheiroPorEtapa({ itens }: { itens: NonNullable<AgregadoComercial["porEtapaAvancada"]> }) {
+  if (!itens.length) {
+    return <p className="text-[12.5px]" style={{ color: MUTED }}>Rode o sync do comercial para esta seção aparecer.</p>;
+  }
+  const pessoas = itens.reduce((t, e) => t + e.pessoas, 0);
+  const comValor = itens.reduce((t, e) => t + e.comValor, 0);
+  const semValor = itens.reduce((t, e) => t + e.semValor, 0);
+  const mrr = itens.reduce((t, e) => t + e.mrrCent, 0);
+  const pctCom = pessoas > 0 ? (comValor / pessoas) * 100 : 0;
+
+  return (
+    <div>
+      <div className="space-y-2">
+        {itens.map((e) => (
+          <div key={e.etapaId} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded-lg px-3 py-2.5"
+            style={{ background: TEMA.zebra }}>
+            <div className="text-[13px] font-medium text-brand-ink">
+              {e.nome}
+              <span className="ml-2 text-[11px] font-normal" style={{ color: MUTED }}>etapa {e.etapaId}</span>
+            </div>
+            <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[12.5px]">
+              <span style={{ color: MUTED }}>
+                <b className="tabular-nums" style={{ color: TEMA.texto }}>{n(e.pessoas)}</b> pessoas
+              </span>
+              <span className="tabular-nums" style={{ color: TEMA.destaque }}>
+                <b>{reais(e.mrrCent)}</b>
+                <span className="ml-1 text-[11px] font-normal" style={{ color: MUTED }}>
+                  de {n(e.comValor)}
+                </span>
+              </span>
+              {e.semValor > 0 && (
+                <span className="tabular-nums" style={{ color: AMBER }}>
+                  <b>{n(e.semValor)}</b> sem valor
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ⚠️ O PISO DITO POR EXTENSO, no corpo e não em tooltip. */}
+      <p className="mt-3 text-[11.5px] leading-relaxed" style={{ color: MUTED }}>
+        Os <b style={{ color: TEMA.destaque }}>{reais(mrr)}</b> são um <b style={{ color: TEMA.texto }}>piso</b>,
+        não o total: somam só as <b style={{ color: TEMA.texto }}>{n(comValor)}</b> pessoas com valor
+        informado. As outras <b style={{ color: AMBER }}>{n(semValor)}</b> têm MRR{" "}
+        <b style={{ color: TEMA.texto }}>desconhecido</b> — não zero. O dinheiro real parado aqui é
+        maior, e não dá para dizer quanto.
+      </p>
+      {/**
+        * A régua MEDIDA, com o denominador — nunca só o percentual.
+        *
+        * ⚠️ NÃO CITE A RÉGUA SUPOSTA AQUI. Uma versão anterior escrevia "não os 95% que a
+        * régua supunha", e o Igor tirou com um motivo que vale registrar: a divergência
+        * precisa chegar ao dono, mas **a tela é lida por outras pessoas**, e citar a régua
+        * dele na interface vira correção pública. O número vai na conversa, que é onde ela
+        * pertence; a divergência fica registrada em data/xmax-integracao.md.
+        *
+        * A régua da casa por trás disso: número na tela informa, não argumenta.
+        */}
+      {semValor > 0 && (
+        <p className="mt-1.5 text-[11.5px] leading-relaxed" style={{ color: MUTED }}>
+          Medido: <b style={{ color: TEMA.texto }}>{n(comValor)} de {n(pessoas)}</b> pessoas daqui
+          para frente têm valor informado ({pctCom.toFixed(0)}%). Preencher as{" "}
+          <b style={{ color: AMBER }}>{n(semValor)}</b> que faltam é o que faz este número virar
+          total em vez de piso.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function SerieMensal({ itens }: { itens: SerieMes[] }) {
   if (!itens.length) return <p className="text-[12.5px]" style={{ color: MUTED }}>Sem dados no período.</p>;
   const totalPessoas = itens.reduce((t, m) => t + m.pessoas, 0);

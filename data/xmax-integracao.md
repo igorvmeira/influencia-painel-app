@@ -751,6 +751,105 @@ registrada em CLAUDE.md, em *Sincronização e tarefas longas*.
 comercial a partir de 2 dias sem sync. Se a automação falhar em silêncio, a tela avisa
 antes de alguém decidir com foto velha.
 
+## 🛑 NÃO FILTRE CLONE PELA ETAPA DE RECUPERAÇÃO — medido em 17/08/2026
+
+Registrado porque **é a ideia natural, e ela falha nas duas direções.** Quem olhar a série
+de leads novos vai propor exatamente isto, como o Igor propôs.
+
+**A proposta:** contar oportunidade (não pessoa) para captar o cliente que volta, excluindo
+as criadas pelas etapas de recuperação `[113]` e `[49]`, que é onde a automação clona.
+
+**Por que não funciona:**
+
+**1. O clone não FICA na etapa de recuperação.** Das 1.477 oportunidades criadas em
+maio/2025 (o mês da clonagem em massa), **1.444 estão hoje na etapa 28** e apenas **13
+(0,9%)** em `[113]`/`[49]`. Filtrar por etapa atual não pega o clone — ele foi criado,
+trabalhado e encerrado noutro lugar.
+
+**2. Quem está em recuperação hoje majoritariamente MIGROU para lá.** Das 1.141 em
+`[113]`/`[49]`, só **237 nasceram ali**; **904 migraram**, com mediana de **535 horas
+(22 dias)** entre criação e chegada. Etapa atual ≠ etapa de nascimento, e o CRM não guarda
+o caminho.
+
+**3. E o efeito é o CONTRÁRIO do pretendido.** O filtro destrói os meses normais, cujos
+leads estão em recuperação agora — que é para o que a recuperação serve:
+
+| | maior mês | 2º maior | razão |
+|---|---|---|---|
+| oportunidade crua | 1.477 | 303 | 4,9x |
+| **excluindo recuperação** | 1.464 | 211 | **6,9x** |
+
+```
+2025-12    72 → 17        2026-02   299 → 38
+2026-03   141 → 29        2026-01   119 → 40
+```
+
+Maio/2025 sai de 1.477 para 1.464 — perde 13 — e fica **mais** dominante.
+
+### A régua que funciona: intervalo mínimo por pessoa
+
+Aprovada pelo Igor em 17/08/2026: **conta oportunidade, e a mesma pessoa só conta de novo
+se a nova oportunidade vier ≥ 30 dias depois da última contada.**
+
+| corte | maio/2025 | maior mês | 2º | razão |
+|---|---|---|---|---|
+| 0 dias (crua) | **1.477** | 1.477 | 303 | 4,9x |
+| 7 dias | 33 | 299 | 280 | 1,1x |
+| **30 dias** | **32** | 291 | 267 | **1,1x** |
+| 90 dias | 30 | 275 | 252 | 1,1x |
+
+30 dias porque: o gráfico fica legível (nenhuma coluna achata as outras), a cadência do
+clone é menor que 7 dias (o corte de 7 já resolve e o de 30 remove só 1 a mais), e "voltou
+um mês depois" é defensável na conversa. E a régua do dono é atendida — o maior mês passa
+de **257 pessoas** para **291**, e os ~13% de diferença são o retorno de cliente.
+
+> ⚠️ **É HEURÍSTICA, NÃO MEDIÇÃO — e isso vai NA TELA, perto do número, nunca em tooltip.**
+> Não conseguimos distinguir clone de retorno genuíno; usamos o tempo como proxy. O rótulo
+> é **"oportunidades, contando cada pessoa no máximo uma vez a cada 30 dias"** — nunca
+> "leads novos" seco. Heurística escondida vira fato na terceira reunião.
+>
+> As duas séries ficam disponíveis (pessoa e oportunidade), com a de oportunidade como
+> principal por decisão do dono. **A diferença entre elas é informação:** é o retorno de
+> cliente.
+
+## ⚠️ A régua dos "95% com valor" é 71% — medido em 17/08/2026
+
+A demanda de alerta de valor recorrente faltando veio com uma régua do dono: *"95% das
+vezes vai ter valor a partir de Negociação"*. Isso faria de valor faltando uma **exceção**,
+que é o que justifica um alerta.
+
+**Medido, nas oportunidades ABERTAS do funil 4:**
+
+| etapa | pessoas | com valor | sem valor | MRR informado |
+|---|---|---|---|---|
+| `[27]` Negociação | 23 | 17 | **6** | R$ 71.560 |
+| `[20]` Fechamento | 88 | 62 | **26** | R$ 157.560 |
+| **total** | **111** | **79** | **32** | **R$ 229.120** |
+
+**71,2% têm valor, não 95%. São 32 pessoas de 111 — 29%.**
+
+**Consequência de desenho:** 32 não é exceção, é **fila de trabalho**. A tela mostra como
+pendência a preencher (em cor de ênfase), nunca como alarme — alarme que acende em 29% dos
+casos é o alarme diário que ninguém lê, e essa regra já está no CLAUDE.md.
+
+> 🛑 **E O MRR É PISO, NUNCA TOTAL.** Os R$ 229.120 somam só as 79 pessoas com valor
+> informado. As outras 32 têm MRR **desconhecido, não zero** — publicar o número como
+> "dinheiro parado" afirmaria que 29% da fila vale zero. É a mesma família do *ausência de
+> dado não é evidência de ausência do fato*. A tela diz isso no corpo, não em tooltip: **"os
+> R$ 229.120 são um piso, não o total"**, com o denominador ao lado de cada número e a frase
+> de que o dinheiro real é maior e não dá para dizer quanto.
+
+> ⚠️ **A DIVERGÊNCIA FICA AQUI, NÃO NA INTERFACE.** Decisão do Igor em 17/08/2026: uma
+> versão da tela escrevia "não os 95% que a régua supunha", e ele tirou — o dono precisa
+> saber, mas **a tela é lida por outras pessoas**, e citar a régua dele ali vira correção
+> pública. O número vai na conversa, que é onde ela pertence. Na tela só o medido, com o
+> denominador. **Número na tela informa, não argumenta.**
+
+**Conferido:** a seção nova (`porEtapaAvancada`) e a existente (`fechamento.emFechamento`)
+publicam os mesmos valores para a etapa 20 — 88 pessoas, 62 com valor, R$ 157.560. Duas
+seções divergindo sobre a mesma etapa seria pior que uma seção só. E nenhuma pessoa está nas
+duas etapas ao mesmo tempo, então a soma das linhas fecha.
+
 ## Perguntas ainda abertas
 
 **Bloqueiam o desenho das coleções** — o modelo não é desenhado antes delas:

@@ -187,6 +187,48 @@ export interface AgregadoComercial {
     sucesso: MedidaSucesso[];
   };
   negociacao: { pessoas: number; etapas: number[] };
+  /**
+   * DINHEIRO PARADO E VALOR FALTANDO, etapa por etapa, a partir de Negociação.
+   * Pedido do dono na reunião de 17/08/2026 (demandas 4 e 5 — mesma forma, uma seção).
+   *
+   * ⚠️⚠️ A PREMISSA DO DONO NÃO SE CONFIRMOU, e isso muda o que a feature É. A régua dele
+   * era "95% das vezes vai ter valor a partir de Negociação", o que faria de valor
+   * faltando uma EXCEÇÃO — coisa de alerta. Medido em 17/08/2026, **por pessoa**, que é a
+   * unidade da tela: **79 de 111 = 71,2%** têm valor — 17 de 23 em Negociação, 62 de 88 em
+   * Fechamento. São **32 pessoas sem valor**.
+   *
+   * (Contando por OPORTUNIDADE dá 69,3%, e a diferença não é erro: são unidades
+   * diferentes. A tela conta pessoa, então a régua dela conta pessoa — comparar as duas
+   * seria comparar denominadores distintos.)
+   *
+   * 32 não é exceção, é FILA DE TRABALHO. Por isso o campo se chama `semValor` e a tela
+   * apresenta como pendência a preencher, não como alarme: alarme que acende em 29% dos
+   * casos é o alarme diário que ninguém lê.
+   *
+   * ⚠️ A DIVERGÊNCIA COM A RÉGUA SUPOSTA FICA AQUI E NO README, NUNCA NA TELA. Decisão do
+   * Igor em 17/08/2026: o dono precisa saber, e a interface é lida por outras pessoas —
+   * citar a régua dele ali viraria correção pública. O número vai na conversa. Na tela só
+   * o medido, com o denominador.
+   *
+   * 🛑 E O `mrrCent` É PISO, NUNCA TOTAL. Ele soma só quem TEM valor informado — as 32
+   * pessoas sem valor têm MRR desconhecido, não zero. Publicar R$ 226.530 como "dinheiro
+   * parado" seria afirmar que 29% da fila vale zero. `pessoas` e `comValor` vão ao lado
+   * justamente para o número poder ser lido como o piso que é.
+   *
+   * ⚠️ CONFERIDO contra `fechamento.emFechamento`, que publica os mesmos números para a
+   * etapa 20: 88 pessoas, 62 com valor, R$ 157.560 — batem exatamente. Duas seções que
+   * divergissem sobre a mesma etapa seriam pior que uma seção só.
+   */
+  porEtapaAvancada: {
+    etapaId: number;
+    nome: string;
+    /** Pessoas com oportunidade ABERTA nesta etapa. */
+    pessoas: number;
+    comValor: number;
+    semValor: number;
+    /** ⚠️ PISO: soma só de `comValor`. Ver a nota acima. */
+    mrrCent: number;
+  }[];
   conversaAvancada: { pessoas: number; etapas: number[] };
   foraDoFunil: {
     pessoas: number;
@@ -236,6 +278,8 @@ export function montarAgregado(
 ): AgregadoComercial {
   const doFunil4 = ops.filter((o) => o.pipelineId != null && Number(o.pipelineId) === 4);
   const abertas = doFunil4.filter((o) => !ehEncerrada(o.status));
+  /** Índice das abertas por id — a pessoa guarda ids, e o valor mora na oportunidade. */
+  const opPorId = new Map(abertas.map((o) => [o.id, o]));
   const idsAbertos = new Set(abertas.map((o) => o.id));
   const comAberta = pessoas.filter((p) => p.oportunidadeIds.some((id) => idsAbertos.has(id)));
 
@@ -314,6 +358,36 @@ export function montarAgregado(
       mrrCent: g.reduce((t, p) => t + p.fechamentoAbertoCent, 0),
     };
   });
+
+  /**
+   * Demandas 4 e 5 — dinheiro parado e valor faltando, por etapa, a partir de Negociação.
+   *
+   * ⚠️ AS ETAPAS VÊM DE `NIVEIS_FUNIL`, não de uma lista nova: "a partir de Negociação" é
+   * o nível 4 para cima, e derivar isso da constante do dono garante que reordenar o funil
+   * não deixe esta seção apontando para etapa errada em silêncio.
+   *
+   * ⚠️ A soma das linhas FECHA (nenhuma pessoa está nas duas etapas ao mesmo tempo —
+   * conferido em 17/08/2026, zero casos). Se um dia houver, a soma passa a contar duplo e
+   * a tela precisa dizer; por isso o número por etapa vem separado, nunca só o total.
+   */
+  const NIVEL_NEGOCIACAO = 4;
+  const porEtapaAvancada = NIVEIS_FUNIL
+    .filter((n) => n.nivel >= NIVEL_NEGOCIACAO)
+    .flatMap((n) => n.etapas.map((etapaId) => ({ etapaId, nome: n.nome })))
+    .map(({ etapaId, nome }) => {
+      const idsEtapa = new Set(abertas.filter((o) => Number(o.stageId) === etapaId).map((o) => o.id));
+      const naEtapa = comAberta.filter((p) => p.oportunidadeIds.some((id) => idsEtapa.has(id)));
+      let comValor = 0, semValor = 0, mrrCent = 0;
+      for (const p of naEtapa) {
+        // Soma só as oportunidades DESTA etapa: a pessoa pode ter outras noutro lugar,
+        // e o dinheiro parado aqui é o desta etapa.
+        const v = p.oportunidadeIds
+          .filter((id) => idsEtapa.has(id))
+          .reduce((t, id) => t + (opPorId.get(id)?.recorrenteCent ?? 0), 0);
+        if (v > 0) { comValor++; mrrCent += v; } else semValor++;
+      }
+      return { etapaId, nome, pessoas: naEtapa.length, comValor, semValor, mrrCent };
+    });
 
   const entrouNoMes = new Map<string, { pessoas: number; mrrCent: number }>();
   emFechPessoas.forEach((p) => {
@@ -521,6 +595,7 @@ export function montarAgregado(
       pessoas: comAberta.filter((p) => p.emNegociacao).length,
       etapas: [...ETAPAS_NEGOCIACAO],
     },
+    porEtapaAvancada,
     // ⚠️ NÃO é "a versão antiga de negociação": responde outra pergunta ("quem já
     // sentou para conversar"). As duas aparecem na tela, com rótulos distintos.
     conversaAvancada: {
