@@ -111,6 +111,47 @@ export interface SerieMes {
   oportunidades: number;
   /** true = razão pessoa/oportunidade denuncia clonagem da automação neste mês. */
   clonagem: boolean;
+  /**
+   * ⚠️ MÊS QUE A BASE NÃO COBRE INTEIRO — e são DOIS, nos dois extremos da série:
+   *
+   *   · o mês CORRENTE, porque o sync rodou no meio dele;
+   *   · o PRIMEIRO mês, porque o CRM começa em 21/05/2024 e não no dia 1.
+   *
+   * Sem isto a última coluna **sempre parece queda** (agosto/2026 mostrava 137 contra
+   * 177 de julho, cobrindo 17 de 31 dias), e o primeiro mês parece o menor da série
+   * quando é o de maior intensidade diária: 42 pessoas em 11 dias = 3,8/dia, contra
+   * 2,3/dia em junho.
+   *
+   * ⚠️ CALCULADO AQUI, NÃO NA TELA. O cliente conseguiria deduzir o mês corrente (tem
+   * `geradoEm`), mas não o primeiro — ele não sabe onde a base começa. Metade da regra
+   * na tela seria a metade que marca só um dos dois extremos.
+   *
+   * ⚠️ E É ESTADO SEPARADO DE `clonagem`, nunca o mesmo: um diz "o dado está
+   * incompleto", o outro diz "o dado está inflado pela automação". Juntar os dois faria
+   * o tooltip afirmar a causa errada.
+   */
+  parcial: boolean;
+  /** Dias do mês que a base cobre, e quantos o mês tem. Vão para o tooltip. */
+  diasCobertos: number;
+  diasNoMes: number;
+}
+
+/** Quantos dias do mês `mes` (YYYY-MM) a janela [de, ate] cobre. Datas YYYY-MM-DD. */
+export function coberturaDoMes(mes: string, de: string, ate: string): {
+  parcial: boolean; diasCobertos: number; diasNoMes: number;
+} {
+  const [ano, m] = mes.split("-").map(Number);
+  // Meio-dia UTC evita que fuso/DST empurre a data para o mês vizinho.
+  const primeiro = Date.UTC(ano, m - 1, 1, 12);
+  const diasNoMes = new Date(Date.UTC(ano, m, 0, 12)).getUTCDate();
+  const ultimo = Date.UTC(ano, m - 1, diasNoMes, 12);
+  const dDe = Date.parse(de + "T12:00:00Z");
+  const dAte = Date.parse(ate + "T12:00:00Z");
+
+  const ini = Math.max(primeiro, dDe);
+  const fim = Math.min(ultimo, dAte);
+  const diasCobertos = fim < ini ? 0 : Math.round((fim - ini) / 86400000) + 1;
+  return { parcial: diasCobertos < diasNoMes, diasCobertos, diasNoMes };
 }
 
 export interface AgregadoComercial {
@@ -209,6 +250,22 @@ export function montarAgregado(
   const idsFunil4 = new Set(doFunil4.map((o) => o.id));
   const pessoasFunil4 = pessoas.filter((p) => p.oportunidadeIds.some((id) => idsFunil4.has(id)));
 
+  /**
+   * A JANELA QUE A BASE COBRE — de onde o CRM começa até o dia deste sync.
+   *
+   * ⚠️ O piso é a data mais antiga OBSERVADA, não uma constante: se um dia o backfill
+   * alcançar mais para trás, a marcação de parcial se ajusta sozinha. Constante aqui
+   * envelheceria em silêncio e passaria a marcar como parcial um mês que já está
+   * inteiro. Medido em 17/08/2026: a base começa em 2024-05-21.
+   */
+  const datasObservadas = [
+    ...doFunil4.map((o) => diaLocal(o.criadaEm)),
+    ...pessoasFunil4.map((p) => diaLocal(p.primeiroContato)),
+  ].filter((x): x is string => !!x).sort();
+  const baseDe = datasObservadas[0] ?? diaLocal(agora.toISOString())!;
+  const baseAte = diaLocal(agora.toISOString())!;
+  const cobertura = (mes: string) => coberturaDoMes(mes, baseDe, baseAte);
+
   // -- níveis ---------------------------------------------------------------
   const niveis: NivelAgregado[] = NIVEIS_FUNIL.map((n) => {
     // `as const` em NIVEIS_FUNIL torna `etapas` uma tupla de literais; alargar
@@ -284,6 +341,7 @@ export function montarAgregado(
       // contraexemplo de 05/02/2026: 190 oportunidades de 175 pessoas é campanha
       // real; 1.445 de 2 pessoas é a automação em laço.
       clonagem: e.pes.size > 0 && e.ops / e.pes.size >= RAZAO_CLONAGEM,
+      ...cobertura(mes),
     }));
   };
 
@@ -313,6 +371,7 @@ export function montarAgregado(
     return [...m.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([mes, x]) => ({
       mes, pessoas: x.pes, oportunidades: x.ops,
       clonagem: x.pes > 0 && x.ops / x.pes >= RAZAO_CLONAGEM,
+      ...cobertura(mes),
     }));
   })();
 

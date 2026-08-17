@@ -421,6 +421,7 @@ function SerieMensal({ itens }: { itens: SerieMes[] }) {
   const totalPessoas = itens.reduce((t, m) => t + m.pessoas, 0);
   const totalOps = itens.reduce((t, m) => t + m.oportunidades, 0);
   const clonados = itens.filter((m) => m.clonagem);
+  const parciais = itens.filter((m) => m.parcial);
 
   return (
     <div>
@@ -429,7 +430,13 @@ function SerieMensal({ itens }: { itens: SerieMes[] }) {
           rotulo: mesCurto(m.mes),
           valor: m.pessoas,
           alerta: m.clonagem,
+          parcial: m.parcial,
           titulo: `${mesCurto(m.mes)} · ${n(m.pessoas)} pessoas · ${n(m.oportunidades)} oportunidades`
+            // ⚠️ O PARCIAL VEM PRIMEIRO no tooltip, antes da clonagem: se o mês está
+            // incompleto, isso muda como se lê TODOS os outros números da linha.
+            + (m.parcial
+              ? ` — MÊS PARCIAL: a base cobre ${m.diasCobertos} de ${m.diasNoMes} dias, então a coluna está abaixo do mês inteiro. Não é queda.`
+              : "")
             + (m.clonagem
               ? ` — a automação criou ${(m.oportunidades / Math.max(1, m.pessoas)).toFixed(0)}× mais oportunidades que pessoas. O número de pessoas é o que vale.`
               : ""),
@@ -444,6 +451,23 @@ function SerieMensal({ itens }: { itens: SerieMes[] }) {
           denunciar clonagem; passe o mouse para ver as duas contagens.</>
         )}
       </p>
+      {/* ⚠️ O AVISO DO PARCIAL É SEPARADO do da clonagem, mesmo motivo do estado ser
+          separado: são fatos diferentes. E ele NOMEIA os meses, porque a hachura diz
+          "este está incompleto" e não diz de quanto — 17 de 31 dias e 30 de 31 pedem
+          leituras muito diferentes. */}
+      {parciais.length > 0 && (
+        <p className="mt-1.5 text-[11.5px]" style={{ color: MUTED }}>
+          As colunas <b style={{ color: TEMA.texto }}>hachuradas</b> são meses que a base não cobre
+          inteiros e por isso aparecem menores do que são:{" "}
+          {parciais.map((m, i) => (
+            <span key={m.mes}>
+              {i > 0 && " · "}
+              <b style={{ color: TEMA.texto }}>{mesCurto(m.mes)}</b> ({m.diasCobertos} de {m.diasNoMes} dias)
+            </span>
+          ))}
+          . Não são queda.
+        </p>
+      )}
     </div>
   );
 }

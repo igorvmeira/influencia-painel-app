@@ -196,6 +196,51 @@ export const TEMA = {
   gradDestaqueH: "linear-gradient(90deg, #C9930B 0%, #F3B60E 100%)",
   gradDestaqueV: "linear-gradient(180deg, #F3B60E 0%, #C9930B 100%)",
 
+  /**
+   * HACHURA DE DADO INCOMPLETO — coluna/barra cujo período a base não cobre inteiro.
+   *
+   * ⚠️ TEXTURA, NÃO COR, e é isso que ela resolve. "Incompleto" e "anômalo" são fatos
+   * diferentes que apareciam na mesma série: `atencao` já significa anomalia (mês com
+   * clonagem da automação), então marcar o parcial com cor faria o tooltip afirmar a
+   * causa errada. Textura é um canal livre — e é canal REDUNDANTE por si, sobrevivendo
+   * a daltonismo e a impressão em preto e branco sem precisar de glifo.
+   *
+   * ⚠️ É OVERLAY, com as lacunas TRANSPARENTES — a cor da coluna passa por baixo. Tem
+   * que ser assim porque a coluna muda de cor (`dadoNeutro` no normal, `atencao` no mês
+   * clonado, dourado no destacado); hachura de cor fixa faria o mês parcial parecer
+   * destacado. Uso: `background: [hachuraParcial, corQueAColunaJaTeria]`.
+   *
+   * ⚠️⚠️ E ELA CLAREIA, NUNCA ESCURECE — a regra mais reutilizável deste token.
+   *
+   * A primeira versão listrava de ESCURO e reprovava, por um motivo que já estava escrito
+   * dez linhas acima e eu não apliquei: a barra é DADO (o comprimento carrega a
+   * informação), cai na WCAG 1.4.11 e precisa de 3:1 — e `dadoNeutro` dá **exatamente
+   * 3,19:1**. Ele JÁ ESTÁ no piso. Escurecer qualquer fração dele reprova, e é a mesma
+   * razão pela qual ele não ganha degradê.
+   *
+   * **A generalização: sobre fundo escuro, CLAREAR passa por construção e ESCURECER
+   * precisa de medição.** Subir a luminância só pode aumentar a razão contra um card
+   * escuro; baixá-la come a margem, e cor que já está no piso não tem margem nenhuma.
+   * Vale para hachura, degradê, véu, hover e realce — toda modificação de uma cor de
+   * DADO. Antes de escurecer, pergunte quanta folga a cor tem; se a resposta for "ela é
+   * o piso", a resposta é não.
+   *
+   * Medido (5px base / 3px listra em `texto`), composto contra o card e textura contra
+   * a base:
+   *     sobre dadoNeutro ... 7,66:1  · textura 4,74:1
+   *     sobre atencao ...... 10,17:1 · textura 2,10:1
+   *     sobre destaque ..... 11,57:1 · textura 1,60:1   ← a mais fraca
+   *
+   * `muted` foi descartado como listra: sobre a coluna âmbar dava textura de 1,22:1,
+   * ou seja hachura invisível justamente no mês que mais precisa de leitura.
+   *
+   * 🛑 LIMITE CONHECIDO: sobre o dourado a textura é fraca (1,60:1). Coluna que seja
+   * `destacada` E `parcial` ao mesmo tempo precisa de outro canal — hoje não existe esse
+   * caso, e se aparecer, medir antes de confiar.
+   */
+  hachuraParcial:
+    "repeating-linear-gradient(135deg, transparent 0 5px, #F2F0EA 5px 8px)",
+
   // ===== FORMA =====
   raioCard: "0.75rem",
   // ⚠️ Sombra faz pouco no escuro — não há luz para bloquear. Ela ficou como um

@@ -6,7 +6,15 @@ import { useEntrada, atrasoDe } from "@/lib/useEntrada";
 export interface Coluna {
   rotulo: string;
   valor: number;
-  /** Sinaliza a coluna sem usar cor como único canal — o rótulo diz o resto. */
+  /**
+   * Sinaliza a coluna sem usar cor como único canal — o rótulo diz o resto.
+   *
+   * 🛑 NÃO COMBINE com `parcial` sem medir. Sobre o dourado a hachura tem textura de
+   * apenas **1,60:1** contra a base (medido em 17/08/2026) — visível de perto, fraca de
+   * longe. Sobre a coluna neutra são 4,74:1 e sobre a âmbar 2,10:1, ambas confortáveis.
+   * Hoje nenhuma série usa os dois juntos; se precisar, o parcial vai ter que ganhar um
+   * segundo canal nesse caso. Ver `hachuraParcial` em lib/brand.ts.
+   */
   destacada?: boolean;
   /**
    * Mês anômalo. ⚠️ A coluna vira âmbar E ganha um "⚠" acima do valor: cor
@@ -14,6 +22,15 @@ export interface Coluna {
    * quem não distingue matiz.
    */
   alerta?: boolean;
+  /**
+   * Período que a base não cobre inteiro (mês corrente, ou o primeiro mês da série).
+   *
+   * ⚠️ ESTADO SEPARADO DE `alerta`, nunca o mesmo. Um diz "o dado está INCOMPLETO", o
+   * outro diz "o dado está INFLADO pela automação" — causas diferentes, ações
+   * diferentes. A coluna parcial ganha HACHURA (textura), não cor: cor nesta série já
+   * está gasta em `alerta`, e reusá-la faria o tooltip afirmar a causa errada.
+   */
+  parcial?: boolean;
   titulo?: string;
 }
 
@@ -103,9 +120,15 @@ export default function ColunasComMedia({
                   // ⚠️ Degradê só onde a cor tem folga: dourado parte de 9,44:1 e
                   // aguenta; `dadoNeutro` parte de 3,19:1, que já é o piso, e o
                   // âmbar não foi medido para escurecer — os dois vão chapados.
-                  background: c.alerta
-                    ? TEMA.atencao
-                    : c.destacada ? TEMA.gradDestaqueV : TEMA.dadoNeutro,
+                  //
+                  // ⚠️ A HACHURA VEM NA FRENTE, com lacunas transparentes: a cor que a
+                  // coluna já teria passa por baixo. Assim o parcial não muda de cor —
+                  // muda de textura — e o mês clonado continua âmbar mesmo quando é
+                  // também parcial. Ver `hachuraParcial` em lib/brand.ts.
+                  background: [
+                    ...(c.parcial ? [TEMA.hachuraParcial] : []),
+                    c.alerta ? TEMA.atencao : c.destacada ? TEMA.gradDestaqueV : TEMA.dadoNeutro,
+                  ].join(", "),
                   transition: `height ${MOVIMENTO.barraMs}ms ${MOVIMENTO.ease}`,
                   transitionDelay: `${atraso}ms`,
                 }}
