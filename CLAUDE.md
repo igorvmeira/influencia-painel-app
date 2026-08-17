@@ -294,6 +294,17 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   atividade" (a fonte veio incompleta, é divergência).**
   É a mesma família do vazio ambíguo, aplicada à própria régua — o lugar onde ela é mais
   difícil de ver, porque quem escreve a conferência confia nela.
+- ⚠️ **ATUALIZAR A CONFERÊNCIA É PARTE DA MUDANÇA, NÃO ETAPA POSTERIOR.** Conferência que
+  não acompanha a regra vira ruído (acusa o que está certo) ou falso negativo (aprova o que
+  está errado) — e nos dois casos ela para de valer justamente quando mais precisaria.
+  **Três verificações deram veredito errado num único dia**, por dois mecanismos:
+  · **premissa não medida** — um teste comparou todos os dias contra o conjunto de chaves
+    de um dia recente e acusou 1.312 "defeitos" que eram o comportamento correto (campos
+    que só passaram a ser coletados depois); outro mediu a hachura sobre a cor errada.
+  · **deriva** — a regra de ordenação passou a depender do nível e o teste continuou
+    checando a regra antiga, reprovando dois níveis que estavam certos.
+  **Antes de confiar num verde ou investigar um vermelho, releia o que o teste assume.** O
+  primeiro suspeito de uma divergência é a régua, não o código medido.
 - ⚠️ **`ok: true` NO ENVELOPE NÃO SIGNIFICA QUE TUDO FOI.** Rotina que processa N itens e
   tolera falha individual devolve sucesso com os fracassos numa lista à parte. Quem lê só
   o envelope recebe "deu certo". Caso real: uma conta com R$ 9.079 de gasto lançou exceção
@@ -340,6 +351,24 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   do arquivo, fáceis de ajustar.
 - Regras de negócio (ex.: o que é um alerta) ficam em **um único módulo**, consumido por todas
   as telas — nunca duplicadas.
+- ⚠️⚠️ **A TELA RECEBE A DECISÃO, NÃO A RECALCULA.** Quando uma regra precisa aparecer na
+  interface, o servidor publica o **resultado** dela como campo, e a tela obedece. Aplicado
+  quatro vezes num único dia: `parcial` (o mês está incompleto?), `porGrupoAte` e
+  `porGrupoDe` (até onde a quebra vale) e `cobraValor` (esta etapa exige valor informado?).
+  Em todos, a alternativa era a tela refazer a conta — e em todos ela teria acesso só a
+  metade do insumo.
+  É a mesma regra do "que mora no ponto de chamada se perde na terceira tela", agora na
+  fronteira cliente/servidor. E aqui ela é mais perigosa: **quando a regra mora nos dois
+  lados, às vezes o build salva e às vezes a divergência só aparece meses depois**, num
+  número que ninguém confere.
+- 🛑 **IMPORT DE VALOR NUM COMPONENTE ARRASTA A CADEIA INTEIRA PARA O BUNDLE DO CLIENTE.**
+  `import type` é apagado na compilação; import de valor não é. Caso real: a tela importou
+  uma constante de `lib/comercialAgregado.ts`, que importa `lib/comercial.ts`, que importa
+  `node:crypto` — e o `next build` morreu com `UnhandledSchemeError: Reading from
+  "node:crypto"`. **O typecheck passa nos dois casos; só o build acusa.**
+  ⚠️ E o conserto NÃO foi mover a constante de lugar: foi a **tela deixar de conhecer a
+  regra**, recebendo o booleano pronto. Mover o arquivo teria resolvido o erro e mantido o
+  defeito de desenho — duas cópias da mesma decisão, uma em cada lado da fronteira.
 - Em listas do React, a `key` deve ser o **ID único**, nunca o nome (nomes repetidos causam
   linhas duplicadas e vazamento entre agrupamentos).
 - Não quebre features existentes ao adicionar novas; mudanças cirúrgicas.

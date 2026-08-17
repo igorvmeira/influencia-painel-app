@@ -99,7 +99,31 @@ em que ordem.
 
 ---
 
-## 4. Quando clicar em "ganhar"? (bloqueia a Etapa E do comercial)
+## 4. Existe campo de EMPRESA próprio no Xmax que a API não expõe?
+
+A lista de "quem está parado em cada etapa" precisava de uma coluna de empresa. **Ela não
+existe.**
+
+**Medido em 17/08/2026:** os **489 títulos** de oportunidade estão preenchidos, e **478
+(97,8%) contêm parte do nome da pessoa**:
+
+```
+ALINNE | TEK TELECOM
+Fernando Lourenço Grupo Technet
+MAERCIO | MIO TELECOM
+Marivaldo Provedor
+```
+
+O CRM mistura **nome e empresa no mesmo campo**, sem separador confiável — ora `|`, ora
+espaço, ora nada. Partir a string faria o painel afirmar o que não sabe, então a tela mostra
+**uma coluna só, com o título cru, rotulada "título no CRM"** — nunca "empresa".
+
+**O que precisamos:** se a interface do Xmax tem um campo de empresa separado que a API não
+devolve, vale pedir à Atenderbem que ele apareça — e aí a coluna passa a ser de verdade.
+**Se não existir**, o CRM inteiro tem nome e empresa misturados, e isso é decisão de processo
+da agência, não limitação do painel.
+
+## 5. Quando clicar em "ganhar"? (bloqueia a Etapa E do comercial)
 
 Pendência antiga, mantida aqui porque continua travando. O CRM tem `status = 1` (ganha) com
 `closerecurrentvalue`, mas **o clique não tem regra na agência** — e por isso a data de
@@ -114,7 +138,7 @@ mensal de vendas passar a significar alguma coisa.
 
 ---
 
-## 5. Existe campo de MOTIVO DA PERDA no Xmax?
+## 6. Existe campo de MOTIVO DA PERDA no Xmax?
 
 O painel mostra **quando e em que etapa** o lead morreu, e **nunca por quê** — a API não
 devolve motivo. Isso já está dito na tela, não é omissão silenciosa.
@@ -125,7 +149,7 @@ apareça na API.
 
 ---
 
-## 6. Cores secundárias oficiais da marca
+## 7. Cores secundárias oficiais da marca
 
 Dois tokens do painel (`chipTerra`/`terraTexto` e `chipOliva`/`olivaTexto`) estão marcados
 `[PROVISÓRIO]` em `lib/brand.ts`: são escolha de design, não cor de marca. A marca oficial

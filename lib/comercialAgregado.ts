@@ -71,11 +71,78 @@ function parteLocal(iso: string | null | undefined, comDia: boolean): string | n
  *  com folga e ainda dá forma para uma sparkline, sem inchar o documento. */
 export const DIAS_SERIE_LEADS = 30;
 
+/**
+ * A partir de qual NÍVEL a régua do dono cobra valor recorrente informado.
+ *
+ * ⚠️⚠️ A TELA NÃO IMPORTA ESTA CONSTANTE — ela lê o booleano `cobraValor` que o agregado
+ * publica por nível. Assim continua havendo uma fonte só (aqui), e a tela não precisa
+ * conhecer o limiar.
+ *
+ * 🛑 E ISSO NÃO É PREFERÊNCIA DE ESTILO: importar a constante daqui QUEBRA O BUILD. Este
+ * módulo importa `./comercial`, que importa `node:crypto` (o hash do docId de pessoa), e
+ * um import de VALOR num componente arrasta a cadeia inteira para o bundle do cliente —
+ * `UnhandledSchemeError: Reading from "node:crypto"`. O `import type` é apagado na
+ * compilação e não tem esse efeito; o de valor tem. O typecheck passa nos dois casos, só
+ * o build acusa.
+ *
+ * 🛑 E O QUE ELA IMPEDE: nos níveis 1 a 3 a ausência de valor é o COMPORTAMENTO ESPERADO
+ * pela régua do dono ("valor a partir de Negociação"). Marcar isso de âmbar transformaria
+ * o normal em pendência — o Follow-up Agendamento tem **248 pessoas e ZERO com valor**, e
+ * a tela mostraria 248 linhas âmbar que ninguém pode resolver. É o alarme que dispara todo
+ * dia, na sua forma mais cara: 248 de uma vez, na primeira abertura.
+ *
+ *   abaixo deste nível ... "—" neutro, sem destaque e sem ordenação especial;
+ *   deste nível acima .... sem valor PRIMEIRO e marcado, porque ali é fila de trabalho.
+ */
+export const NIVEL_COBRA_VALOR = 4;
+
 const diasAte = (iso: string | null | undefined, ref: Date): number | null => {
   if (!iso) return null;
   const d = new Date(iso);
   return isNaN(d.getTime()) ? null : Math.floor((ref.getTime() - d.getTime()) / 86400000);
 };
+
+/**
+ * Uma pessoa parada numa etapa — a lista que a demanda 3 pede.
+ *
+ * ⚠️⚠️ DADO PESSOAL. Nome de pessoa real fica neste documento. O que protege:
+ *   · `firestore.rules` = `allow read, write: if false` — nenhum cliente lê a coleção
+ *     direto, só o Admin SDK pelo servidor. É ISTO que protege de verdade;
+ *   · `/api/comercial/funil` exige ID token do Firebase (401 sem sessão);
+ *   · nada aqui vai para log — o único `console.*` da rota registra a exceção, não o dado.
+ *
+ * 🛑 TELEFONE FICA DE FORA, e é decisão, não esquecimento. A tela responde "quem está
+ * parado e há quanto tempo"; para ligar para a pessoa existe o CRM, que é onde o contato
+ * deve morar. Guardar telefone aqui aumentaria o estrago de um vazamento sem melhorar a
+ * resposta. Não acrescente "por conveniência".
+ */
+export interface PessoaNaEtapa {
+  nome: string;
+  /**
+   * O `title` da oportunidade, CRU — e o rótulo na tela é "título no CRM", nunca
+   * "empresa".
+   *
+   * ⚠️ NÃO EXISTE CAMPO DE EMPRESA. Medido em 17/08/2026: os 489 títulos estão
+   * preenchidos e **478 contêm parte do nome da pessoa** ("ALINNE | TEK TELECOM",
+   * "Fernando Lourenço Grupo Technet"). O Xmax mistura nome e empresa no mesmo campo, sem
+   * separador confiável. Partir a string faria o painel afirmar o que não sabe — então vai
+   * uma coluna só, com o valor como veio.
+   */
+  tituloCrm: string | null;
+  /**
+   * Dias na etapa ATUAL. `null` = o CRM não devolveu `stagebegintime`.
+   *
+   * ⚠️ NÃO É "há quanto tempo está no funil". É `stagebegintime`: zera quando a pessoa
+   * volta atrás e avança de novo, porque o CRM não guarda o caminho. Mesma limitação que a
+   * tela já declara sobre o histórico de etapas, e o rótulo é "parado nesta etapa desde".
+   */
+  diasParado: number | null;
+  /**
+   * ⚠️ `null` = valor NÃO INFORMADO. Nunca 0 — zero é um valor real, e "desconhecido" não
+   * é zero. É a mesma regra do `reach` ausente no sync de tráfego.
+   */
+  mrrCent: number | null;
+}
 
 export interface NivelAgregado {
   nivel: number;
@@ -85,6 +152,28 @@ export interface NivelAgregado {
   oportunidades: number;
   /** Só quando o nível tem mais de uma etapa — é o detalhe do empate. */
   porEtapa: { etapaId: number; oportunidades: number }[] | null;
+  /**
+   * A régua do dono cobra valor recorrente informado neste nível? (= `NIVEL_COBRA_VALOR`)
+   *
+   * ⚠️ VEM COMO DADO, não como constante importada pela tela — ver a nota em
+   * NIVEL_COBRA_VALOR. A regra fica num lugar só e a tela só obedece: onde é `true`,
+   * ausência de valor é PENDÊNCIA (marcada, e primeiro na lista); onde é `false`, é o
+   * comportamento esperado e vira "—" neutro.
+   */
+  cobraValor: boolean;
+  /**
+   * QUEM está parado neste nível (demanda 3 do dono, 17/08/2026).
+   *
+   * ⚠️ ORDEM DEFINIDA AQUI, não na tela: **sem valor primeiro**, depois por MRR
+   * decrescente. As sem valor são a fila de trabalho da demanda 4, e quem abre a etapa vê
+   * primeiro o que precisa preencher. Ordenar por MRR jogaria as sem valor para o fim como
+   * se valessem zero.
+   *
+   * ⚠️ TAMANHO MEDIDO antes de existir: 489 pessoas × ~102 bytes = 48,9 kB, levando o
+   * documento de 12,1 kB para 60,9 kB — **6% do limite de 1 MB do Firestore**, margem de
+   * 21x. A versão com telefone e ids daria 114 kB; a sem título, 19 kB.
+   */
+  pessoasNaEtapa: PessoaNaEtapa[];
 }
 
 /**
@@ -315,7 +404,56 @@ export function montarAgregado(
     // `as const` em NIVEIS_FUNIL torna `etapas` uma tupla de literais; alargar
     // para number[] aqui evita espalhar o tipo literal por todo o agregado.
     const etapas: number[] = [...n.etapas];
+
+    /**
+     * A LISTA DE QUEM ESTÁ PARADO — ver PessoaNaEtapa para o que entra e o que não entra.
+     *
+     * ⚠️ A pessoa é listada no nível em que ela CONTA (`p.nivel`), não em todo nível onde
+     * tenha oportunidade. Sem isso, alguém em duas etapas apareceria duas vezes e a soma
+     * das listas não fecharia com `pessoasNoFunil` — que é a conferência que a tela usa.
+     */
+    const cobraValor = n.nivel >= NIVEL_COBRA_VALOR;
+    const idsDoNivel = new Set(abertas.filter((o) => etapas.includes(Number(o.stageId))).map((o) => o.id));
+    const pessoasNaEtapa: PessoaNaEtapa[] = comAberta
+      .filter((p) => p.nivel === n.nivel)
+      .map((p) => {
+        const suas = p.oportunidadeIds
+          .filter((id) => idsDoNivel.has(id))
+          .map((id) => opPorId.get(id))
+          .filter((o): o is OportunidadeGravada => !!o);
+        const valor = suas.reduce((t, o) => t + (o.recorrenteCent ?? 0), 0);
+        // O `naEtapaDesde` MAIS ANTIGO: se há duas oportunidades na etapa, o relógio que
+        // importa é o de quem chegou primeiro.
+        const desde = suas.map((o) => o.naEtapaDesde).filter((x): x is string => !!x).sort()[0] ?? null;
+        return {
+          nome: p.nomes[0] ?? p.chave,
+          tituloCrm: suas.map((o) => o.titulo).find((t) => !!t) ?? null,
+          diasParado: diasAte(desde, agora),
+          // ⚠️ null e não 0 quando não há valor informado — ver PessoaNaEtapa.
+          mrrCent: valor > 0 ? valor : null,
+        };
+      })
+      /**
+       * ⚠️ A ORDEM DEPENDE DO NÍVEL — ver NIVEL_COBRA_VALOR.
+       *
+       * Onde a régua cobra valor (Negociação para cima), sem valor vem PRIMEIRO: é a fila
+       * de trabalho, e quem abre a etapa precisa ver o que falta preencher.
+       *
+       * Abaixo disso, sem valor é o esperado e não é pendência — então vão para o FIM, e
+       * as poucas que têm valor sobem, que é o que ali é notável. Priorizar as 248 sem
+       * valor do Follow-up seria destacar o normal.
+       */
+      .sort((a, b) => {
+        if ((a.mrrCent === null) !== (b.mrrCent === null)) {
+          const sinal = cobraValor ? -1 : 1; // sem valor primeiro só onde é pendência
+          return a.mrrCent === null ? sinal : -sinal;
+        }
+        return (b.mrrCent ?? 0) - (a.mrrCent ?? 0);
+      });
+
     return {
+      pessoasNaEtapa,
+      cobraValor,
       nivel: n.nivel,
       nome: n.nome,
       etapas,
@@ -370,9 +508,9 @@ export function montarAgregado(
    * conferido em 17/08/2026, zero casos). Se um dia houver, a soma passa a contar duplo e
    * a tela precisa dizer; por isso o número por etapa vem separado, nunca só o total.
    */
-  const NIVEL_NEGOCIACAO = 4;
   const porEtapaAvancada = NIVEIS_FUNIL
-    .filter((n) => n.nivel >= NIVEL_NEGOCIACAO)
+    // A MESMA constante que decide a ordem e a marcação da lista — ver NIVEL_COBRA_VALOR.
+    .filter((n) => n.nivel >= NIVEL_COBRA_VALOR)
     .flatMap((n) => n.etapas.map((etapaId) => ({ etapaId, nome: n.nome })))
     .map(({ etapaId, nome }) => {
       const idsEtapa = new Set(abertas.filter((o) => Number(o.stageId) === etapaId).map((o) => o.id));

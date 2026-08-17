@@ -3,6 +3,13 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useComercial } from "@/lib/useComercial";
+/**
+ * ⚠️ SÓ `import type` DESTE MÓDULO. Ele importa `lib/comercial.ts`, que importa
+ * `node:crypto` (hash do docId de pessoa) — um import de VALOR arrastaria a cadeia para o
+ * bundle do cliente e o build quebra com `UnhandledSchemeError`. O typecheck passa nos
+ * dois casos; só o `next build` acusa. Regras que a tela precisa vêm como DADO no
+ * agregado (ex.: `cobraValor`), nunca como constante importada.
+ */
 import type { AgregadoComercial, SerieMes } from "@/lib/comercialAgregado";
 import { TEMA, MOVIMENTO } from "@/lib/brand";
 import { useEntrada, atrasoDe } from "@/lib/useEntrada";
@@ -200,6 +207,9 @@ export default function Comercial() {
                   <span className="text-[11.5px]" style={{ color: MUTED }}>— mesmo degrau, duas portas de entrada</span>
                 </div>
               ) : null}
+
+              {/* Demanda 3: quem está parado aqui, a um clique. */}
+              <QuemEstaParado nivel={nv} />
             </div>
           ))}
         </div>
@@ -425,6 +435,118 @@ export default function Comercial() {
  * histórico dela está no commit que trouxe as colunas, se um dia a comparação
  * visual voltar a pesar mais que a forma.
  */
+/** Quantas linhas a lista mostra antes do botão. 248 no maior nível — rolagem que
+ *  ninguém lê. Carrega tudo (é o mesmo documento) e revela sob demanda. */
+const LINHAS_VISIVEIS = 20;
+
+/**
+ * QUEM ESTÁ PARADO NA ETAPA — demanda 3 do dono (17/08/2026).
+ *
+ * ⚠️ CUSTO ZERO: a lista já veio no documento que a tela leu. Nenhuma leitura nova.
+ *
+ * ⚠️ ORDEM VEM DO AGREGADO, não daqui: sem valor primeiro, depois por MRR decrescente.
+ * Reordenar na tela criaria uma segunda definição da mesma regra.
+ */
+function QuemEstaParado({ nivel }: { nivel: AgregadoComercial["funil"]["niveis"][number] }) {
+  const [aberto, setAberto] = useState(false);
+  const [tudo, setTudo] = useState(false);
+  const lista = nivel.pessoasNaEtapa ?? [];
+  if (!lista.length) return null;
+
+  const semValor = lista.filter((p) => p.mrrCent === null).length;
+  const total = lista.reduce((t, p) => t + (p.mrrCent ?? 0), 0);
+  const mostradas = tudo ? lista : lista.slice(0, LINHAS_VISIVEIS);
+
+  /**
+   * ⚠️ A MARCAÇÃO SÓ VALE ONDE A RÉGUA COBRA VALOR — e o limiar NÃO mora aqui: vem como
+   * dado do agregado, calculado no mesmo lugar que ordenou a lista. Assim os dois não
+   * podem divergir, e a tela não importa nada do módulo do servidor.
+   *
+   * Abaixo da Negociação, ausência de valor é o esperado: o Follow-up tem 248 pessoas e
+   * ZERO com valor, e pintar tudo de âmbar mostraria 248 pendências que ninguém pode
+   * resolver. Ali vai "—" neutro.
+   */
+  const cobraValor = !!nivel.cobraValor;
+
+  return (
+    <div className="ml-7 mt-1.5">
+      <button
+        type="button"
+        onClick={() => setAberto((v) => !v)}
+        className="text-[11.5px] underline underline-offset-2"
+        style={{ color: MUTED }}
+      >
+        {aberto ? "Ocultar" : `Ver as ${n(lista.length)} pessoas paradas aqui`}
+      </button>
+
+      {aberto && (
+        <div className="mt-2 rounded-lg px-3 py-2.5" style={{ background: TEMA.zebra }}>
+          {/*
+            ⚠️ A LIMITAÇÃO VEM ANTES DA LISTA, no corpo e não em tooltip. O relógio é o
+            `stagebegintime` do CRM: ele diz desde quando a pessoa está na etapa ATUAL e
+            ZERA se ela voltou atrás e avançou de novo, porque o CRM não guarda o caminho.
+            É a mesma ressalva que a tela já faz sobre o histórico de etapas, na mesma
+            formulação — quem lê as duas precisa reconhecer que é o mesmo limite.
+          */}
+          <p className="mb-2 text-[11px] leading-relaxed" style={{ color: MUTED }}>
+            <b style={{ color: TEMA.texto }}>Parado nesta etapa desde</b> — não é há quanto tempo
+            está no funil. O CRM não guarda por onde o lead passou, então quem voltou atrás e
+            avançou de novo aparece com o relógio zerado.
+          </p>
+
+          <div className="space-y-1">
+            {mostradas.map((p, i) => (
+              <div key={`${p.nome}-${i}`} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-[12px]">
+                <span className="min-w-0 flex-1 truncate" style={{ color: TEMA.texto }} title={p.tituloCrm ?? p.nome}>
+                  {p.tituloCrm ?? p.nome}
+                </span>
+                <span className="w-20 shrink-0 text-right tabular-nums" style={{ color: MUTED }}>
+                  {p.diasParado === null ? "—" : `${n(p.diasParado)} dias`}
+                </span>
+                {/* ⚠️ NUNCA "R$ 0" — zero é um valor real e desconhecido não é, a mesma
+                    regra do `mrrCent: null` no agregado. O que muda com o nível é só o
+                    PESO: pendência (âmbar) onde a régua cobra, ausência neutra onde não. */}
+                <span className="w-32 shrink-0 text-right tabular-nums"
+                  style={{ color: p.mrrCent === null ? (cobraValor ? AMBER : MUTED) : TEMA.destaque }}>
+                  {p.mrrCent === null ? (cobraValor ? "sem valor informado" : "—") : reais(p.mrrCent)}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {lista.length > LINHAS_VISIVEIS && (
+            <button
+              type="button"
+              onClick={() => setTudo((v) => !v)}
+              className="mt-2 text-[11.5px] underline underline-offset-2"
+              style={{ color: MUTED }}
+            >
+              {tudo ? `Mostrar só as primeiras ${LINHAS_VISIVEIS}` : `Mostrar todas as ${n(lista.length)}`}
+            </button>
+          )}
+
+          {/* O total daqui TEM que fechar com o bloco "Dinheiro parado por etapa" —
+              dois lugares mostrando o mesmo número que não batem é pior que um só. */}
+          <p className="mt-2 border-t pt-2 text-[11px] leading-relaxed" style={{ borderColor: LINE, color: MUTED }}>
+            <b style={{ color: TEMA.destaque }}>{reais(total)}</b> somando as{" "}
+            <b style={{ color: TEMA.texto }}>{n(lista.length - semValor)}</b> com valor informado
+            {semValor > 0 && (cobraValor ? (
+              <> · <b style={{ color: AMBER }}>{n(semValor)}</b> ainda sem valor, e aparecem primeiro
+              porque são o que falta preencher</>
+            ) : (
+              /* Sem cor e sem "falta": aqui não falta nada — a régua da agência só pede
+                 valor a partir da Negociação, e dizer "falta" seria inventar pendência. */
+              <> · as outras <b style={{ color: TEMA.texto }}>{n(semValor)}</b> ainda não têm valor,
+              o que é o esperado antes da Negociação</>
+            ))}
+            .
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * As demandas 4 e 5 do dono, numa seção só — porque são a mesma forma: MRR parado e
  * valor faltando, etapa por etapa, da Negociação para frente.
