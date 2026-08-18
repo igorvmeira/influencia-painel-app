@@ -923,7 +923,7 @@ export default function Dashboard(
         </div>
       ) : aba === "gestores" ? (
         <div className="mb-10 rounded-xl p-5" style={{ background: CARD }}>
-          <div ref={refRanking} className="flex flex-col gap-4">
+          <div ref={refRanking} className="flex flex-col gap-2.5">
             {ranking.map((g, i) => {
               const melhor = i === 0;
               const largura = Math.max(6, (g.cpl / maxCpl) * 100);

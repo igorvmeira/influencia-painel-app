@@ -359,7 +359,7 @@ function LinhaAlerta({ n, texto, detalhe, nomes, href, cor }: {
       // NUNCA pintar — sem erro, sem aviso, e a linha parece só não responder ao
       // mouse. Escrevi errado aqui e o `scripts/audita-tema.js` pegou; é o mesmo
       // defeito que ficou três meses vivo no painel antes da migração de tema.
-      className="block bg-brand-card p-4 transition-colors hover:bg-brand-hover"
+      className="block bg-brand-card p-2.5 transition-colors hover:bg-brand-hover"
       style={{ border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}
     >
       <p className="text-[13px]" style={{ color: TEMA.texto }}>
