@@ -18,6 +18,7 @@ import BarraDado from "./BarraDado";
 import KpiCard from "./KpiCard";
 import ColunasComMedia from "./ColunasComMedia";
 import AvisoDadoVelho from "./AvisoDadoVelho";
+import Modal from "./Modal";
 
 const CARD = TEMA.card;
 const LINE = TEMA.borda;
@@ -28,6 +29,15 @@ const AMBER = TEMA.atencao;
 
 /** Quantos meses as séries mostram por padrão. */
 const MESES_VISIVEIS = 12;
+
+/** Um nível do funil, como vem do agregado. Apelido para não repetir o caminho. */
+type NivelDoFunil = AgregadoComercial["funil"]["niveis"][number];
+
+/** Altura de cada faixa do funil, em px. FIXA e igual para todos os níveis — é o que
+ *  faz a ÁREA de cada faixa ser proporcional ao valor. Num funil trapezoidal a área de
+ *  uma faixa é (largura_de_cima + largura_de_baixo) ÷ 2, ou seja depende do nível
+ *  SEGUINTE: nem fiel à largura, nem à área. Aqui largura e área dizem a mesma coisa. */
+const ALTURA_FAIXA = 30;
 
 const n = (v: number) => v.toLocaleString("pt-BR");
 const reais = (cent: number) =>
@@ -82,6 +92,8 @@ function Aviso({ children, tom = "ouro" }: { children: React.ReactNode; tom?: "o
 export default function Comercial() {
   const { agregado, carregando, erro, recarregar } = useComercial();
   const [todosMeses, setTodosMeses] = useState(false);
+  /** Nível cuja lista de pessoas está aberta na janela. null = fechada. */
+  const [etapaAberta, setEtapaAberta] = useState<NivelDoFunil | null>(null);
   // Cada bloco animado tem o próprio observador: a cascata do funil não deve
   // esperar o usuário chegar nas faixas de idade, lá embaixo.
   const { ref: refFunil, entrou: entrouFunil } = useEntrada<HTMLDivElement>();
@@ -144,7 +156,24 @@ export default function Comercial() {
   }
 
   const { funil, recuperacao, negociacao, conversaAvancada, foraDoFunil, fechamento } = agregado;
-  const maxNivel = Math.max(1, ...funil.niveis.map((x) => x.pessoas));
+  /**
+   * ONDE A SILHUETA ALARGA — calculado, nunca escrito à mão.
+   *
+   * ⚠️ O funil de captação NÃO afunila (Follow-up 248, Negociação 23, Fechamento 88), e
+   * a forma centrada mostra isso de cara. Sem uma linha explicando, quem bate o olho lê
+   * "gráfico quebrado" — e o que está ali é o achado da tela.
+   *
+   * ⚠️ CALCULADO e não texto fixo: no dia em que o funil passar a afunilar de verdade, a
+   * frase some sozinha. Afirmação fixa sobre dado vivo é a que ninguém revisa.
+   */
+  const alargamentos = funil.niveis.flatMap((nv, i) =>
+    i > 0 && nv.pessoas > funil.niveis[i - 1].pessoas
+      ? [{ de: funil.niveis[i - 1], para: nv, vezes: nv.pessoas / Math.max(1, funil.niveis[i - 1].pessoas) }]
+      : []
+  );
+  const ultimo = funil.niveis[funil.niveis.length - 1];
+  const penultimo = funil.niveis[funil.niveis.length - 2];
+  const estacionaNoFim = !!ultimo && !!penultimo && ultimo.pessoas > penultimo.pessoas;
   const cortar = <T,>(a: T[]) => (todosMeses ? a : a.slice(-MESES_VISIVEIS));
   const emFechamento = fechamento.emFechamento;
 
@@ -169,50 +198,45 @@ export default function Comercial() {
       >
         {/* ⚠️ REGRA DA CASA: nunca um número solto chamado "leads". Cada linha diz
             se está contando PESSOA ou OPORTUNIDADE — é a diferença entre 476 e 1.660. */}
-        <div ref={refFunil} className="space-y-2.5">
-          {funil.niveis.map((nv, i) => (
-            <div key={nv.nivel}>
-              <div className="flex items-baseline gap-2">
-                <span className="w-5 text-[11px] tabular-nums" style={{ color: MUTED }}>{nv.nivel}</span>
-                <span className="flex-1 text-[13px] font-medium text-brand-ink">{nv.nome}</span>
-                <span className="text-[15px] font-semibold tabular-nums text-brand-ink">{n(nv.pessoas)}</span>
-                <span className="text-[11.5px]" style={{ color: MUTED }}>pessoas</span>
-              </div>
-              <div className="ml-7 mt-1 flex items-center gap-2">
-                {/* Degradê só aqui: o dourado tem folga de contraste (9,44:1) e
-                    aguenta escurecer; o neutro das outras barras não teria. */}
-                <BarraDado
-                  pct={(nv.pessoas / maxNivel) * 100}
-                  cor={GOLD}
-                  degrade
-                  entrou={entrouFunil}
-                  indice={i}
-                  titulo={`${n(nv.pessoas)} pessoas no nível ${nv.nivel}`}
-                />
-                <span className="w-28 text-right text-[11.5px] tabular-nums" style={{ color: MUTED }}>
-                  {n(nv.oportunidades)} oportunidades
-                </span>
-              </div>
+        <FunilCentrado
+          refBloco={refFunil}
+          entrou={entrouFunil}
+          niveis={funil.niveis}
+          nomeEtapa={nomeEtapa}
+          aoAbrir={setEtapaAberta}
+        />
 
-              {/* ⚠️ O EMPATE DO NÍVEL 1, explicado na tela: tráfego e outbound são
-                  duas PORTAS do mesmo degrau, não degraus diferentes. */}
-              {nv.porEtapa ? (
-                <div className="ml-7 mt-1.5 flex flex-wrap gap-x-5 gap-y-1">
-                  {nv.porEtapa.map((e) => (
-                    <span key={e.etapaId} className="text-[11.5px]" style={{ color: MUTED }}>
-                      <b className="tabular-nums" style={{ color: TEMA.texto }}>{n(e.oportunidades)}</b>{" "}
-                      {nomeEtapa.get(e.etapaId) ?? `etapa ${e.etapaId}`}
-                    </span>
-                  ))}
-                  <span className="text-[11.5px]" style={{ color: MUTED }}>— mesmo degrau, duas portas de entrada</span>
-                </div>
-              ) : null}
+        {/*
+          ⚠️ ESTADO PERMANENTE, NÃO ALERTA — dourado, nunca vermelho. Não é falha que
+          alguém vá consertar: é como este funil é, e vai estar aqui em toda visita.
 
-              {/* Demanda 3: quem está parado aqui, a um clique. */}
-              <QuemEstaParado nivel={nv} />
-            </div>
-          ))}
-        </div>
+          ⚠️ A EXPLICAÇÃO SÓ APARECE ONDE ELA FOI MEDIDA. O alargamento no fim tem causa
+          conhecida (a agência definiu que estar em Fechamento É venda feita, então ali
+          as pessoas ficam). Nos outros pontos a tela diz QUE alarga e não inventa por
+          quê — explicação que não fecha encerra a investigação sem resolver nada.
+        */}
+        {alargamentos.length > 0 && (
+          <p className="mt-3 border-t pt-3 text-[12px] leading-relaxed" style={{ borderColor: LINE, color: MUTED }}>
+            <b style={{ color: GOLD }}>A silhueta alarga</b> em{" "}
+            {alargamentos.length === 1 ? "um ponto" : `${n(alargamentos.length)} pontos`} — e isso é o
+            dado, não defeito de desenho:{" "}
+            {alargamentos.map((a, i) => (
+              <span key={a.para.nivel}>
+                {i > 0 && ", "}
+                <b style={{ color: TEMA.texto }}>{a.para.nome}</b> tem{" "}
+                <b className="tabular-nums" style={{ color: TEMA.texto }}>{a.vezes.toFixed(1).replace(".", ",")}x</b>{" "}
+                as pessoas de {a.de.nome}
+              </span>
+            ))}
+            .
+            {estacionaNoFim && (
+              <> No fim isso tem causa conhecida: <b style={{ color: TEMA.texto }}>{penultimo.nome} é
+              passagem, {ultimo.nome} é estacionamento</b> — a agência definiu que estar em{" "}
+              {ultimo.nome} é negociação concluída, então a pessoa fica parada ali depois da venda.
+              O gargalo deste funil não é o afunilamento, é o acúmulo no fim.</>
+            )}
+          </p>
+        )}
 
         <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1.5 border-t pt-3 text-[12.5px]" style={{ borderColor: LINE }}>
           {/* ⚠️ Havia um `opacity-70` nestes parênteses. Sobre texto que JÁ é `muted`,
@@ -415,6 +439,28 @@ export default function Comercial() {
       >
         {todosMeses ? `Mostrar só os últimos ${MESES_VISIVEIS} meses` : "Mostrar o histórico completo"}
       </button>
+
+      {/*
+        A JANELA DA ETAPA — abre ao clicar na faixa do funil.
+
+        ⚠️ O MESMO `Modal` da /carteira, e a MESMA lista de antes. Nada foi refeito: o
+        que mudou é por onde se chega. Uma segunda janela com outro comportamento de
+        foco, ESC e tela cheia no celular seria o nono mecanismo de revelação desta base.
+
+        ⚠️ MONTA E DESMONTA com a abertura (`{etapaAberta && ...}` dentro de um Modal que
+        devolve null quando fechado), então o "mostrar todas" volta ao padrão a cada
+        abertura — estado de revelação não persiste, que é o estilo da casa.
+      */}
+      <Modal
+        aberto={etapaAberta !== null}
+        aoFechar={() => setEtapaAberta(null)}
+        titulo={etapaAberta ? `${etapaAberta.nome} — quem está parado aqui` : ""}
+        subtitulo={etapaAberta
+          ? `Nível ${etapaAberta.nivel} · ${n(etapaAberta.pessoas)} pessoas · ${n(etapaAberta.oportunidades)} oportunidades`
+          : undefined}
+      >
+        {etapaAberta && <ListaDaEtapa nivel={etapaAberta} />}
+      </Modal>
     </div>
   );
 }
@@ -435,20 +481,138 @@ export default function Comercial() {
  * histórico dela está no commit que trouxe as colunas, se um dia a comparação
  * visual voltar a pesar mais que a forma.
  */
+/**
+ * O FUNIL, EM BARRAS CENTRADAS — a forma que o dono pediu, sem a mentira que ela costuma
+ * carregar. Aprovado em 18/08/2026.
+ *
+ * ⚠️ POR QUE NÃO O TRAPÉZIO. Nele o valor vira LARGURA e o olho lê ÁREA, e as duas não
+ * batem: a área de uma faixa trapezoidal é (largura_de_cima + largura_de_baixo) ÷ 2, ou
+ * seja **depende do nível seguinte**. Aqui cada faixa é um retângulo de altura FIXA
+ * (ALTURA_FAIXA), então área e largura dizem exatamente a mesma coisa.
+ *
+ * ⚠️⚠️ E O MOTIVO QUE DECIDE: **ESTE FUNIL NÃO AFUNILA.** Medido em 17/08/2026 —
+ * Follow-up 248, Negociação 23, Fechamento 88. Ele ALARGA em duas das quatro transições
+ * (1→2 e 4→5), e a última é 3,8x. Uma forma que precisa estreitar não consegue desenhar
+ * isso: ou estreita mentindo, ou incha e parece defeito.
+ *
+ * 🔑 **NEGOCIAÇÃO É PASSAGEM, FECHAMENTO É ESTACIONAMENTO.** É o achado, não o efeito
+ * colateral do gráfico. A agência definiu que estar em Fechamento É venda feita, então
+ * ali as pessoas se ACUMULAM — são as 88 com R$ 157.560 parados. O gargalo do comercial
+ * não é o afunilamento, é o estacionamento no fim. A silhueta vai inchar ali todo dia, e
+ * isso é informação: quem olhar e achar que o gráfico quebrou está lendo o dado certo.
+ *
+ * ⚠️ NENHUM PISO DE LARGURA. Barra mínima faria 1 pessoa parecer N, que é a mesma mentira
+ * do trapézio em miniatura. A menor razão hoje é 23/248 = 9,3%, perfeitamente visível.
+ */
+function FunilCentrado({
+  refBloco, entrou, niveis, nomeEtapa, aoAbrir,
+}: {
+  refBloco: React.RefObject<HTMLDivElement>;
+  entrou: boolean;
+  niveis: NivelDoFunil[];
+  nomeEtapa: Map<number, string>;
+  aoAbrir: (nv: NivelDoFunil) => void;
+}) {
+  const max = Math.max(1, ...niveis.map((x) => x.pessoas));
+
+  return (
+    <div ref={refBloco} className="space-y-1">
+      {niveis.map((nv, i) => {
+        const pct = Math.max(0, Math.min(100, (nv.pessoas / max) * 100));
+        const atraso = atrasoDe(i, MOVIMENTO.escalonamentoMs, MOVIMENTO.escalonamentoTetoMs);
+        const temLista = (nv.pessoasNaEtapa ?? []).length > 0;
+        return (
+          <div key={nv.nivel}>
+            {/*
+              ⚠️ A LINHA INTEIRA É O ALVO, e não a barra. O nível 4 tem 23 de 248 — uma
+              lasca de 9% da largura. Alvo de clique de 9% é alvo que ninguém acerta, e
+              seria justamente o nível onde está o dinheiro.
+
+              ⚠️ FUNDO DO HOVER EM CLASSE (`hover:bg-brand-hover`), NUNCA em `style`
+              inline: estilo inline vence stylesheet, e o hover simplesmente não pintaria
+              — sem erro e sem aviso. Três hovers desta base já morreram assim.
+            */}
+            <button
+              type="button"
+              disabled={!temLista}
+              onClick={() => temLista && aoAbrir(nv)}
+              className="group flex w-full items-center gap-3 rounded-lg px-2 py-1 text-left transition-colors hover:bg-brand-hover disabled:cursor-default disabled:hover:bg-transparent"
+              title={temLista ? `Ver as ${n(nv.pessoas)} pessoas do nível ${nv.nivel}` : undefined}
+            >
+              <span className="w-4 shrink-0 text-[11px] tabular-nums" style={{ color: MUTED }}>{nv.nivel}</span>
+              <span className="w-40 shrink-0 truncate text-[13px] font-medium text-brand-ink">{nv.nome}</span>
+
+              {/*
+                A SILHUETA. Cresce do CENTRO para os dois lados — é o que dá a forma de
+                funil sem trocar a codificação: a largura continua linear no valor.
+
+                ⚠️ O HOVER NÃO MEXE NO TAMANHO. A largura É o dado; crescer no hover faria
+                a barra mentir por um instante. O destaque vem de `brightness` (que no
+                escuro é como se comunica profundidade — sombra não eleva onde não há luz
+                para bloquear) e do fundo da linha. Nunca da escala.
+              */}
+              <span className="flex flex-1 justify-center" style={{ height: ALTURA_FAIXA }}>
+                <span
+                  className="block rounded-md group-hover:brightness-125"
+                  style={{
+                    width: entrou ? `${pct}%` : "0%",
+                    height: "100%",
+                    background: TEMA.gradDestaqueH,
+                    transition: `width ${MOVIMENTO.barraMs}ms ${MOVIMENTO.ease}, filter 150ms ${MOVIMENTO.ease}`,
+                    transitionDelay: `${atraso}ms`,
+                  }}
+                />
+              </span>
+
+              <span className="w-32 shrink-0 text-right">
+                <b className="text-[15px] font-semibold tabular-nums text-brand-ink">{n(nv.pessoas)}</b>
+                <span className="ml-1 text-[11.5px]" style={{ color: MUTED }}>pessoas</span>
+              </span>
+              <span className="w-28 shrink-0 text-right text-[11.5px] tabular-nums" style={{ color: MUTED }}>
+                {n(nv.oportunidades)} oportunidades
+              </span>
+            </button>
+
+            {/* ⚠️ O EMPATE DO NÍVEL 1, explicado na tela: tráfego e outbound são duas
+                PORTAS do mesmo degrau, não degraus diferentes. Fica FORA do botão: é
+                leitura, não alvo de clique. */}
+            {nv.porEtapa ? (
+              <div className="mb-1 ml-9 flex flex-wrap gap-x-5 gap-y-1">
+                {nv.porEtapa.map((e) => (
+                  <span key={e.etapaId} className="text-[11.5px]" style={{ color: MUTED }}>
+                    <b className="tabular-nums" style={{ color: TEMA.texto }}>{n(e.oportunidades)}</b>{" "}
+                    {nomeEtapa.get(e.etapaId) ?? `etapa ${e.etapaId}`}
+                  </span>
+                ))}
+                <span className="text-[11.5px]" style={{ color: MUTED }}>— mesmo degrau, duas portas de entrada</span>
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /** Quantas linhas a lista mostra antes do botão. 248 no maior nível — rolagem que
  *  ninguém lê. Carrega tudo (é o mesmo documento) e revela sob demanda. */
 const LINHAS_VISIVEIS = 20;
 
 /**
- * QUEM ESTÁ PARADO NA ETAPA — demanda 3 do dono (17/08/2026).
+ * QUEM ESTÁ PARADO NA ETAPA — demanda 3 do dono (17/08/2026), agora dentro da JANELA que
+ * abre ao clicar na faixa do funil (18/08/2026).
  *
  * ⚠️ CUSTO ZERO: a lista já veio no documento que a tela leu. Nenhuma leitura nova.
  *
  * ⚠️ ORDEM VEM DO AGREGADO, não daqui: sem valor primeiro, depois por MRR decrescente.
  * Reordenar na tela criaria uma segunda definição da mesma regra.
+ *
+ * ⚠️ O ACORDEÃO INLINE QUE ISTO ERA **SAIU**, não virou um segundo caminho. Clique na
+ * faixa e botão "Ver as N pessoas" abrindo a mesma lista seriam dois mecanismos para a
+ * mesma coisa — e este painel já tinha oito mecanismos de revelação inventados um a um.
+ * A contagem, que era o que aquele gatilho anunciava, está na própria faixa do funil.
  */
-function QuemEstaParado({ nivel }: { nivel: AgregadoComercial["funil"]["niveis"][number] }) {
-  const [aberto, setAberto] = useState(false);
+function ListaDaEtapa({ nivel }: { nivel: NivelDoFunil }) {
   const [tudo, setTudo] = useState(false);
   const lista = nivel.pessoasNaEtapa ?? [];
   if (!lista.length) return null;
@@ -469,18 +633,10 @@ function QuemEstaParado({ nivel }: { nivel: AgregadoComercial["funil"]["niveis"]
   const cobraValor = !!nivel.cobraValor;
 
   return (
-    <div className="ml-7 mt-1.5">
-      <button
-        type="button"
-        onClick={() => setAberto((v) => !v)}
-        className="text-[11.5px] underline underline-offset-2"
-        style={{ color: MUTED }}
-      >
-        {aberto ? "Ocultar" : `Ver as ${n(lista.length)} pessoas paradas aqui`}
-      </button>
-
-      {aberto && (
-        <div className="mt-2 rounded-lg px-3 py-2.5" style={{ background: TEMA.zebra }}>
+    // ⚠️ Sem o fundo `zebra` que existia quando isto era acordeão embutido: dentro da
+    // janela o Modal já É a superfície, e um segundo tom empilhado só adicionaria um
+    // degrau de elevação que não significa nada.
+    <div>
           {/*
             ⚠️ A LIMITAÇÃO VEM ANTES DA LISTA, no corpo e não em tooltip. O relógio é o
             `stagebegintime` do CRM: ele diz desde quando a pessoa está na etapa ATUAL e
@@ -541,8 +697,6 @@ function QuemEstaParado({ nivel }: { nivel: AgregadoComercial["funil"]["niveis"]
             ))}
             .
           </p>
-        </div>
-      )}
     </div>
   );
 }
