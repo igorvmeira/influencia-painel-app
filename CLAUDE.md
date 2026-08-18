@@ -399,6 +399,23 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   fronteira cliente/servidor. E aqui ela é mais perigosa: **quando a regra mora nos dois
   lados, às vezes o build salva e às vezes a divergência só aparece meses depois**, num
   número que ninguém confere.
+- ⚠️ **EM ESTADO COMPARTILHADO ENTRE TELAS, SÓ A ESCOLHA VIAJA.** Valor DERIVADO e valor
+  PADRÃO não são escolha — e os dois viajam disfarçados de escolha se você deixar.
+  A mesma régua pegou dois casos no mesmo dia, no período que viaja entre as telas:
+  · **derivado** — os modos "Mês" e "Personalizado" do Dashboard têm um número de dias
+    (dias decorridos, tamanho do intervalo), mas ele é consequência, não decisão. Levar
+    "23 dias" para outra tela inventaria uma janela que ninguém pediu;
+  · **padrão** — guardar o 15 do Dashboard como valor inicial do estado faria o modal de
+    Análise de Conta abrir em 15 no primeiro uso de cada sessão, em vez dos 30 dele, **sem
+    nenhum clique ter acontecido**. O estado nasce `null` = ninguém escolheu, e cada tela
+    segue com o padrão dela até existir escolha de verdade.
+  Os dois são silenciosos do mesmo jeito: a tela mostra um número plausível, e a única
+  pergunta que os denuncia é **"que clique produziu isto?"** — se a resposta for
+  "nenhum", não era escolha.
+  **Corolário — LER É TOLERANTE, ESCREVER É SÓ POR CLIQUE.** Chegar numa tela pode ADAPTAR
+  o valor recebido (uma tela de mês fechado apara o mês corrente para o anterior — e diz na
+  tela que aparou). Mas a adaptação NUNCA volta para o estado compartilhado: se voltasse,
+  navegar de volta moveria a outra tela sem nenhum clique, e não haveria o que rastrear.
 - 🛑 **IMPORT DE VALOR NUM COMPONENTE ARRASTA A CADEIA INTEIRA PARA O BUNDLE DO CLIENTE.**
   `import type` é apagado na compilação; import de valor não é. Caso real: a tela importou
   uma constante de `lib/comercialAgregado.ts`, que importa `lib/comercial.ts`, que importa
