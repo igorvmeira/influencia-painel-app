@@ -267,6 +267,39 @@ export async function GET(req: Request) {
   const opParaGravar = [...opCriadas, ...opAlteradas];
   const pesParaGravar = [...pesCriadas, ...pesAlteradas];
 
+  /**
+   * O AGREGADO, MONTADO UMA VEZ — e é ESTE objeto que será gravado.
+   *
+   * ⚠️ Antes ele nascia dentro do `.set()`, o que impedia a resposta de descrever o que
+   * ia para o banco: qualquer número no relatório teria que ser recalculado à parte, e
+   * duas contas da mesma coisa divergem no dia em que uma das duas mudar. Aqui a
+   * conferência descreve o objeto REAL.
+   */
+  const agregado = montarAgregado(universo, pessoas, new Date());
+
+  /**
+   * SAFRA DE ENTRADA — a conferência da etapa que só ESCREVE o `mesEntrada`.
+   *
+   * ⚠️ A etapa que grava sem ninguém ler precisa de um jeito de provar que gravou; senão
+   * "escrevi primeiro, leio depois" vira "escrevi e ninguém conferiu". É a mesma ordem do
+   * dual-write do sync de tráfego.
+   *
+   * ⚠️ `semMes` é o residual que a tela vai ter que declarar. Medido em 18/08/2026 ele é
+   * ZERO — nenhuma das 1.679 abertas do pipeline 4 está sem `createdAt`. Mas isso é
+   * propriedade do dado de hoje, não garantia do CRM, e por isso vira número no relatório
+   * em vez de premissa no código.
+   */
+  const pessoasDosNiveis = agregado.funil.niveis.flatMap((n) => n.pessoasNaEtapa ?? []);
+  const safrasMap = new Map<string, number>();
+  let semMes = 0;
+  for (const pe of pessoasDosNiveis) {
+    if (!pe.mesEntrada) { semMes++; continue; }
+    safrasMap.set(pe.mesEntrada, (safrasMap.get(pe.mesEntrada) ?? 0) + 1);
+  }
+  const safras = [...safrasMap.entries()]
+    .sort(([a], [b]) => b.localeCompare(a)) // mais recente primeiro, como o seletor
+    .map(([mes, pessoas]) => ({ mes, pessoas }));
+
   const resposta: Record<string, unknown> = {
     ok: true,
     modo: aplicar ? "aplicar" : "previa",
@@ -327,11 +360,41 @@ export async function GET(req: Request) {
           somaNaoPassaDoTotal: obtido.captacao + obtido.foraDoFunil <= obtido.pessoas,
           ok: obtido.captacao + obtido.foraDoFunil <= obtido.pessoas,
         },
+        /**
+         * ⚠️ IDENTIDADE, não comparação com foto: a soma das safras mais quem não tem
+         * mês TEM que dar o total das listas, em qualquer dia. Se quebrar, alguém
+         * duplicou ou perdeu gente ao agrupar por mês — e é justamente o número que a
+         * tela vai dividir ("30 das 210"). Divisão com universo furado sai plausível.
+         */
+        safraFechaComAsListas: {
+          somaDasSafras: safras.reduce((t, x) => t + x.pessoas, 0),
+          semMes,
+          totalNasListas: pessoasDosNiveis.length,
+          ok: safras.reduce((t, x) => t + x.pessoas, 0) + semMes === pessoasDosNiveis.length,
+        },
         tudoCoerente:
           somaNiveis === obtido.captacao
           && obtido.negociacao <= obtido.conversaAvancada
-          && obtido.captacao + obtido.foraDoFunil <= obtido.pessoas,
+          && obtido.captacao + obtido.foraDoFunil <= obtido.pessoas
+          && safras.reduce((t, x) => t + x.pessoas, 0) + semMes === pessoasDosNiveis.length,
       },
+    },
+
+    /**
+     * A FOTO DAS SAFRAS — existe para conferir a etapa de escrita do `mesEntrada`.
+     *
+     * ⚠️ `semMes` é o que a tela precisará declarar como residual. Enquanto for 0, a soma
+     * das safras é o funil inteiro; no dia em que não for, a /comercial mostra a linha.
+     */
+    safraDeEntrada: {
+      nota:
+        "mesEntrada sai de primeiroContato, que cobre os funis 4 E 23 — é ENTRADA NO "
+        + "COMERCIAL, não entrada no funil de captação. Mesma régua do leadsNovos, para o "
+        + "denominador da tela fechar.",
+      totalNasListas: pessoasDosNiveis.length,
+      semMes,
+      mesesDistintos: safras.length,
+      porMes: safras,
     },
 
     // ⚠️ O `stageorders` continua sendo lido — não para mandar, para DENUNCIAR.
@@ -449,8 +512,8 @@ export async function GET(req: Request) {
      * É DERIVADO: as duas coleções granulares seguem intactas como auditoria, e
      * mudar uma regra é rodar o sync de novo — não há migração de dado.
      */
-    await db.collection(COL_AGREGADO).doc("funil").set(
-      montarAgregado(universo, pessoas, new Date()), { merge: false });
+    // ⚠️ O MESMO objeto que a resposta acabou de descrever — não uma segunda montagem.
+    await db.collection(COL_AGREGADO).doc("funil").set(agregado, { merge: false });
     await db.collection("sistema").doc("sync_comercial").set({
       ultimaExecucao: new Date().toISOString(),
       oportunidadesAbertas: frescas.length,

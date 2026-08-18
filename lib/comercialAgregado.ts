@@ -142,6 +142,35 @@ export interface PessoaNaEtapa {
    * é zero. É a mesma regra do `reach` ausente no sync de tráfego.
    */
   mrrCent: number | null;
+  /**
+   * O MÊS EM QUE A PESSOA ENTROU NO COMERCIAL ("YYYY-MM"), para a safra da /comercial.
+   *
+   * ⚠️ MESMA RÉGUA DO `leadsNovos`: sai de `primeiroContato`, que é o `createdAt` mais
+   * antigo entre as oportunidades da pessoa nos funis 4 **e 23**. Ou seja é "entrou no
+   * COMERCIAL", não "entrou no funil de captação" — quem chegou direto como
+   * desqualificado nunca esteve no funil e mesmo assim tem mês de entrada. O rótulo na
+   * tela precisa dizer isso.
+   * Usar a mesma régua não é detalhe: é o que faz o denominador da tela fechar. Se a
+   * safra do funil e a série mensal contassem de formas diferentes, "30 das 210 que
+   * entraram" seria uma divisão entre dois universos, e ninguém saberia qual está certo.
+   *
+   * ⚠️ POR QUE POR PESSOA e não um agregado `porMesEntrada` por nível (que custaria 3 kB
+   * em vez de 9): com o campo aqui, a CONTAGEM da safra é o tamanho da própria lista que
+   * a janela mostra. Um agregado paralelo seria uma segunda fonte, e no dia em que ela
+   * divergisse o funil diria 6 e a janela mostraria 47. Divergir fica impossível por
+   * construção — vale os 6 kB de diferença.
+   *
+   * ⚠️ CUSTO MEDIDO: 489 pessoas x ~19 bytes = ~9 kB, levando o documento de ~61 kB para
+   * ~70 kB — 7% do limite de 1 MB, margem de 14x.
+   *
+   * ⚠️ `null` = sem data de entrada. Medido em 18/08/2026 contra a fonte: das 1.679
+   * oportunidades ABERTAS no pipeline 4, **zero** estão sem `createdAt` válido — e como
+   * toda pessoa do funil tem ao menos uma aberta ali, hoje ninguém fica sem mês. O tipo
+   * continua aceitando `null` porque isso é propriedade do DADO DE HOJE, não garantia do
+   * CRM: basta uma oportunidade sem data amanhã. Quem consome soma o residual e mostra a
+   * linha só quando ele existe.
+   */
+  mesEntrada: string | null;
 }
 
 export interface NivelAgregado {
@@ -429,6 +458,10 @@ export function montarAgregado(
           nome: p.nomes[0] ?? p.chave,
           tituloCrm: suas.map((o) => o.titulo).find((t) => !!t) ?? null,
           diasParado: diasAte(desde, agora),
+          // ⚠️ `mesLocal` e não `slice(0, 7)` do ISO: um primeiro contato às 22h de 31/07
+          // em Brasília cai em 01/08 no UTC e mudaria de safra. É a mesma função que o
+          // `leadsNovos` usa — o mês tem que ser o mesmo nos dois lugares.
+          mesEntrada: mesLocal(p.primeiroContato),
           // ⚠️ null e não 0 quando não há valor informado — ver PessoaNaEtapa.
           mrrCent: valor > 0 ? valor : null,
         };
