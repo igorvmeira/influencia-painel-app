@@ -104,7 +104,7 @@ A agência entregou o Manual de Marca 2026. A migração é feita em commits num
 ```
 1   fontes (Space Grotesk + Inconsolata)        FEITO  5f3c5db
 1b  correção de peso (face 600 + b/strong)      FEITO  este commit
-1c  calibração tipográfica                      pendente — decisão do Igor
+1c  calibração tipográfica                    FEITO  este commit
 2   flip atômico da paleta                      pendente
 3-8 tela a tela                                 pendente
 9   logo                                        pendente (SVGs recebidos)
@@ -139,3 +139,34 @@ herdavam o `bolder` do navegador (700) em prosa de 11 a 12,5px, incluindo 41 nas
 camada de honestidade da /comercial. Nunca foi escolha de ninguém: era o que sobrava por
 omissão. Regra única em `app/globals.css`, com o porquê e com a saída documentada — se 500
 não destacar o bastante, a resposta é **contraste**, nunca subir o peso.
+
+**18/08/2026 — a calibração tipográfica foi MEDIDA e confirmou o existente (commit 1c).**
+Feita na /tipografia contra o app já corrigido pelo 1b — ou seja, contra uma tela que
+renderiza o que está escrito no código, e não o 700 que o commit 1 estava produzindo por
+omissão de face. Resultado:
+
+| o que foi medido | decisão |
+|---|---|
+| pesos carregados | mantém **400 / 500 / 600 / 700** |
+| Poppins 700 → Space Grotesk | **700** |
+| Poppins 600 (grande e pequeno) → | **600** |
+| Poppins 500 → | **500** |
+| tracking dos rótulos em caps | mantém **.13em** |
+| Inconsolata vs Space Grotesk no mesmo corpo | **sem ajuste** — nenhum `font-size-adjust`, nenhum multiplicador |
+
+⚠️ **É registro de DECISÃO MEDIDA, não de mudança.** Nenhum peso, tracking, tamanho ou
+família foi alterado no 1c — o diff dele é comentário e este README. A medição vale
+justamente por ter confirmado o existente: sem ela, "não mudou nada" seria indistinguível
+de "ninguém olhou".
+
+A única coisa que o 1c decidiu de novo foi o **terceiro caso da régua tipográfica**, que a
+versão anterior errava. Ela dizia que KPI era coluna; KPI não é coluna, é um número solto
+num card. A régua completa mora em `app/layout.tsx`, junto da declaração da Inconsolata:
+
+```
+1. número em COLUNA        -> Inconsolata      (vizinho vertical; alinhar É a informação)
+2. número em FRASE         -> Space Grotesk    (vizinho é texto; sem troca no meio da linha)
+3. número SOZINHO em card  -> Space Grotesk    (sem vizinho; o card fala a língua do título)
+```
+
+A aplicação da régua acontece nos commits de tela (3 a 8), com a paleta já nova.

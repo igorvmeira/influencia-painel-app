@@ -43,12 +43,32 @@ const spaceGrotesk = Space_Grotesk({
  * ⚠️ É MONOESPAÇADA, e é por isso que ela entra nos números: dígito de mesma largura
  * resolve o alinhamento de coluna por natureza, sem depender do `tabular-nums`.
  *
- * ⚠️ A RÉGUA DE ONDE ELA ENTRA — decidida em 18/08/2026:
- *   **número em COLUNA é Inconsolata; número em FRASE acompanha a frase.**
- * Tabela, ranking, KPI e eixo de gráfico são coluna: ali o alinhamento É a informação.
- * Já "111 das 210 que entraram" é PROSA — um número dentro de uma frase não é dado
- * técnico, e trocar de fonte no meio da linha cria um solavanco de leitura a cada
- * número. O `tabular-nums` continua onde a Space Grotesk ficar com números.
+ * ⚠️ A RÉGUA DE ONDE ELA ENTRA — três casos, fechada em 18/08/2026 (commit 1c).
+ * A pergunta não é "é número?", é **o que está ao lado dele**:
+ *
+ *   1. NÚMERO EM COLUNA  → Inconsolata.
+ *      Tabela, eixo de gráfico, lista de valores, ranking. Ali o número tem um VIZINHO
+ *      VERTICAL, e o alinhamento dos dígitos É a informação: a monoespaçada resolve por
+ *      natureza, sem depender do `tabular-nums`.
+ *
+ *   2. NÚMERO EM FRASE   → acompanha a frase (Space Grotesk).
+ *      "111 das 210 que entraram ainda estão no funil." O vizinho é TEXTO. Um número
+ *      dentro de uma frase não é dado técnico, é prosa — e trocar de família no meio da
+ *      linha cria um solavanco de leitura a cada número.
+ *
+ *   3. NÚMERO SOZINHO EM CARD → Space Grotesk.
+ *      KpiCard e equivalentes. Não há vizinho: não há coluna para alinhar nem frase para
+ *      acompanhar. O card fala a língua do TÍTULO — rótulo, número e delta são uma
+ *      unidade tipográfica só, e enfiar uma segunda família ali quebraria a unidade em
+ *      troca de um alinhamento que ninguém pode ver, porque não há segundo número.
+ *      Quem segura os dígitos aqui é o `tabular-nums`, e ele basta: o problema real do
+ *      KPI é a largura MUDAR quando o valor muda (a animação de count-up), não a
+ *      comparação com um vizinho.
+ *
+ * ⚠️ O CASO 3 EXISTE PORQUE A RÉGUA DE DOIS CASOS ERRAVA. A versão anterior deste
+ * comentário listava "KPI" como coluna — e KPI não é coluna: é um número solto num card.
+ * Seguir aquela versão colocaria Inconsolata no número herói de 34px, que é justamente
+ * onde a família de TÍTULO tem que estar.
  *
  * ⚠️ A APLICAÇÃO DESSA RÉGUA NÃO É DESTE COMMIT. Aqui as duas fontes só passam a
  * existir; trocar coluna por coluna acontece nos commits de tela, com a paleta já nova.
