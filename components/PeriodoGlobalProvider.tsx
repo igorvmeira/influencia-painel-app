@@ -80,7 +80,23 @@ export type JanelaDia = (typeof JANELAS_DIA)[number];
  * É a mesma régua que mantém "Mês" e "Personalizado" fora daqui: **só ESCOLHA
  * viaja.** Número derivado não é escolha, e valor padrão também não é.
 
-/** Mês de calendário. `mes` é 1..12 (não 0..11 — o formato do lib/periodo.ts). */
+/**
+ * Mês de calendário. `mes` é 1..12 (não 0..11 — o formato do lib/periodo.ts).
+ *
+ * ⚠️ HOJE SÓ EXISTE UMA PONTA: a /gestores é a única tela que ESCOLHE um mês. A
+ * /comercial mostra uma SÉRIE (o interruptor dela decide quantos meses aparecem,
+ * não qual vale) e a /recuperacao não tem mês. O valor ainda serve — o mês volta
+ * ao sair e voltar para a /gestores dentro da sessão — mas o compartilhamento
+ * de verdade espera uma segunda tela que escolha mês.
+ *
+ * ⚠️ E é por isso que NÃO existe aparo visível ("agosto ainda não fechou;
+ * mostrando julho") em lugar nenhum: aparo é o que uma tela mostra ao receber um
+ * mês que ela não aceita, e não há tela nessa situação. Escrever a mensagem agora
+ * seria UI para um estado inalcançável — pior que ausência, porque pareceria
+ * testada. A leitura tolerante existe (a /gestores valida contra a lista de
+ * comparáveis, senão cairia no vazio de "não há dois meses fechados", que seria
+ * uma frase falsa); o que não existe é o texto, e ele nasce junto da segunda tela.
+ */
 export interface MesEscolhido {
   ano: number;
   mes: number;

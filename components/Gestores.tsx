@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useDadosPainel } from "@/lib/useDadosPainel";
 import { montarPainel } from "@/lib/painel";
 import { janelaMesFechado, mesesDisponiveis, coberturaMes, ymdParaBR } from "@/lib/periodo";
+import { usePeriodoGlobal } from "./PeriodoGlobalProvider";
 import { brl, brlDec, num } from "@/lib/format";
 import { TEMA } from "@/lib/brand";
 import { ContaMap, LinhaCliente } from "@/lib/types";
@@ -100,11 +101,32 @@ export default function Gestores() {
   const meses = useMemo(() => mesesDisponiveis(daily, contasAtivas), [daily, contasAtivas]);
   const comparaveis = useMemo(() => meses.filter((m) => m.cobreMesAnterior), [meses]);
 
+  /**
+   * ETAPA 2 do período compartilhado — a metade que existe.
+   *
+   * ⚠️ Esta é a ÚNICA tela do painel que ESCOLHE um mês. A /comercial mostra uma
+   * SÉRIE de meses (o interruptor dela decide quantos aparecem, não qual vale), e
+   * a /recuperacao não tem mês nenhum — então não existe, hoje, a segunda ponta
+   * do compartilhamento. O que sobra é real e vale por si: o mês volta ao sair e
+   * voltar para cá dentro da sessão, em vez de reiniciar no mais recente.
+   *
+   * ⚠️ LER É TOLERANTE (ver PeriodoGlobalProvider.tsx): o valor compartilhado só é
+   * aceito se estiver entre os COMPARÁVEIS. Um mês fora da lista faria
+   * `janelaMesFechado` devolver null e a tela cairia no vazio de "não há dois meses
+   * fechados" — que é uma frase FALSA quando há, e o que faltou foi o mês pedido.
+   *
+   * ⚠️ E o fallback NÃO é gravado de volta. Se ele voltasse, a escolha do usuário
+   * seria apagada por uma tela que só passou por ela.
+   */
+  const { mes: mesCompartilhado, escolherMes } = usePeriodoGlobal();
   const [sel, setSel] = useState<{ ano: number; mes: number } | null>(null);
   useEffect(() => {
     if (sel || !comparaveis.length) return;
-    setSel({ ano: comparaveis[0].ano, mes: comparaveis[0].mes }); // mês fechado mais recente
-  }, [comparaveis, sel]);
+    const cabe =
+      mesCompartilhado &&
+      comparaveis.some((m) => m.ano === mesCompartilhado.ano && m.mes === mesCompartilhado.mes);
+    setSel(cabe ? mesCompartilhado : { ano: comparaveis[0].ano, mes: comparaveis[0].mes });
+  }, [comparaveis, sel, mesCompartilhado]);
 
   const janela = useMemo(
     () => (sel ? janelaMesFechado(daily, contasAtivas, sel.ano, sel.mes) : null),
@@ -283,6 +305,10 @@ export default function Gestores() {
               onChange={(e) => {
                 const [a, m] = e.target.value.split("-").map(Number);
                 setSel({ ano: a, mes: m });
+                // ⚠️ ESCREVER É SÓ POR CLIQUE: este onChange é o único ponto do app
+                // que grava o mês compartilhado. O useEffect acima LÊ e pode cair no
+                // padrão — e não devolve nada para cá.
+                escolherMes({ ano: a, mes: m });
               }}
               className="rounded-xl px-3 py-2 text-sm outline-none"
               style={{ background: CARD, color: TEMA.texto, border: `1px solid ${LINE}` }}
