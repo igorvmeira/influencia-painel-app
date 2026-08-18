@@ -332,6 +332,24 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   atividade" (a fonte veio incompleta, é divergência).**
   É a mesma família do vazio ambíguo, aplicada à própria régua — o lugar onde ela é mais
   difícil de ver, porque quem escreve a conferência confia nela.
+- ⚠️⚠️ **CONFERIR O QUE SE MONTOU É CONFERIR A SI MESMO — a escrita se prova LENDO DE
+  VOLTA.** Rotina que grava e relata costuma calcular o relatório a partir do objeto EM
+  MEMÓRIA. Isso descreve a INTENÇÃO, não o resultado: o objeto pode estar perfeito e o
+  campo não chegar ao banco (regra de merge, sanitização, tipo recusado, escrita numa
+  coleção diferente da que se pensa) — e o relatório continua verde, porque ele nunca
+  olhou o banco.
+  **A régua: se a resposta afirma que gravou, ela leu de volta.** Um `get` do documento
+  logo após o `set` é fortemente consistente no Firestore, custa UMA leitura, e é a única
+  frase do relatório que fala do que existe em vez do que se pretendia.
+  Caso real: o `mesEntrada` entrou no agregado do comercial e o relatório do sync dizia
+  `idempotente: true, gravadas: 0` — porque esses dois contam as coleções GRANULARES, e o
+  agregado é reescrito inteiro fora do diff. A leitura natural era "o campo novo não foi
+  gravado". A resposta certa não foi explicar o número: foi **ler o documento de volta e
+  contar quantas pessoas têm o campo no banco**, mais uma linha dizendo de quem os outros
+  números falam.
+  ⚠️ E isto NÃO é código de uma migração: fica. Toda vez que um campo novo entrar numa
+  estrutura gravada, é a leitura de volta que responde se ele chegou — o que muda é só a
+  contagem comparada.
 - ⚠️ **ATUALIZAR A CONFERÊNCIA É PARTE DA MUDANÇA, NÃO ETAPA POSTERIOR.** Conferência que
   não acompanha a regra vira ruído (acusa o que está certo) ou falso negativo (aprova o que
   está errado) — e nos dois casos ela para de valer justamente quando mais precisaria.
