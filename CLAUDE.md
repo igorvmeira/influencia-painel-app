@@ -450,17 +450,21 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   **Restrição bem escrita carrega o porquê, e é o porquê que diz quando ela expira.** Sem o
   motivo anotado a regra vira superstição: mantida por quem não sabe se ainda vale, ou
   quebrada por quem não sabe o que ela protegia.
-  **E há três saídas, não duas.** Obedecer e quebrar são as óbvias; a terceira é **remover
-  a condição que criava o risco** — e costuma ser a certa.
+  🔑 **HÁ TRÊS SAÍDAS, E A TERCEIRA É QUASE SEMPRE A CERTA.** Obedecer e quebrar são as
+  óbvias — e são as únicas que aparecem quando a pergunta é "mantenho ou não mantenho".
+  A terceira é **REMOVER A CONDIÇÃO QUE CRIAVA O RISCO**: aí não há o que manter nem o que
+  quebrar, porque a restrição deixou de ter assunto. As três expirações desta semana foram
+  todas ela, e nenhuma teria sido encontrada discutindo se a regra ainda valia.
   ⚠️ Quando a restrição expira, **reescreva o comentário junto com o código**: comentário
   que afirma o contrário do que o código faz é pior que comentário nenhum, porque o próximo
   leitor confia nele.
-  *Os casos se acumulam; a régua é uma. Três, comprimidos:* o modal "só leitura" (o motivo
-  era "dois formulários = duas verdades" → **extrair o formulário** dissolveu o risco); o
-  modal que "não herda o período do Dashboard" (o motivo era **não haver período para
-  herdar** → passou a haver, e ele continua perguntando, só não começa do zero); e a
-  restrição de importar constante em componente (o motivo era o **bundle**, e a saída não
-  foi mover o arquivo — foi a tela deixar de conhecer a regra).
+  *Os casos se acumulam; a régua é uma. Três, comprimidos — repare que em todos a saída foi
+  a terceira:* o modal "só leitura" (motivo: "dois formulários = duas verdades" → **extrair
+  o formulário**, e nenhum dos dois passou a ser a segunda verdade); o modal que "não herda
+  o período do Dashboard" (motivo: **não havia período para herdar** → passou a haver, e ele
+  continua perguntando, só não começa do zero); a constante importada num componente
+  (motivo: **o bundle** → não foi mover o arquivo, foi **a tela deixar de conhecer a**
+  **regra**, e aí não havia mais import).
 - ⚠️ **Regra que mora no PONTO DE CHAMADA se perde na terceira tela.** Um card fazia
   `delta={semComparacao ? null : delta}` no render: funcionava, e dependia de todo uso
   futuro lembrar. Regra que define o comportamento do componente mora **dentro** dele.
