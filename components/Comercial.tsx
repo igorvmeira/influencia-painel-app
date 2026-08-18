@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useComercial } from "@/lib/useComercial";
 /**
@@ -19,6 +19,7 @@ import KpiCard from "./KpiCard";
 import ColunasComMedia from "./ColunasComMedia";
 import AvisoDadoVelho from "./AvisoDadoVelho";
 import Modal from "./Modal";
+import { usePeriodoGlobal, MES_NENHUM } from "./PeriodoGlobalProvider";
 
 const CARD = TEMA.card;
 const LINE = TEMA.borda;
@@ -112,6 +113,35 @@ export default function Comercial() {
    * parecem e só uma é verdade aqui.
    */
   const [safra, setSafra] = useState<string | null>(null);
+
+  /**
+   * A SEGUNDA PONTA DO MÊS COMPARTILHADO — esta tela lê e escreve.
+   *
+   * ⚠️ SEMEIA UMA VEZ, quando o agregado chega (`semeado`), e nunca mais. Depois disso o
+   * <select> manda: mudar o mês na /gestores com esta tela aberta não pode mexer nela.
+   *
+   * ⚠️ LEITURA TOLERANTE: só aceita o mês se ALGUÉM daquela safra ainda estiver no funil.
+   * Um mês cuja gente toda já fechou existe no calendário e não existe aqui — filtrar por
+   * ele daria um funil vazio com cinco zeros, que qualquer pessoa lê como tela quebrada.
+   *
+   * ⚠️ E "nenhum mês em particular" NÃO é aparo: é a /comercial no padrão dela, que já é
+   * "todos os períodos". Nada a avisar.
+   */
+  const { mes: mesCompartilhado, escolherMes } = usePeriodoGlobal();
+  const [semeado, setSemeado] = useState(false);
+  /** O que a chegada fez com o mês recebido — vira a linha de aviso no topo do funil. */
+  const [daOutraTela, setDaOutraTela] = useState<{ mes: string; aparado: boolean } | null>(null);
+  useEffect(() => {
+    if (semeado || !agregado) return;
+    setSemeado(true);
+    if (!mesCompartilhado || mesCompartilhado === MES_NENHUM) return;
+    const alvo = `${mesCompartilhado.ano}-${String(mesCompartilhado.mes).padStart(2, "0")}`;
+    const temGente = agregado.funil.niveis.some((nv) =>
+      (nv.pessoasNaEtapa ?? []).some((pe) => pe.mesEntrada === alvo)
+    );
+    if (temGente) setSafra(alvo);
+    setDaOutraTela({ mes: alvo, aparado: !temGente });
+  }, [agregado, semeado, mesCompartilhado]);
   // Cada bloco animado tem o próprio observador: a cascata do funil não deve
   // esperar o usuário chegar nas faixas de idade, lá embaixo.
   const { ref: refFunil, entrou: entrouFunil } = useEntrada<HTMLDivElement>();
@@ -294,6 +324,34 @@ export default function Comercial() {
           muda com a base). O ano existe independentemente do dado e nunca precisa ser
           recalibrado — dá a separação visual sem inventar régua.
         */}
+        {/*
+          ⚠️ O FILTRO QUE VEIO DE OUTRA TELA SE ANUNCIA NA CHEGADA, não só no <select>.
+          Um funil de 111 pessoas onde havia 492 é lido como "o funil encolheu" por quem
+          não reparou no seletor — e a pessoa não fez nada nesta tela para explicar a
+          diferença. O controle mostra o ESTADO; esta linha explica a ORIGEM dele.
+
+          ⚠️ Âmbar, nunca vermelho: nada falhou. E some no primeiro clique do seletor,
+          porque a partir daí a escolha é desta tela.
+        */}
+        {daOutraTela && (
+          <div
+            className="mb-4 rounded-lg px-3.5 py-2.5 text-[12.5px] leading-relaxed"
+            style={{ background: TEMA.limiteFundo, color: AMBER }}
+          >
+            {daOutraTela.aparado ? (
+              <>
+                ⚠ Você vinha de <b>{mesLongo(daOutraTela.mes)}</b> em outra tela, mas ninguém que
+                entrou nesse mês ainda está no funil — mostrando <b>todos os períodos</b>.
+              </>
+            ) : (
+              <>
+                ⚠ O funil está filtrado por <b>{mesLongo(daOutraTela.mes)}</b> porque foi o mês que
+                você escolheu em outra tela — não é o funil completo.
+              </>
+            )}
+          </div>
+        )}
+
         {safras.itens.length > 0 && (
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <label className="text-[12px]" style={{ color: MUTED }} htmlFor="safra-funil">
@@ -302,7 +360,17 @@ export default function Comercial() {
             <select
               id="safra-funil"
               value={safra ?? ""}
-              onChange={(e) => setSafra(e.target.value || null)}
+              onChange={(e) => {
+                const v = e.target.value || null;
+                setSafra(v);
+                // ⚠️ ESCREVER É SÓ POR CLIQUE. E "todos os períodos" TAMBÉM é escolha:
+                // sem gravar MES_NENHUM, o slot ficaria com o último mês e voltar para
+                // esta tela reaplicaria o filtro que a pessoa acabou de desligar.
+                escolherMes(v ? { ano: Number(v.slice(0, 4)), mes: Number(v.slice(5, 7)) } : MES_NENHUM);
+                // O aviso descreve a CHEGADA. Depois de um clique aqui ele passaria a
+                // explicar um filtro que não é mais o que está na tela.
+                setDaOutraTela(null);
+              }}
               className="rounded-xl px-3 py-2 text-[13px] outline-none"
               style={{ background: TEMA.chip, color: TEMA.texto, border: `1px solid ${LINE}` }}
             >
@@ -321,7 +389,11 @@ export default function Comercial() {
             {safra && (
               <button
                 type="button"
-                onClick={() => setSafra(null)}
+                onClick={() => {
+                  setSafra(null);
+                  escolherMes(MES_NENHUM);
+                  setDaOutraTela(null);
+                }}
                 className="rounded-full px-3 py-1.5 text-[12px] font-medium transition hover:brightness-125"
                 style={{ background: TEMA.destaque, color: TEMA.textoSobreDestaque }}
               >

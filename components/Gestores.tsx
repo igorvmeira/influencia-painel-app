@@ -4,8 +4,9 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useDadosPainel } from "@/lib/useDadosPainel";
 import { montarPainel } from "@/lib/painel";
-import { janelaMesFechado, mesesDisponiveis, coberturaMes, ymdParaBR } from "@/lib/periodo";
-import { usePeriodoGlobal } from "./PeriodoGlobalProvider";
+import { janelaMesFechado, mesesDisponiveis, coberturaMes, ymdParaBR, rotuloMes } from "@/lib/periodo";
+import type { MesDisponivel } from "@/lib/periodo";
+import { usePeriodoGlobal, MES_NENHUM } from "./PeriodoGlobalProvider";
 import { brl, brlDec, num } from "@/lib/format";
 import { TEMA } from "@/lib/brand";
 import { ContaMap, LinhaCliente } from "@/lib/types";
@@ -89,6 +90,27 @@ function trocaNoMes(conta: ContaMap, ano: number, mes: number): string | null {
   return null;
 }
 
+/**
+ * POR QUE O MÊS RECEBIDO NÃO SERVE — derivado da própria lista, nunca chutado.
+ *
+ * ⚠️ Três motivos DIFERENTES levam ao mesmo aparo, e dizer "não dá" para os três seria
+ * esconder a única informação útil: o que a pessoa faz a seguir muda em cada caso.
+ * Mês que ainda não fechou volta a servir sozinho no dia 1º; mês fora da janela de
+ * tráfego não volta nunca (a retenção é móvel); mês sem anterior é o limite da
+ * comparação, não do dado.
+ */
+function motivoDoAparo(
+  pedido: { ano: number; mes: number },
+  meses: MesDisponivel[]
+): string {
+  const chave = (m: { ano: number; mes: number }) => m.ano * 12 + m.mes;
+  if (!meses.length) return "não há mês fechado na janela de dados de tráfego";
+  const p = chave(pedido);
+  if (p > chave(meses[0])) return "ele ainda não fechou";
+  if (p < chave(meses[meses.length - 1])) return "ele está fora da janela de dados de tráfego (~95 dias)";
+  return "ele não tem o mês anterior inteiro na janela, então não haveria comparação";
+}
+
 export default function Gestores() {
   const { dados, erro } = useDadosPainel();
 
@@ -120,13 +142,36 @@ export default function Gestores() {
    */
   const { mes: mesCompartilhado, escolherMes } = usePeriodoGlobal();
   const [sel, setSel] = useState<{ ano: number; mes: number } | null>(null);
+  /** O mês que veio de outra tela e não coube aqui. null = não houve aparo. */
+  const [aparo, setAparo] = useState<{ pedido: string; motivo: string; usado: string } | null>(null);
   useEffect(() => {
     if (sel || !comparaveis.length) return;
-    const cabe =
-      mesCompartilhado &&
-      comparaveis.some((m) => m.ano === mesCompartilhado.ano && m.mes === mesCompartilhado.mes);
-    setSel(cabe ? mesCompartilhado : { ano: comparaveis[0].ano, mes: comparaveis[0].mes });
-  }, [comparaveis, sel, mesCompartilhado]);
+    const padrao = { ano: comparaveis[0].ano, mes: comparaveis[0].mes };
+    // ⚠️ "nenhum mês em particular" (a /comercial em "todos os períodos") NÃO é um mês.
+    // Esta tela não tem esse modo — mês fechado é sempre um mês — então ela ignora o
+    // valor e segue no padrão dela, que é o que a régua das duas casas manda fazer com
+    // o que não se entende.
+    if (!mesCompartilhado || mesCompartilhado === MES_NENHUM) { setSel(padrao); return; }
+    const pedido = mesCompartilhado;
+    if (comparaveis.some((m) => m.ano === pedido.ano && m.mes === pedido.mes)) {
+      setSel(pedido);
+      return;
+    }
+    /**
+     * ⚠️ APARA E DIZ QUE APAROU. Sem a segunda metade, quem veio da /comercial vendo a
+     * safra de agosto cai numa tela de julho com todos os números diferentes e nada na
+     * interface explicando — e a pergunta "por que mudou?" não tem onde ser respondida.
+     *
+     * ⚠️ E NÃO GRAVA o padrão de volta no estado compartilhado: se gravasse, voltar para
+     * a /comercial te tiraria da safra que você estava vendo, sem clique nenhum.
+     */
+    setSel(padrao);
+    setAparo({
+      pedido: rotuloMes(pedido.ano, pedido.mes),
+      motivo: motivoDoAparo(pedido, meses),
+      usado: rotuloMes(padrao.ano, padrao.mes),
+    });
+  }, [comparaveis, meses, sel, mesCompartilhado]);
 
   const janela = useMemo(
     () => (sel ? janelaMesFechado(daily, contasAtivas, sel.ano, sel.mes) : null),
@@ -305,6 +350,9 @@ export default function Gestores() {
               onChange={(e) => {
                 const [a, m] = e.target.value.split("-").map(Number);
                 setSel({ ano: a, mes: m });
+                // O aviso descreve o que aconteceu NA CHEGADA. Depois de um clique aqui,
+                // ele passaria a explicar uma escolha que não é mais a que está na tela.
+                setAparo(null);
                 // ⚠️ ESCREVER É SÓ POR CLIQUE: este onChange é o único ponto do app
                 // que grava o mês compartilhado. O useEffect acima LÊ e pode cair no
                 // padrão — e não devolve nada para cá.
@@ -351,6 +399,13 @@ export default function Gestores() {
             <span className="rounded-lg px-3 py-1.5 text-[12px]" style={{ background: TEMA.chip, color: MUTED }}>
               {painel.periodoLabel}
             </span>
+            {/* ⚠️ ÂMBAR, não vermelho: nada quebrou. É um limite da janela de dados de
+                tráfego encontrando uma escolha feita numa tela que tem outra régua. */}
+            {aparo && (
+              <span className="rounded-lg px-3 py-1.5 text-[12px]" style={{ background: TEMA.limiteFundo, color: AMBAR }}>
+                ⚠ você vinha de <b>{aparo.pedido}</b> em outra tela, mas {aparo.motivo} — mostrando <b>{aparo.usado}</b>
+              </span>
+            )}
             {janela.parcial && (
               <span className="rounded-lg px-3 py-1.5 text-[12px]" style={{ background: TEMA.limiteFundo, color: AMBAR }}
                 title="A série disponível não cobre um dos meses inteiro. Os totais podem estar subestimados.">

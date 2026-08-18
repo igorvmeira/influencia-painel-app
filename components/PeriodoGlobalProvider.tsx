@@ -83,32 +83,52 @@ export type JanelaDia = (typeof JANELAS_DIA)[number];
 /**
  * Mês de calendário. `mes` é 1..12 (não 0..11 — o formato do lib/periodo.ts).
  *
- * ⚠️ HOJE SÓ EXISTE UMA PONTA: a /gestores é a única tela que ESCOLHE um mês. A
- * /comercial mostra uma SÉRIE (o interruptor dela decide quantos meses aparecem,
- * não qual vale) e a /recuperacao não tem mês. O valor ainda serve — o mês volta
- * ao sair e voltar para a /gestores dentro da sessão — mas o compartilhamento
- * de verdade espera uma segunda tela que escolha mês.
+ * ⚠️ AS DUAS PONTAS TÊM RÉGUAS DIFERENTES, e é isso que torna o aparo necessário:
+ *   · /gestores  — só mês FECHADO, e só se o anterior inteiro couber na janela de
+ *                  tráfego (~95 dias). São 3 ou 4 opções.
+ *   · /comercial — QUALQUER mês em que alguém entrou, inclusive o corrente. São 26,
+ *                  a partir de 2024.
+ * Ou seja a /comercial manda mês que a /gestores não aceita com frequência, não por
+ * exceção: qualquer safra anterior ao trimestre já está fora da janela de tráfego.
  *
- * ⚠️ E é por isso que NÃO existe aparo visível ("agosto ainda não fechou;
- * mostrando julho") em lugar nenhum: aparo é o que uma tela mostra ao receber um
- * mês que ela não aceita, e não há tela nessa situação. Escrever a mensagem agora
- * seria UI para um estado inalcançável — pior que ausência, porque pareceria
- * testada. A leitura tolerante existe (a /gestores valida contra a lista de
- * comparáveis, senão cairia no vazio de "não há dois meses fechados", que seria
- * uma frase falsa); o que não existe é o texto, e ele nasce junto da segunda tela.
+ * ⚠️ QUEM RECEBE UM MÊS QUE NÃO ACEITA APARA E DIZ QUE APAROU. Aparar em silêncio
+ * mostraria julho para quem pediu agosto, com a tela inteira parecendo normal — e
+ * "por que os números mudaram?" não teria resposta visível em lugar nenhum.
+ *
+ * ⚠️ E O APARO NÃO VOLTA PARA CÁ. Ver a regra 2 acima: se a /gestores gravasse o mês
+ * que ela escolheu no lugar do que recebeu, voltar para a /comercial te tiraria da
+ * safra que você estava vendo, sem clique nenhum.
  */
 export interface MesEscolhido {
   ano: number;
   mes: number;
 }
 
+/**
+ * ESCOLHER "NENHUM MÊS EM PARTICULAR" TAMBÉM É ESCOLHER.
+ *
+ * ⚠️ Sem este valor, "todos os períodos" na /comercial não teria como viajar, e o slot
+ * ficaria com o último mês escolhido. Voltar para a tela reaplicaria esse mês — ou seja,
+ * a única escolha que o painel DESFAZ sozinho seria justamente a de não filtrar.
+ *
+ * ⚠️ E é diferente de `null`: `null` é "ninguém escolheu nesta sessão" (cada tela segue
+ * com o padrão dela), enquanto isto é um clique que aconteceu. A distinção é a mesma que
+ * separa escolha de padrão em `janelaDias` — aqui ela só precisou de um nome.
+ *
+ * ⚠️ VOCABULÁRIO NEUTRO de propósito: "todos os períodos" é o jeito de UMA tela dizer
+ * isto. Uma tela que não tenha esse modo simplesmente ignora o valor e usa o padrão dela
+ * — que é o que a /gestores faz, porque "todos os meses" não existe em mês fechado.
+ */
+export const MES_NENHUM = "nenhum" as const;
+export type MesCompartilhado = MesEscolhido | typeof MES_NENHUM;
+
 interface Ctx {
   /** null = ninguém escolheu janela nesta sessão; a tela usa o padrão dela. */
   janelaDias: JanelaDia | null;
   /** null = ninguém escolheu mês nesta sessão; a tela usa o padrão dela. */
-  mes: MesEscolhido | null;
+  mes: MesCompartilhado | null;
   escolherJanelaDias: (dias: JanelaDia) => void;
-  escolherMes: (m: MesEscolhido) => void;
+  escolherMes: (m: MesCompartilhado) => void;
 }
 
 /**
@@ -128,10 +148,10 @@ export const usePeriodoGlobal = () => useContext(PeriodoContext);
 
 export default function PeriodoGlobalProvider({ children }: { children: React.ReactNode }) {
   const [janelaDias, setJanelaDias] = useState<JanelaDia | null>(null);
-  const [mes, setMes] = useState<MesEscolhido | null>(null);
+  const [mes, setMes] = useState<MesCompartilhado | null>(null);
 
   const escolherJanelaDias = useCallback((dias: JanelaDia) => setJanelaDias(dias), []);
-  const escolherMes = useCallback((m: MesEscolhido) => setMes(m), []);
+  const escolherMes = useCallback((m: MesCompartilhado) => setMes(m), []);
 
   const valor = useMemo(
     () => ({ janelaDias, mes, escolherJanelaDias, escolherMes }),

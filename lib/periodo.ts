@@ -341,7 +341,9 @@ export function ymdParaBR(ymd: string): string {
 const diasNoMes = (ano: number, mes: number) => new Date(Date.UTC(ano, mes, 0)).getUTCDate();
 // Mês anterior a (ano, mes), tratando a virada de ano.
 const mesAnteriorDe = (ano: number, mes: number) => (mes === 1 ? { ano: ano - 1, mes: 12 } : { ano, mes: mes - 1 });
-const rotuloMes = (ano: number, mes: number) => `${MESES[mes - 1]}/${ano}`;
+/** "julho/2026". Exportado porque a /gestores precisa rotular um mês que NÃO está
+ *  na lista de disponíveis — o que ela recebeu e teve que aparar. */
+export const rotuloMes = (ano: number, mes: number) => `${MESES[mes - 1]}/${ano}`;
 
 /**
  * Janela de um mês FECHADO inteiro vs o mês fechado anterior inteiro.
