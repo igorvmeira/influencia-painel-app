@@ -52,6 +52,20 @@ const spaceGrotesk = Space_Grotesk({
  *
  * ⚠️ A APLICAÇÃO DESSA RÉGUA NÃO É DESTE COMMIT. Aqui as duas fontes só passam a
  * existir; trocar coluna por coluna acontece nos commits de tela, com a paleta já nova.
+ *
+ * 🛑 SEM A FACE 600 — E O MOTIVO É MEDIDO, NÃO ESQUECIMENTO.
+ * Conferido em 18/08/2026: `font-mono` aparece em UM lugar no projeto inteiro (o bloco 5
+ * da /tipografia), e nada ali pede 600 — os números herdam 400. Não existe hoje nenhum
+ * elemento que combine a família de dado com peso 600, então carregar a face seria peso
+ * morto em toda visita.
+ *
+ * ⚠️ QUEM CRIAR ESSA COMBINAÇÃO PRECISA ADICIONAR A FACE AQUI, e a razão é a armadilha
+ * que este mesmo commit acabou de consertar do outro lado: com 400/500/700 carregados, um
+ * `font-mono font-semibold` NÃO renderiza 600 — a regra de casamento do CSS procura para
+ * cima e ele sai em **700**, sem erro e sem aviso. É o mesmo defeito que deslocou 76
+ * lugares da Space Grotesk, esperando a segunda família.
+ *
+ * Como confirmar antes de mexer:  git grep -n "font-mono" -- app components
  */
 const inconsolata = Inconsolata({
   subsets: ["latin"],
