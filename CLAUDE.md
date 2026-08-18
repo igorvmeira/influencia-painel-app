@@ -235,6 +235,27 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   **Só a segunda derruba o job.** É o mesmo raciocínio do aviso de dado velho, que fica
   invisível enquanto tudo funciona e só aparece quando algo está errado: **um aviso que
   está sempre lá deixa de ser aviso.**
+- ⚠️ **AFIRMAÇÃO SOBRE DADO VIVO SE CALCULA, NÃO SE ESCREVE.** Frase fixa na tela que
+  descreve o número de hoje é a que ninguém revisa quando o número muda — ela continua
+  ali, com a autoridade de texto escrito, dizendo o contrário do gráfico ao lado.
+  Caso real: o funil da /comercial ALARGA em duas das quatro transições (Follow-up 248,
+  Negociação 23, Fechamento 88), e a tela precisa explicar isso ou quem bate o olho lê
+  "gráfico quebrado". A linha varre os níveis, acha onde cresce e nomeia os pontos com o
+  multiplicador — **no dia em que o funil afunilar de verdade, a frase some sozinha.**
+  **A régua: se a frase cita um número, uma direção ou uma comparação, ela é derivada do
+  dado — nunca literal.** Vale para o texto de apoio tanto quanto para o número: o texto
+  envelhece pior, porque ninguém confere prosa.
+- ⚠️ **EXPLICAÇÃO PARCIAL NÃO VAI PARA A TELA — dizer O QUE acontece sem inventar o PORQUÊ
+  é melhor que uma causa plausível não verificada.** Causa plausível ENCERRA a
+  investigação: ninguém procura o motivo de uma coisa que já foi "entendida".
+  No mesmo funil, o alargamento no FIM tem causa medida (a agência definiu que estar em
+  Fechamento É venda feita, então as pessoas se acumulam ali — 88 com R$ 157.560 parados).
+  O alargamento do nível 1 para o 2 **não tem**. A tela diz que os dois alargam e explica
+  só o que foi medido; o outro fica sem causa, à vista.
+  É a mesma família do "explicação que acerta a direção e não fecha o valor não é
+  explicação", um degrau antes: lá a causa existia e não fechava; aqui a tentação é
+  escrever uma que soa bem. **Buraco declarado é convite a investigar; buraco preenchido
+  com hipótese é assunto encerrado.**
 - ⚠️ **DOBRA NUNCA ESCONDE ALERTA — e o que nasce recolhido ANUNCIA o que tem dentro.**
   Seção colapsável é a forma mais fácil de fazer um aviso deixar de existir sem ninguém
   apagar nada: ele continua no código, passa em todo teste, e não está na tela. É a camada
