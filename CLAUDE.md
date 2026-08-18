@@ -235,6 +235,23 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   **Só a segunda derruba o job.** É o mesmo raciocínio do aviso de dado velho, que fica
   invisível enquanto tudo funciona e só aparece quando algo está errado: **um aviso que
   está sempre lá deixa de ser aviso.**
+- ⚠️ **DOBRA NUNCA ESCONDE ALERTA — e o que nasce recolhido ANUNCIA o que tem dentro.**
+  Seção colapsável é a forma mais fácil de fazer um aviso deixar de existir sem ninguém
+  apagar nada: ele continua no código, passa em todo teste, e não está na tela. É a camada
+  de honestidade outra vez — aviso dentro de seção fechada é aviso que não existe.
+  **As duas regras que toda dobra carrega:**
+  · o gatilho diz a QUANTIDADE e a NATUREZA do que está escondido — "Ver as 47 pessoas
+    paradas aqui", "14 contas pausadas · fora dos rankings, médias e alertas". Dobra que
+    esconde um número que ninguém vê equivale a não ter o número;
+  · **alerta, pendência e aviso de limite da fonte nascem ABERTOS**, sempre.
+  ⚠️ E antes de construir "um sistema de seções colapsáveis": conte quantos você já tem.
+  Este painel tinha **oito** mecanismos de revelação inventados um a um (abas, acordeão de
+  rodapé, acordeão um-por-vez, interruptor de série, dois níveis aninhados, vários
+  independentes com expandir/recolher tudo, carga sob demanda e filtro com contador) —
+  com TRÊS afordâncias visuais diferentes (▸ girando, ▼/▶, checkbox). **O defeito eram as
+  três setas, não os oito comportamentos.** Unifique a AFORDÂNCIA; os comportamentos são
+  respostas a problemas diferentes, e um deles nem é cosmético (recolher o bloco de
+  criativos EVITA chamada à Meta). É a mesma régua do `DeltaChip` vs `Trend`.
 - ⚠️ **`fetch` NÃO tem timeout, e carregamento eterno é pior que erro.** Se o servidor
   aceita a conexão e não responde, a promessa **nunca settla** — o `.catch` nunca roda e a
   tela fica em "Carregando…" indefinidamente **sem nunca dizer que falhou**. Erro visível é
