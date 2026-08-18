@@ -443,14 +443,24 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   Do mesmo jeito, **card de MÉTRICA e card de ENTIDADE são naturezas distintas**: o de
   entidade tem avatar, é clicável e carrega selos; forçá-lo no molde do de métrica custa
   exatamente o que ele tem de próprio.
-- ⚠️ **Antes de manter uma restrição, pergunte de que ela era PROXY.** Um modal deste painel
-  nasceu "só leitura" — e a razão escrita não era "modal não deve escrever", era **"dois
-  formulários criariam duas verdades sobre como se escreve"**. Quando a tela passou a
-  precisar escrever, a saída não foi quebrar a regra nem obedecê-la: foi **EXTRAIR o
-  formulário**, e aí a razão da restrição simplesmente deixou de existir.
-  **Restrição bem escrita carrega o porquê, e é o porquê que diz quando ela expira.** Se o
-  motivo original não estiver anotado, a regra vira superstição — mantida por quem não sabe
-  se ainda vale, ou quebrada por quem não sabe o que ela protegia.
+- ⚠️⚠️ **ANTES DE MANTER UMA RESTRIÇÃO, PERGUNTE DE QUE ELA ERA PROXY — E SE O MOTIVO AINDA
+  EXISTE.** Quase nenhuma restrição é sobre o que ela proíbe: ela proíbe X para proteger Y.
+  Quando Y deixa de estar em risco, a proibição de X não vale mais nada — e continuar
+  obedecendo custa exatamente o que a restrição nunca quis custar.
+  **Restrição bem escrita carrega o porquê, e é o porquê que diz quando ela expira.** Sem o
+  motivo anotado a regra vira superstição: mantida por quem não sabe se ainda vale, ou
+  quebrada por quem não sabe o que ela protegia.
+  **E há três saídas, não duas.** Obedecer e quebrar são as óbvias; a terceira é **remover
+  a condição que criava o risco** — e costuma ser a certa.
+  ⚠️ Quando a restrição expira, **reescreva o comentário junto com o código**: comentário
+  que afirma o contrário do que o código faz é pior que comentário nenhum, porque o próximo
+  leitor confia nele.
+  *Os casos se acumulam; a régua é uma. Três, comprimidos:* o modal "só leitura" (o motivo
+  era "dois formulários = duas verdades" → **extrair o formulário** dissolveu o risco); o
+  modal que "não herda o período do Dashboard" (o motivo era **não haver período para
+  herdar** → passou a haver, e ele continua perguntando, só não começa do zero); e a
+  restrição de importar constante em componente (o motivo era o **bundle**, e a saída não
+  foi mover o arquivo — foi a tela deixar de conhecer a regra).
 - ⚠️ **Regra que mora no PONTO DE CHAMADA se perde na terceira tela.** Um card fazia
   `delta={semComparacao ? null : delta}` no render: funcionava, e dependia de todo uso
   futuro lembrar. Regra que define o comportamento do componente mora **dentro** dele.
