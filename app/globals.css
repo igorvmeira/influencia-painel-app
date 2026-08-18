@@ -22,9 +22,39 @@ html { color-scheme: dark; }
    afina demais o texto ESCURO sobre fundo CLARO", e o padrão do sistema (auto)
    rendia melhor. No escuro o problema é o oposto — texto CLARO sobre fundo
    ESCURO ENGORDA, e o `antialiased` é justamente o que o afina de volta.
-   Trocar de volta para `auto` deixa a Poppins pastosa no escuro. */
+   Trocar de volta para `auto` deixa o texto pastoso no escuro. */
 * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 
-/* Números sempre alinhados em tabelas/KPIs (tabular-nums é font-variant e
-   independe da família — segue valendo com a Poppins). */
+/* Números sempre alinhados em tabelas/KPIs. `tabular-nums` é font-variant e
+   independe da família: valia com a Poppins e continua valendo com a Space
+   Grotesk. Onde a Inconsolata entrar ele fica redundante — monoespaçada já
+   alinha por natureza — e redundante aqui é inofensivo, não errado. */
 .tabular-nums { font-variant-numeric: tabular-nums; }
+
+/* ============================================================================
+   ÊNFASE EM PROSA — <b> e <strong>
+   ============================================================================
+   ⚠️ O PESO AQUI É DECISÃO, NÃO PADRÃO DO NAVEGADOR. Sem esta regra, os 88
+   `<b>`/`<strong>` do painel herdam o `bolder` do user-agent, que resolve para
+   700 — o peso MAIS FORTE do sistema, aplicado justamente ao texto MENOR da
+   tela. Quase todos vivem em prosa de 11 a 12,5px, e 41 deles estão nas frases
+   da camada de honestidade da /comercial ("111 das 210 que entraram", "R$
+   157.560 somando as 62 com valor"). Herdar 700 ali nunca foi escolha de
+   ninguém: era o que sobrava por omissão.
+
+   500 e não 600 de propósito: em corpo pequeno o salto de 400 para 500 já
+   separa, e 600 numa frase de 11px fecha as contraformas e a linha vira
+   mancha — o oposto do que a ênfase quer.
+
+   🛑 SE 500 NÃO DESTACAR O BASTANTE, A SAÍDA É CONTRASTE, NUNCA SUBIR O PESO.
+   Trocar a cor do trecho enfatizado para `TEMA.texto` sobre um parágrafo em
+   `TEMA.muted` é o que o painel já faz na maioria dessas frases, e é o que
+   funciona em tamanho pequeno: o olho separa luminância melhor que espessura
+   de haste quando a haste tem 1px. Subir para 600 ou 700 devolve a mancha que
+   esta regra existe para remover.
+
+   ⚠️ REGRA ÚNICA, e não uma classe aplicada 88 vezes: ênfase em prosa é uma
+   decisão do sistema, não de cada trecho. Espalhar em classe faria o próximo
+   `<b>` nascer com 700 outra vez, e ninguém iria notar.
+   ============================================================================ */
+b, strong { font-weight: 500; }

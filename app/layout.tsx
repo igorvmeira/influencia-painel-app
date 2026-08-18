@@ -14,13 +14,25 @@ import { TEMA } from "@/lib/brand";
  * saber qual deles causou o que ficou estranho. A paleta nova entra no commit seguinte.
  *
  * ⚠️ PESO ÓPTICO NÃO SE CONVERTE POR TABELA. O 600 da Poppins não é o 600 da Space
- * Grotesk — o eixo óptico é outro, e a Space Grotesk tem contraste de haste maior. Por
- * isso carregamos 400/500/700 (o 600 fica de fora até alguém MEDIR na tela que precisa
- * dele) e existe a /tipografia para a comparação lado a lado.
+ * Grotesk — o eixo óptico é outro, e a Space Grotesk tem contraste de haste maior. A
+ * /tipografia existe para essa comparação lado a lado, e a CALIBRAÇÃO (qual peso novo
+ * substitui qual peso antigo) é decisão à parte, ainda não tomada.
+ *
+ * 🛑 AS QUATRO FACES SÃO CARREGADAS, E ISSO NÃO É PRECAUÇÃO — É CORREÇÃO.
+ * A primeira versão deste arquivo trazia 400/500/700 "até alguém medir se o 600 é
+ * necessário". O `next/font` gera faces DISCRETAS (medido no CSS servido: três
+ * @font-face, não uma faixa variável), e pela regra de casamento do CSS um peso pedido
+ * ACIMA de 500 procura primeiro para CIMA. Resultado: os 76 lugares escritos como 600
+ * passaram a renderizar 700 — sem erro, sem aviso, e o painel inteiro ficou mais pesado
+ * do que está escrito no código.
+ *
+ * A lição: **não carregar uma face não deixa o peso de fora, deixa o navegador escolher
+ * outro.** Omitir peso só é seguro depois de trocar quem o usa; antes disso, omitir é
+ * mudar silenciosamente 76 lugares. Ver a nota datada no README.
  */
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
   variable: "--font-titulo",
 });

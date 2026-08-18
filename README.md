@@ -90,4 +90,52 @@ Para o sync rodar sozinho todo dia, faça o upgrade para o Pro e então:
 Já implementado: pull do CPL semanal (atual vs ~2 meses atrás) e seletor de gestor.
 
 ## Identidade
-Roxo `#611A77` · roxo profundo `#45125A` · âmbar `#F3B63E` · branco no roxo.
+
+⚠️ **A paleta NÃO é repetida aqui.** A fonte única é `lib/brand.ts` (`TEMA`), espelhada em
+`tailwind.config.ts` para uso em classes. Esta seção já listou três hex que deixaram de
+existir na migração do tema escuro e ninguém percebeu — README que repete valor de cor
+envelhece calado. Para conferir a paleta viva: `node scripts/audita-tema.js`.
+
+### Marca 2026 — migração em andamento
+
+A agência entregou o Manual de Marca 2026. A migração é feita em commits numerados, com o
+`audita-tema.js` rodando entre eles:
+
+```
+1   fontes (Space Grotesk + Inconsolata)        FEITO  5f3c5db
+1b  correção de peso (face 600 + b/strong)      FEITO  este commit
+1c  calibração tipográfica                      pendente — decisão do Igor
+2   flip atômico da paleta                      pendente
+3-8 tela a tela                                 pendente
+9   logo                                        pendente (SVGs recebidos)
+10  auditoria final (a /tipografia e a Poppins saem aqui)
+```
+
+### Divergências e correções registradas
+
+**18/08/2026 — `#530263` no SVG contra `#530163` no manual.** O `LOGO_E_SIMBOLO.svg`
+entregue pela agência traz o roxo como `#530263`; o manual escrito diz `#530163`. Um
+dígito. **Vale o do MANUAL** (`#530163`) até a agência responder qual dos dois está errado.
+Se for o manual, o token muda num lugar só; se for o arquivo, a agência reexporta. A
+pergunta está com o Igor.
+
+**18/08/2026 — o commit 1 deslocou 76 lugares de peso 600 para 700, por omissão de face.**
+O commit 1 (`5f3c5db`) carregou Space Grotesk 400/500/700, deixando o 600 "de fora até
+alguém medir". O `next/font` gera faces **discretas** (verificado no CSS servido: três
+`@font-face`, não uma faixa variável), e pela regra de casamento do CSS um peso pedido
+acima de 500 procura primeiro **para cima** — então os 74 `font-semibold` e os 2
+`fontWeight: 600` do `SlopeCpl` passaram a renderizar 700. Sem erro e sem aviso: o painel
+ficou mais pesado do que estava escrito no código, e a comparação de peso feita na
+/tipografia olhava um app que não renderizava o que estava escrito.
+
+O commit **1b** reverteu carregando a face 600. Nenhuma classe foi tocada — elas voltaram a
+renderizar 600 sozinhas, que é o que sempre estiveram escritas.
+
+**A lição, que vale além desta migração:** não carregar uma face não deixa o peso de fora,
+deixa o **navegador escolher outro**. Omitir peso só é seguro DEPOIS de trocar quem o usa.
+
+**18/08/2026 — ênfase em prosa ganhou peso explícito (500).** Os 88 `<b>`/`<strong>`
+herdavam o `bolder` do navegador (700) em prosa de 11 a 12,5px, incluindo 41 nas frases da
+camada de honestidade da /comercial. Nunca foi escolha de ninguém: era o que sobrava por
+omissão. Regra única em `app/globals.css`, com o porquê e com a saída documentada — se 500
+não destacar o bastante, a resposta é **contraste**, nunca subir o peso.
