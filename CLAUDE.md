@@ -305,6 +305,27 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
     checando a regra antiga, reprovando dois níveis que estavam certos.
   **Antes de confiar num verde ou investigar um vermelho, releia o que o teste assume.** O
   primeiro suspeito de uma divergência é a régua, não o código medido.
+- ⚠️⚠️ **EXPLICAÇÃO QUE ACERTA A DIREÇÃO E NÃO FECHA O VALOR NÃO É EXPLICAÇÃO — é hipótese
+  com aparência de conclusão.** E é **pior que não ter explicação nenhuma**, porque encerra
+  a investigação: ninguém procura a causa de uma diferença que já foi "entendida".
+  Caso real: o BI da agência mostrava 168 e o nosso painel 137 no mesmo mês. A explicação
+  aceita — "o BI conta oportunidade por data de criação, nós contamos pessoa por primeiro
+  contato" — está **certa na direção** (as unidades e os frames são mesmo diferentes) e
+  **não fecha**: por oportunidade criada o nosso número é ~145, não 168. Sobravam 23 que a
+  explicação não cobria, e ela já tinha sido passada ao dono como resolvida.
+  **A régua: uma explicação de divergência só vale quando RECONSTRÓI o número.** Enquanto
+  sobrar resto, ela é uma pista — e o resto é o que ainda não se sabe.
+  **Corolário:** enquanto não fecha, os dois números **não vão lado a lado** em tela nem em
+  reunião, nem para dizer que batem nem para dizer que divergem. Número divergente com
+  régua desconhecida faz a conversa discutir quem está certo em vez de o que cada um mede.
+- ⚠️ **ANTES DE PAGAR O CUSTO DE UM MÉTODO, CONFIRME QUE A FONTE TEM O QUE VOCÊ FOI
+  BUSCAR.** O método caro tende a ser planejado em detalhe — condições, salvaguardas,
+  ordem dos passos — e essa preparação toda esconde que ninguém verificou o pressuposto
+  mais básico: existe lá o que se quer? Caso real: havia um caminho rigoroso para extrair
+  um mapa de etiquetas de um BI de terceiro, com quatro condições de proteção de dado
+  pessoal. Uma checagem de dois minutos mostrou que **o BI não continha as etiquetas
+  procuradas** — o método inteiro teria sido executado, manipulando dado de cliente, para
+  um resultado vazio.
 - ⚠️ **`ok: true` NO ENVELOPE NÃO SIGNIFICA QUE TUDO FOI.** Rotina que processa N itens e
   tolera falha individual devolve sucesso com os fracassos numa lista à parte. Quem lê só
   o envelope recebe "deu certo". Caso real: uma conta com R$ 9.079 de gasto lançou exceção
@@ -419,8 +440,21 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   depois de já ter corrigido uma linha à mão, casa o prefixo da linha corrigida e produz
   `textoSobreDestaqueSobreDestaque`. Aqui o TypeScript pegou; num nome de classe CSS ou
   numa string, passaria.
-- **Antes de comparar um percentual contra um limiar, diga sobre o que ele é percentual.**
-  Um número correto sobre o denominador errado passa na revisão, porque a conta fecha.
+- ⚠️⚠️ **ANTES DE COMPARAR UM PERCENTUAL CONTRA UM LIMIAR, DIGA SOBRE O QUE ELE É
+  PERCENTUAL.** Um número correto sobre o denominador errado **passa na revisão, porque a
+  conta fecha** — e sai plausível, que é o pior tipo de errado: ninguém investiga um número
+  que parece razoável.
+  Caso real: o BI da agência mede o desempenho contra uma meta de 15%, e tem **duas** taxas
+  de conversão sobre bases diferentes — uma sobre o total de leads, outra sobre os
+  qualificados. **A taxa medida contra a meta não é nenhuma das duas.** Implementar o alvo
+  sem determinar o denominador construiria a régua sobre a base errada, e o painel passaria
+  a afirmar "72% da meta" sem que ninguém pudesse dizer meta de quê.
+  **Corolário: limiar e denominador são UMA decisão, não duas.** Quem informa o alvo tem que
+  informar a base junto; alvo sem base é número sem unidade. E quando a base não é
+  determinável, **a régua não sobe** — melhor não ter indicador de meta que ter um cujo
+  denominador ninguém sabe.
+  É a mesma família do piso duplo (`a ÷ b` com `a` zero) e do "nunca compare dois números em
+  frames de data diferentes": nos três, o defeito não está no número, está no que ele divide.
 - ⚠️ **PISO SIMPLES NÃO PEGA FURO NO NUMERADOR — todo ranking de razão precisa de piso
   nos DOIS lados.** A régua "mínimo de N conversões" existe para barrar a conta que
   converteu pouco e produz percentual gigante: ela protege o DENOMINADOR. Não protege o

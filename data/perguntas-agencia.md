@@ -185,3 +185,68 @@ tem só o dourado.
 
 **O que precisamos:** as cores secundárias oficiais, se existirem. Com elas, troca-se o hex
 em um arquivo e o resto do app acompanha — e o `[PROVISÓRIO]` sai.
+
+---
+
+# Vindas do BI comercial (17/08/2026)
+
+Levantadas no inventário do Power BI que o comercial usa — detalhe em
+[`bi-comercial-inventario.md`](./bi-comercial-inventario.md). **As três primeiras são
+pré-requisito para comparar qualquer número com o BI.**
+
+## 8. O que é `data_entrada`?
+
+Criação da oportunidade ou entrada na etapa atual? É a coluna de data da tabela Base, e
+dela depende todo o frame de comparação. **Sem isso, nenhuma série do BI é comparável com
+a nossa.**
+
+## 9. Quais valores tem `situacao`, e o que "Todos" inclui?
+
+É um dos quatro filtros globais do relatório e recorta todas as medidas. Não sabemos se
+separa aberto/fechado, ativo/inativo, ou outra coisa.
+
+## 10. De onde vem o `Mínimo de peso`?
+
+A tabela `tipo` do BI classifica em LEAD NOVO / EM_PROCESSAMENTO / CONVERTIDO usando uma
+coluna `Mínimo de peso` — ou seja, **as etapas têm peso numérico** e o estado sai de um
+limiar.
+
+**É campo do CRM ou construção do modelo do BI?** Não temos nada equivalente, e não vamos
+importar o conceito sem saber o que ele é.
+
+## 11. 🎯 As metas: quais são, quem define, com que periodicidade — e sobre qual base
+
+**A pergunta que mais muda o painel.** Nós decidimos não ter meta porque a agência disse
+que não havia meta consolidada. **O BI tem duas configuradas** (15% e 25%) — então ou mudou,
+ou existe meta que não chegou até nós.
+
+O que já está determinado pela aritmética:
+
+    % ENTREGA_CONVERSAO         = % CONVERSÃO         ÷ meta de 15%
+    % ENTREGA_CONVERSAO_LIQUIDA = % CONVERSAO_LIQUIDA ÷ meta de 25%
+
+As metas são **taxas de conversão**, não volume de leads, vendas ou MRR. Isso é bom: já
+temos o numerador, faltaria só o alvo — seria configuração, não feature.
+
+> 🛑 **Só que falta o denominador.** O BI tem duas taxas de conversão sobre bases
+> diferentes: `% CONVERTIDO` (sobre o total de leads) e `% CONVERSAO_LIQUIDA` (sobre os
+> qualificados) — as duas determinadas. E a **`% CONVERSÃO`, que é a medida contra a meta
+> de 15%, não bate com nenhuma das duas.**
+>
+> **Precisamos saber sobre o que a `% CONVERSÃO` é percentual.** Sem isso, implementar a
+> meta constrói a régua sobre a base errada.
+
+**E a meta é fixa ou muda por período?** Não determinado — os slicers do relatório são
+canvas e não abriram por automação. Meta fixa é uma env; meta por mês é documento de
+config com grão de mês. Muda o desenho.
+
+## 12. O dataset do BI tem mais de uma empresa?
+
+O slicer `empresa` está fixo em INFLUENCIA MARKETING, mas existir como filtro sugere que o
+modelo comporta outras. Se sim, precisamos saber se o recorte que vemos é comparável.
+
+## 13. O `responsavel` deveria ser sempre preenchido?
+
+Hoje é ~1/3 (amostra de ~520 linhas). Nenhum visual do BI agrega por ele. Se a intenção é
+acompanhar por vendedor, o campo precisa ser preenchido antes de qualquer tela existir —
+ver a decisão registrada em `bi-comercial-inventario.md`.
