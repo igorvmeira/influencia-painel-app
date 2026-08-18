@@ -130,7 +130,7 @@ export default function OrientacaoDoCliente({
 
       {/* ================= HISTÓRICO ================= */}
       <div className="mt-5">
-        <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: MUTED }}>
+        <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.13em]" style={{ color: MUTED }}>
           Antes desta
         </div>
 

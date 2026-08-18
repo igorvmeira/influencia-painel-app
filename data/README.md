@@ -8,6 +8,9 @@
 | `orientacoes-seed.json` | carga inicial das orientações por conta |
 | `xmax-api.yaml` | spec OpenAPI do **Xmax**, o CRM do comercial — insumo do futuro painel comercial |
 | `xmax-integracao.md` | levantamento e plano dessa integração; **nada implementado ainda** |
+| `perguntas-agencia.md` | fila de perguntas que só a agência responde e que travam feature |
+| `bi-comercial-inventario.md` | inventário do Power BI da agência: estrutura, réguas e o que não é comparável |
+| `grafana-referencia-inspecao.md` | inspeção da instância de referência — **não é um dashboard de Grafana** |
 
 ### Xmax — correção de expectativa sobre o retroativo
 

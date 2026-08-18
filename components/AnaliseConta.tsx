@@ -155,11 +155,11 @@ export default function AnaliseConta({ conta }: { conta: ContaMap }) {
               <div className="px-5 py-4" style={{ background: TEMA.card, border: `1px solid ${TEMA.borda}`, borderRadius: TEMA.raioCard }}>
                 <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
                   <div>
-                    <div className="text-[11px] uppercase tracking-[0.06em]" style={{ color: MUTED }}>CPL desta conta</div>
+                    <div className="text-[11px] uppercase tracking-[0.13em]" style={{ color: MUTED }}>CPL desta conta</div>
                     <div className="text-[20px] font-semibold tabular-nums" style={{ color: TEMA.texto }}>{brlDec(noNicho.cpl)}</div>
                   </div>
                   <div>
-                    <div className="text-[11px] uppercase tracking-[0.06em]" style={{ color: MUTED }}>Média do nicho</div>
+                    <div className="text-[11px] uppercase tracking-[0.13em]" style={{ color: MUTED }}>Média do nicho</div>
                     <div className="text-[20px] font-semibold tabular-nums" style={{ color: MUTED }}>{brlDec(nicho.cpl)}</div>
                   </div>
                   <div className="flex items-center gap-2">

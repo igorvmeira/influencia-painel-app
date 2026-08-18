@@ -94,7 +94,7 @@ export default function KpiCard({
 
       <div className="relative">
         <div
-          className="text-[11px] font-semibold uppercase tracking-[0.06em]"
+          className="text-[11px] font-semibold uppercase tracking-[0.13em]"
           style={{ color: TEMA.muted }}
         >
           {rotulo}

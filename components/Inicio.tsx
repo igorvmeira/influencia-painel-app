@@ -264,7 +264,7 @@ export default function Inicio() {
             icone="★"
           />
           <div className="p-4" style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}>
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: MUTED }}>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.13em]" style={{ color: MUTED }}>
               Gestores · evolução de CPL
             </p>
             {!evolucao ? (
@@ -295,7 +295,7 @@ export default function Inicio() {
               </>
             )}
 
-            <p className="mb-2 mt-5 text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: MUTED }}>
+            <p className="mb-2 mt-5 text-[11px] font-semibold uppercase tracking-[0.13em]" style={{ color: MUTED }}>
               Contas · CPL vs média do nicho
             </p>
             {destaquesNicho.length === 0 ? (

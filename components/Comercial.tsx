@@ -266,7 +266,7 @@ export default function Comercial() {
           className="mt-4 rounded-lg px-4 py-3"
           style={{ background: TEMA.chip }}
         >
-          <div className="text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: MUTED }}>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.13em]" style={{ color: MUTED }}>
             MRR do que está vendido
           </div>
           <div className="mt-1 text-[14px] tabular-nums" style={{ color: TEMA.texto }}>
