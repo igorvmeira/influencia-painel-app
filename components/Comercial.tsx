@@ -42,6 +42,14 @@ const ALTURA_FAIXA = 30;
 const n = (v: number) => v.toLocaleString("pt-BR");
 const reais = (cent: number) =>
   "R$ " + (cent / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+/** "2026-07" -> "julho/2026". Para rótulo que a pessoa lê por inteiro (o <select> da
+ *  safra); o `mesCurto` continua servindo eixo de gráfico, onde espaço é escasso. */
+const mesLongo = (m: string) => {
+  const [a, mm] = m.split("-");
+  const nomes = ["", "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+    "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+  return `${nomes[Number(mm)] ?? mm}/${a}`;
+};
 const mesCurto = (m: string) => {
   const [a, mm] = m.split("-");
   return `${["", "jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"][Number(mm)]}/${a.slice(2)}`;
@@ -94,6 +102,16 @@ export default function Comercial() {
   const [todosMeses, setTodosMeses] = useState(false);
   /** Nível cuja lista de pessoas está aberta na janela. null = fechada. */
   const [etapaAberta, setEtapaAberta] = useState<NivelDoFunil | null>(null);
+  /**
+   * SAFRA SELECIONADA ("YYYY-MM"). `null` = todos os períodos, que é o padrão e é o
+   * funil completo de hoje.
+   *
+   * ⚠️ A LEITURA É "QUEM ENTROU EM X, ONDE ESTÁ AGORA" — nunca "como o funil estava em
+   * X". O painel não tem histórico de etapas: o CRM não guarda por onde o lead passou.
+   * Todo rótulo desta tela precisa carregar a diferença, porque as duas frases se
+   * parecem e só uma é verdade aqui.
+   */
+  const [safra, setSafra] = useState<string | null>(null);
   // Cada bloco animado tem o próprio observador: a cascata do funil não deve
   // esperar o usuário chegar nas faixas de idade, lá embaixo.
   const { ref: refFunil, entrou: entrouFunil } = useEntrada<HTMLDivElement>();
@@ -156,6 +174,66 @@ export default function Comercial() {
   }
 
   const { funil, recuperacao, negociacao, conversaAvancada, foraDoFunil, fechamento } = agregado;
+
+  /**
+   * AS SAFRAS OFERECIDAS — os meses que o funil realmente CONSEGUE mostrar.
+   *
+   * ⚠️ Sai do `mesEntrada` das listas, não do `leadsNovos`: oferecer um mês cuja gente
+   * toda já saiu do funil daria uma tela vazia sem explicação. O `leadsNovos` entra do
+   * outro lado — como DENOMINADOR, para a tela poder dizer "111 das N que entraram".
+   *
+   * ⚠️ ORDEM: mais recente primeiro. A cauda antiga tem safras de 1 a 10 pessoas e
+   * ninguém abre a tela para procurar junho/2025.
+   *
+   * ⚠️ TODOS OS MESES ENTRAM, inclusive os de 1 pessoa. O rótulo carrega o tamanho, então
+   * ninguém escolhe no escuro — e esconder um mês por ser pequeno seria a tela decidindo
+   * o que se pode perguntar, com um limiar que eu teria inventado.
+   */
+  const safras = (() => {
+    const conta = new Map<string, number>();
+    let semMes = 0;
+    for (const nv of funil.niveis) {
+      for (const pe of nv.pessoasNaEtapa ?? []) {
+        if (!pe.mesEntrada) { semMes++; continue; }
+        conta.set(pe.mesEntrada, (conta.get(pe.mesEntrada) ?? 0) + 1);
+      }
+    }
+    const itens = [...conta.entries()]
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([mes, noFunil]) => {
+        const serie = agregado.leadsNovos.find((x) => x.mes === mes) ?? null;
+        /**
+         * ⚠️ O DENOMINADOR SÓ VALE SE CONTIVER O NUMERADOR. Quem está no funil tem
+         * oportunidade ABERTA no funil 4, e quem entrou no mês está no `leadsNovos` do
+         * mesmo mês pela MESMA `primeiroContato` — então `entraram >= noFunil` é
+         * identidade, não sorte. Se ela quebrar (alguém mexeu numa das duas réguas), a
+         * tela mostra o número sozinho em vez de uma fração invertida: 111 de 40 seria
+         * lido como erro de leitura, não como bug.
+         */
+        const entraram = serie && serie.pessoas >= noFunil ? serie.pessoas : null;
+        return { mes, noFunil, entraram, parcial: !!serie?.parcial };
+      });
+    return { itens, semMes, anos: [...new Set(itens.map((x) => x.mes.slice(0, 4)))] };
+  })();
+  const safraAtual = safra ? safras.itens.find((x) => x.mes === safra) ?? null : null;
+
+  /**
+   * O FUNIL FILTRADO. A contagem de cada nível vira o TAMANHO DA PRÓPRIA LISTA que a
+   * janela vai mostrar — é o que torna impossível o funil dizer 6 e a janela mostrar 47.
+   *
+   * ⚠️ `oportunidades` e `porEtapa` continuam aqui com o valor do funil INTEIRO, e por
+   * isso NÃO são renderizados sob safra (ver `mostrarOportunidades`). O nível conta
+   * oportunidade pelas ETAPAS dele, enquanto a pessoa conta no nível MAIS ALTO que
+   * alcançou — uma versão por safra seria outra definição do mesmo rótulo, e o número
+   * mudaria ao alternar o filtro por motivo nenhum. Zerar seria pior: zero é um valor.
+   */
+  const niveisVisiveis = safra
+    ? funil.niveis.map((nv) => {
+        const lista = (nv.pessoasNaEtapa ?? []).filter((pe) => pe.mesEntrada === safra);
+        return { ...nv, pessoasNaEtapa: lista, pessoas: lista.length };
+      })
+    : funil.niveis;
+
   /**
    * ONDE A SILHUETA ALARGA — calculado, nunca escrito à mão.
    *
@@ -165,15 +243,20 @@ export default function Comercial() {
    *
    * ⚠️ CALCULADO e não texto fixo: no dia em que o funil passar a afunilar de verdade, a
    * frase some sozinha. Afirmação fixa sobre dado vivo é a que ninguém revisa.
+   *
+   * ⚠️ SOBRE OS NÍVEIS VISÍVEIS, não sobre o funil inteiro: a frase descreve a forma que
+   * está NA TELA. Sob uma safra de 3 pessoas a silhueta é outra, e uma nota herdada do
+   * funil completo estaria descrevendo um gráfico que ninguém está vendo.
    */
-  const alargamentos = funil.niveis.flatMap((nv, i) =>
-    i > 0 && nv.pessoas > funil.niveis[i - 1].pessoas
-      ? [{ de: funil.niveis[i - 1], para: nv, vezes: nv.pessoas / Math.max(1, funil.niveis[i - 1].pessoas) }]
+  const alargamentos = niveisVisiveis.flatMap((nv, i) =>
+    i > 0 && nv.pessoas > niveisVisiveis[i - 1].pessoas
+      ? [{ de: niveisVisiveis[i - 1], para: nv, vezes: nv.pessoas / Math.max(1, niveisVisiveis[i - 1].pessoas) }]
       : []
   );
-  const ultimo = funil.niveis[funil.niveis.length - 1];
-  const penultimo = funil.niveis[funil.niveis.length - 2];
+  const ultimo = niveisVisiveis[niveisVisiveis.length - 1];
+  const penultimo = niveisVisiveis[niveisVisiveis.length - 2];
   const estacionaNoFim = !!ultimo && !!penultimo && ultimo.pessoas > penultimo.pessoas;
+  const pessoasNaSafra = niveisVisiveis.reduce((t, nv) => t + nv.pessoas, 0);
   const cortar = <T,>(a: T[]) => (todosMeses ? a : a.slice(-MESES_VISIVEIS));
   const emFechamento = fechamento.emFechamento;
 
@@ -194,16 +277,110 @@ export default function Comercial() {
       <Bloco
         titulo="Onde as pessoas estão agora"
         icone="◧"
-        sub={`${n(funil.pessoasNoFunil)} pessoas no funil de captação · ${n(funil.oportunidadesAbertas)} oportunidades abertas no total`}
+        sub={safra
+          ? `Só quem entrou no comercial em ${mesLongo(safra)} — onde essas pessoas estão HOJE`
+          : `${n(funil.pessoasNoFunil)} pessoas no funil de captação · ${n(funil.oportunidadesAbertas)} oportunidades abertas no total`}
       >
+        {/*
+          O SELETOR DE SAFRA.
+
+          ⚠️ "ENTROU NO COMERCIAL", nunca "entrou no funil de captação". O `mesEntrada`
+          vem de `primeiroContato`, que cobre os funis 4 E 23 — quem chegou direto como
+          desqualificado nunca esteve no funil de captação e mesmo assim tem mês de
+          entrada. Duas frases parecidas, populações diferentes.
+
+          ⚠️ AGRUPADO POR ANO, não por tamanho. Separar "safra significativa" de "cauda"
+          exigiria um limiar que eu inventaria (o corte natural de hoje, 53 contra 10,
+          muda com a base). O ano existe independentemente do dado e nunca precisa ser
+          recalibrado — dá a separação visual sem inventar régua.
+        */}
+        {safras.itens.length > 0 && (
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <label className="text-[12px]" style={{ color: MUTED }} htmlFor="safra-funil">
+              Filtrar por quem entrou em:
+            </label>
+            <select
+              id="safra-funil"
+              value={safra ?? ""}
+              onChange={(e) => setSafra(e.target.value || null)}
+              className="rounded-xl px-3 py-2 text-[13px] outline-none"
+              style={{ background: TEMA.chip, color: TEMA.texto, border: `1px solid ${LINE}` }}
+            >
+              <option value="">Todos os períodos — o funil completo de hoje</option>
+              {safras.anos.map((ano) => (
+                <optgroup key={ano} label={ano}>
+                  {safras.itens.filter((x) => x.mes.startsWith(ano)).map((x) => (
+                    <option key={x.mes} value={x.mes}>
+                      {mesLongo(x.mes)} — {n(x.noFunil)} no funil
+                      {x.entraram !== null ? `, de ${n(x.entraram)} que entraram` : ""}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+            {safra && (
+              <button
+                type="button"
+                onClick={() => setSafra(null)}
+                className="rounded-full px-3 py-1.5 text-[12px] font-medium transition hover:brightness-125"
+                style={{ background: TEMA.destaque, color: TEMA.textoSobreDestaque }}
+              >
+                Ver todos os períodos
+              </button>
+            )}
+          </div>
+        )}
+
+        {/*
+          ⚠️⚠️ O DENOMINADOR É OBRIGATÓRIO, NÃO ENFEITE. O funil só mostra quem tem
+          oportunidade ABERTA — quem entrou em julho e já fechou, perdeu ou saiu não
+          aparece. Sem esta linha, alguém lê a safra filtrada como a safra INTEIRA e
+          conclui que julho foi fraco, quando está olhando o resto dela.
+
+          ⚠️ E o título diz POSIÇÃO ATUAL, nunca "funil de julho". O painel não tem
+          histórico de etapas (o CRM não guarda o caminho), então "como o funil estava em
+          julho" é uma frase que esta tela não pode dizer.
+        */}
+        {safraAtual && (
+          <div
+            className="mb-4 rounded-lg px-3.5 py-2.5 text-[12.5px] leading-relaxed"
+            style={{ background: TEMA.chip, color: MUTED }}
+          >
+            <b style={{ color: TEMA.texto }}>
+              Pessoas que entraram no comercial em {mesLongo(safraAtual.mes)} — posição ATUAL no funil.
+            </b>
+            <br />
+            {safraAtual.entraram !== null ? (
+              <>
+                <b className="tabular-nums" style={{ color: GOLD }}>{n(pessoasNaSafra)}</b> das{" "}
+                <b className="tabular-nums" style={{ color: TEMA.texto }}>{n(safraAtual.entraram)}</b> que
+                entraram ainda estão no funil · as outras{" "}
+                <b className="tabular-nums" style={{ color: TEMA.texto }}>{n(safraAtual.entraram - pessoasNaSafra)}</b>{" "}
+                fecharam, perderam ou saíram.
+              </>
+            ) : (
+              <>
+                <b className="tabular-nums" style={{ color: GOLD }}>{n(pessoasNaSafra)}</b> desta safra ainda
+                estão no funil. O total que entrou no mês não está disponível nesta leitura, então a
+                tela não mostra a fração.
+              </>
+            )}
+            {safraAtual.parcial && (
+              <> <span style={{ color: AMBER }}>⚠</span> {mesLongo(safraAtual.mes)} ainda está em curso na
+              base — a safra continua crescendo.</>
+            )}
+          </div>
+        )}
+
         {/* ⚠️ REGRA DA CASA: nunca um número solto chamado "leads". Cada linha diz
             se está contando PESSOA ou OPORTUNIDADE — é a diferença entre 476 e 1.660. */}
         <FunilCentrado
           refBloco={refFunil}
           entrou={entrouFunil}
-          niveis={funil.niveis}
+          niveis={niveisVisiveis}
           nomeEtapa={nomeEtapa}
           aoAbrir={setEtapaAberta}
+          mostrarOportunidades={!safra}
         />
 
         {/*
@@ -455,8 +632,14 @@ export default function Comercial() {
         aberto={etapaAberta !== null}
         aoFechar={() => setEtapaAberta(null)}
         titulo={etapaAberta ? `${etapaAberta.nome} — quem está parado aqui` : ""}
+        // ⚠️ Sob safra o subtítulo NÃO cita oportunidades, pelo mesmo motivo da faixa: o
+        // número do nível conta o funil INTEIRO e viraria uma afirmação errada ao lado de
+        // uma lista filtrada. E ele DIZ de que safra é a lista — janela sem o recorte no
+        // título é janela que alguém lê como se fosse o total.
         subtitulo={etapaAberta
-          ? `Nível ${etapaAberta.nivel} · ${n(etapaAberta.pessoas)} pessoas · ${n(etapaAberta.oportunidades)} oportunidades`
+          ? (safra
+            ? `Nível ${etapaAberta.nivel} · ${n(etapaAberta.pessoas)} pessoas que entraram no comercial em ${mesLongo(safra)}`
+            : `Nível ${etapaAberta.nivel} · ${n(etapaAberta.pessoas)} pessoas · ${n(etapaAberta.oportunidades)} oportunidades`)
           : undefined}
       >
         {etapaAberta && <ListaDaEtapa nivel={etapaAberta} />}
@@ -505,13 +688,21 @@ export default function Comercial() {
  * do trapézio em miniatura. A menor razão hoje é 23/248 = 9,3%, perfeitamente visível.
  */
 function FunilCentrado({
-  refBloco, entrou, niveis, nomeEtapa, aoAbrir,
+  refBloco, entrou, niveis, nomeEtapa, aoAbrir, mostrarOportunidades = true,
 }: {
   refBloco: React.RefObject<HTMLDivElement>;
   entrou: boolean;
   niveis: NivelDoFunil[];
   nomeEtapa: Map<number, string>;
   aoAbrir: (nv: NivelDoFunil) => void;
+  /**
+   * ⚠️ FALSO SOB SAFRA, e não é economia de espaço: o nível conta OPORTUNIDADE pelas
+   * etapas dele, enquanto a PESSOA conta no nível mais alto que alcançou. Filtrar por
+   * safra recontaria as oportunidades com outra definição do mesmo rótulo, e o número
+   * mudaria ao ligar o filtro por motivo nenhum. Sumir é honesto; mudar de régua em
+   * silêncio não é. O mesmo vale para o detalhe `porEtapa`.
+   */
+  mostrarOportunidades?: boolean;
 }) {
   const max = Math.max(1, ...niveis.map((x) => x.pessoas));
 
@@ -568,15 +759,17 @@ function FunilCentrado({
                 <b className="text-[15px] font-semibold tabular-nums text-brand-ink">{n(nv.pessoas)}</b>
                 <span className="ml-1 text-[11.5px]" style={{ color: MUTED }}>pessoas</span>
               </span>
-              <span className="w-28 shrink-0 text-right text-[11.5px] tabular-nums" style={{ color: MUTED }}>
-                {n(nv.oportunidades)} oportunidades
-              </span>
+              {mostrarOportunidades && (
+                <span className="w-28 shrink-0 text-right text-[11.5px] tabular-nums" style={{ color: MUTED }}>
+                  {n(nv.oportunidades)} oportunidades
+                </span>
+              )}
             </button>
 
             {/* ⚠️ O EMPATE DO NÍVEL 1, explicado na tela: tráfego e outbound são duas
                 PORTAS do mesmo degrau, não degraus diferentes. Fica FORA do botão: é
                 leitura, não alvo de clique. */}
-            {nv.porEtapa ? (
+            {mostrarOportunidades && nv.porEtapa ? (
               <div className="mb-1 ml-9 flex flex-wrap gap-x-5 gap-y-1">
                 {nv.porEtapa.map((e) => (
                   <span key={e.etapaId} className="text-[11.5px]" style={{ color: MUTED }}>

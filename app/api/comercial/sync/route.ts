@@ -453,6 +453,17 @@ export async function GET(req: Request) {
         "Criada/alterada/inalterada é campo a campo, não 'seria reescrita'. Rodar "
         + "de novo sem nada ter mudado no Xmax deve dar 0 criada e 0 alterada — é o "
         + "teste de idempotência. Só o que mudou é gravado.",
+      /**
+       * ⚠️ ESTE BLOCO FALA SÓ DAS COLEÇÕES GRANULARES (oportunidades e pessoas). O
+       * AGREGADO NÃO ENTRA AQUI: ele é reescrito INTEIRO (`merge: false`) a cada apply,
+       * sempre, fora de qualquer diff.
+       *
+       * Sem esta linha, "idempotente: true, gravadas: 0" logo depois de um campo NOVO
+       * parece dizer que o campo não foi gravado — e é exatamente o que alguém conclui
+       * ao ler o relatório. Quem responde por ele é `agregado` abaixo, que LÊ DE VOLTA
+       * do banco em vez de afirmar.
+       */
+      escopoDestesNumeros: "coleções granulares (oportunidades e pessoas) — o agregado é reescrito inteiro, sempre",
       oportunidades: {
         naFonte: frescas.length,
         criadas: opCriadas.length,
@@ -480,6 +491,8 @@ export async function GET(req: Request) {
   // 6) APLICAR — merge, nunca sobrescrita cega; nada é apagado
   // ---------------------------------------------------------------------
   let gravadas = 0;
+  /** Preenchido pela leitura de volta do agregado — ver o bloco abaixo. */
+  let conferenciaDoBanco: Record<string, unknown> | null = null;
   const escrever = async <T extends { }>(col: string, itens: T[], idDe: (x: T) => string) => {
     for (let i = 0; i < itens.length; i += LOTE) {
       const batch = db.batch();
@@ -514,6 +527,36 @@ export async function GET(req: Request) {
      */
     // ⚠️ O MESMO objeto que a resposta acabou de descrever — não uma segunda montagem.
     await db.collection(COL_AGREGADO).doc("funil").set(agregado, { merge: false });
+
+    /**
+     * LEITURA DE VOLTA — a única prova de que o campo novo chegou ao banco.
+     *
+     * ⚠️ POR QUE NÃO BASTA O RELATÓRIO: tudo que a resposta diz sobre `mesEntrada` é
+     * calculado do objeto EM MEMÓRIA. Um campo pode ser montado certo e não ser gravado
+     * (regra de merge, sanitização, tipo recusado) — e o relatório continuaria verde.
+     * Conferir o que se montou é conferir a si mesmo.
+     *
+     * ⚠️ Custa UMA leitura por apply, e o `get` de um documento logo após o `set` é
+     * fortemente consistente no Firestore — é a leitura certa para esta pergunta.
+     *
+     * ⚠️ FICA DEPOIS DA MIGRAÇÃO. Não é código de uma vez: toda vez que um campo novo
+     * entrar no agregado, é aqui que se descobre se ele chegou. O que muda é só a
+     * contagem que se compara.
+     */
+    const lido = await db.collection(COL_AGREGADO).doc("funil").get();
+    const dadosLidos = lido.data() as { funil?: { niveis?: { pessoasNaEtapa?: { mesEntrada?: string | null }[] }[] } } | undefined;
+    const listasLidas = (dadosLidos?.funil?.niveis ?? []).flatMap((x) => x.pessoasNaEtapa ?? []);
+    const comMesNoBanco = listasLidas.filter((x) => typeof x.mesEntrada === "string" && x.mesEntrada.length === 7).length;
+    conferenciaDoBanco = {
+      docExiste: lido.exists,
+      pessoasNoDocLido: listasLidas.length,
+      comMesEntrada: comMesNoBanco,
+      semMesEntrada: listasLidas.length - comMesNoBanco,
+      /** Bate com o que a resposta calculou em memória? Se não, o gravado ≠ o relatado. */
+      confereComOCalculado:
+        listasLidas.length === pessoasDosNiveis.length
+        && comMesNoBanco === pessoasDosNiveis.length - semMes,
+    };
     await db.collection("sistema").doc("sync_comercial").set({
       ultimaExecucao: new Date().toISOString(),
       oportunidadesAbertas: frescas.length,
@@ -526,5 +569,8 @@ export async function GET(req: Request) {
     }, { status: 500 });
   }
 
-  return NextResponse.json({ ...resposta, gravacao: { ...(resposta.gravacao as object), gravadas } });
+  return NextResponse.json({
+    ...resposta,
+    gravacao: { ...(resposta.gravacao as object), gravadas, agregado: conferenciaDoBanco },
+  });
 }
