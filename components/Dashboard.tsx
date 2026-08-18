@@ -21,6 +21,7 @@ import { MARCA, TEMA } from "@/lib/brand";
 import NichosSection from "./NichosSection";
 import CriativosSection from "./CriativosSection";
 import HeroChart from "./HeroChart";
+import { usePeriodoGlobal, type JanelaDia } from "./PeriodoGlobalProvider";
 import Sparkline from "./Sparkline";
 import KpiCard from "./KpiCard";
 import DeltaChip from "./DeltaChip";
@@ -167,7 +168,9 @@ function Iniciais({ nome }: { nome: string }) {
 const PERIODOS = ["7 dias", "15 dias", "30 dias", "60 dias", "Mês", "Personalizado"] as const;
 type Periodo = (typeof PERIODOS)[number];
 type PeriodoDia = Exclude<Periodo, "Mês" | "Personalizado">;
-const DIAS_POR_PERIODO: Record<PeriodoDia, number> = { "7 dias": 7, "15 dias": 15, "30 dias": 30, "60 dias": 60 };
+// Tipado como JanelaDia (e nao number) porque estes quatro sao exatamente os
+// valores que VIAJAM entre as telas — ver PeriodoGlobalProvider.tsx.
+const DIAS_POR_PERIODO: Record<PeriodoDia, JanelaDia> = { "7 dias": 7, "15 dias": 15, "30 dias": 30, "60 dias": 60 };
 // Rótulo curto dos botões (o "Mês"/"Personalizado" mantêm o nome por extenso).
 const ROTULO_CURTO: Record<Periodo, string> = {
   "7 dias": "7d", "15 dias": "15d", "30 dias": "30d", "60 dias": "60d",
@@ -254,6 +257,19 @@ export default function Dashboard(
   // Seletor de período: agora filtra de verdade, recomputando o painel a partir
   // dos registros diários para a janela selecionada.
   const [periodo, setPeriodo] = useState<Periodo>("15 dias");
+
+  /**
+   * ETAPA 0 do periodo compartilhado: o Dashboard so ESCREVE. Nada aqui le do
+   * contexto ainda, entao a tela se comporta exatamente como antes — inclusive
+   * voltando para "15 dias" a cada montagem. A leitura entra na etapa seguinte,
+   * pela /carteira (modal de Analise de Conta).
+   *
+   * E a mesma disciplina de duas etapas que a casa ja usa em migracao de dados:
+   * primeiro a escrita nos dois lugares, e a troca da LEITURA so depois de
+   * conferir que a fonte nova esta populada. Aqui o custo de errar e menor, mas
+   * a ordem e a mesma — e ela e o que permite validar esta etapa por "nada mudou".
+   */
+  const { escolherJanelaDias } = usePeriodoGlobal();
 
   // Regra única: conta pausada fica FORA de toda a operação (rankings, médias,
   // nichos, criativos, KPIs, gráfico e alertas). As pausadas só alimentam o
@@ -573,7 +589,17 @@ export default function Dashboard(
               return (
                 <button
                   key={p}
-                  onClick={() => setPeriodo(p)}
+                  onClick={() => {
+                    setPeriodo(p);
+                    // ⚠️ ESCREVER E SO POR CLIQUE (ver PeriodoGlobalProvider.tsx): este e
+                    // o unico ponto do app que grava a janela de dias. Nenhuma tela
+                    // devolve para ca o valor que ela adaptou na chegada.
+                    // "Mes" e "Personalizado" NAO viajam: o numero de dias deles e
+                    // derivado (dias decorridos / tamanho do intervalo), e o que viaja
+                    // e a ESCOLHA. Levar 23 dias para outra tela seria inventar uma
+                    // janela que ninguem escolheu.
+                    if (p !== "Mês" && p !== "Personalizado") escolherJanelaDias(DIAS_POR_PERIODO[p]);
+                  }}
                   className="rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors"
                   style={ativo
                     ? { background: YELLOW, color: TEMA.textoSobreDestaque }
