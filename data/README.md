@@ -411,3 +411,29 @@ o motivo e o gatilho para revisar:
 | SOLUÇÃO (2ª conta) | `act_974158976372768` | ⚠ **Os números da SOLUÇÃO no painel estão INCOMPLETOS.** A agência confirmou (14/08/2026) que o cliente roda em **duas** contas; só a `act_358502495857953` ("Solução Empresas") é acessível e foi cadastrada. Esta segue **bloqueada** (`#200 ... NOT grant ads_management`), então o gasto e as conversões dela **não entram no painel** — e nada na tela indica que falta metade. Ao ler os números desse cliente, some mentalmente o que não está aqui. | Cadastrar quando sair a parceria de Business Manager. Aí os números do cliente passam a ser completos. |
 | DRA. ANA PAULA | `act_2057134961683901` | Cadastrada já **pausada** (regra `pausado` = não veicula): último gasto em **02/05/2026**, zero nos últimos 104 dias. Entrou pausada para não diluir o CPL de carteira do ISMAIL com uma conta parada. | Reativar quando voltar a veicular — `pausado: false` **e `gestor: "ISMAIL"`**, que é a dona. ⚠ Como ela nasceu pausada, o `gestorHistorico` NÃO tem o ISMAIL registrado; este é o único lugar onde a titularidade está escrita. |
 | TRAJETO | `act_2622092654889646` | Cadastrada e **pausada**. Conta criada em 17/07/2026, `account_status` ACTIVE, mas **gasto zero em 120 dias** — nunca veiculou. Ativa, entraria zerada e puxaria o CPL de carteira do gestor para baixo. Está também com **nicho vazio**: a planilha diz "Provedor" e a Meta chama a conta de "CA 01 - TRAJETO MÓVEIS". | **Dois gatilhos independentes.** (1) Reativar (`pausado: false` + `gestor: VINÍCIUS`) quando começar a veicular — confira por **gasto > 0 no período**, não por `account_status`. (2) Preencher o nicho quando a agência disser o ramo. |
+
+## A camada que não aparece num print lado a lado
+
+Comparando este painel com o BI da agência e com o Grafana de referência, a diferença que
+mais pesa **não é visual** — é o que a tela diz sobre o que ela **não sabe**. Ela não
+aparece numa captura de tela e é o que impede o painel de mentir.
+
+O inventário dela, para não se perder em refatoração:
+
+| mecanismo | onde | o que impede |
+|---|---|---|
+| **Hachura de período parcial** | série mensal do comercial | agosto mostrava 139 contra 177 de julho e lia-se **queda de 22%**; são 17 de 31 dias, e a intensidade diária é a maior da série |
+| **"É um piso, não o total"** | dinheiro parado por etapa | R$ 229.120 somam só 79 de 111 pessoas; publicar como total afirmaria que 29% da fila vale zero |
+| **"Sem valor informado", nunca "R$ 0"** | listas por etapa | zero é um valor real; desconhecido não é zero |
+| **"—" com motivo, nunca percentual com asterisco** | `DeltaChip` | percentual com ressalva continua sendo lido como percentual |
+| **Aviso de lista vazia ambígua** | fila de contas novas | vazio parece "está tudo em dia"; `me/adaccounts` não lista conta de BM parceira |
+| **Rótulo de unidade em todo número** | comercial inteiro | pessoa e oportunidade diferem por 10x em meses de clonagem |
+| **Marca de "já esteve na carteira"** | fila de contas novas | recadastrar desfaz decisão que ninguém lembra ter sido tomada |
+| **Régua ao lado do número** | recuperação, MRR, CPL | três definições defensáveis de sucesso: a distância entre elas **é** a informação |
+
+⚠️ **Nenhum desses mecanismos sobrevive a uma refatoração que só olha o CSS.** Todos são
+texto, estado ou estrutura de dado — some sem quebrar build, sem quebrar teste, e sem que
+ninguém perceba até o número já ter ido para uma reunião.
+
+Um BI mostra o número. Este painel mostra o número **com o que ele não prova**. Se em algum
+momento a escolha for entre densidade visual e um desses avisos, o aviso fica.
