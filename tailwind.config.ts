@@ -37,8 +37,14 @@ const config: Config = {
         },
       },
       fontFamily: {
-        // Poppins via next/font (self-host); a var é definida em app/layout.tsx.
-        sans: ["var(--font-poppins)", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Roboto", "Helvetica", "Arial", "sans-serif"],
+        // MANUAL DE MARCA 2026 — as duas vars são definidas em app/layout.tsx (next/font,
+        // self-host). Os nomes das vars são SEMÂNTICOS (--font-titulo / --font-dado) e não
+        // o nome da fonte: trocar a família um dia não deve obrigar a varrer o projeto
+        // atrás de "poppins", que foi exatamente o que esta migração teve que fazer.
+        sans: ["var(--font-titulo)", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Roboto", "Helvetica", "Arial", "sans-serif"],
+        // ⚠️ "mono" aqui é a Inconsolata do manual, e o papel dela é DADO EM COLUNA —
+        // ver a régua em app/layout.tsx. Não é a fonte de código.
+        mono: ["var(--font-dado)", "ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
       },
     },
   },
