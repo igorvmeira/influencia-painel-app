@@ -68,9 +68,17 @@ import { createContext, useCallback, useContext, useMemo, useState } from "react
 export const JANELAS_DIA = [7, 15, 30, 60] as const;
 export type JanelaDia = (typeof JANELAS_DIA)[number];
 
-/** O mesmo padrão que o Dashboard já usava chumbado. Trocar aqui muda a tela
- *  que abre primeiro — é decisão de produto, não detalhe. */
-export const JANELA_PADRAO: JanelaDia = 15;
+/**
+ * ⚠️ NÃO EXISTE PADRÃO AQUI, e a ausência é a decisão.
+ *
+ * `janelaDias` nasce `null` = NINGUÉM ESCOLHEU nesta sessão, e cada tela segue
+ * com o padrão dela (o Dashboard abre em 15 dias, o modal de Análise de Conta em
+ * 30). Um padrão guardado aqui viajaria como se fosse escolha e mudaria telas que
+ * ninguém pediu para mudar — o modal abriria em 15 no primeiro uso da sessão, sem
+ * nenhum clique ter acontecido.
+ *
+ * É a mesma régua que mantém "Mês" e "Personalizado" fora daqui: **só ESCOLHA
+ * viaja.** Número derivado não é escolha, e valor padrão também não é.
 
 /** Mês de calendário. `mes` é 1..12 (não 0..11 — o formato do lib/periodo.ts). */
 export interface MesEscolhido {
@@ -79,7 +87,8 @@ export interface MesEscolhido {
 }
 
 interface Ctx {
-  janelaDias: JanelaDia;
+  /** null = ninguém escolheu janela nesta sessão; a tela usa o padrão dela. */
+  janelaDias: JanelaDia | null;
   /** null = ninguém escolheu mês nesta sessão; a tela usa o padrão dela. */
   mes: MesEscolhido | null;
   escolherJanelaDias: (dias: JanelaDia) => void;
@@ -93,7 +102,7 @@ interface Ctx {
  * a tela que a agência mais usa. Degrada tirando o enfeite, não o essencial.
  */
 const PeriodoContext = createContext<Ctx>({
-  janelaDias: JANELA_PADRAO,
+  janelaDias: null,
   mes: null,
   escolherJanelaDias: () => {},
   escolherMes: () => {},
@@ -102,7 +111,7 @@ const PeriodoContext = createContext<Ctx>({
 export const usePeriodoGlobal = () => useContext(PeriodoContext);
 
 export default function PeriodoGlobalProvider({ children }: { children: React.ReactNode }) {
-  const [janelaDias, setJanelaDias] = useState<JanelaDia>(JANELA_PADRAO);
+  const [janelaDias, setJanelaDias] = useState<JanelaDia | null>(null);
   const [mes, setMes] = useState<MesEscolhido | null>(null);
 
   const escolherJanelaDias = useCallback((dias: JanelaDia) => setJanelaDias(dias), []);

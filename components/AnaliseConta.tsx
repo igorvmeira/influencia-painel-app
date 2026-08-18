@@ -11,12 +11,18 @@ import KpiCard from "./KpiCard";
 import DeltaChip from "./DeltaChip";
 import SecaoHeader from "./SecaoHeader";
 import CriativosDaConta from "./CriativosDaConta";
+import { usePeriodoGlobal } from "./PeriodoGlobalProvider";
 
 const MUTED = TEMA.muted;
 const AMBER = TEMA.atencao;
 
 /** Os mesmos degraus do Dashboard — mudar aqui e lá seria duas verdades. */
 const PERIODOS = [7, 15, 30, 60] as const;
+
+/** Padrão DESTA tela, usado quando ninguém escolheu período na sessão. 30 dias
+ *  porque quem abre a análise de um cliente quer o retrato do mês, não da
+ *  semana — pergunta diferente da do Dashboard, que abre em 15. */
+const PADRAO_MODAL = 30;
 
 /**
  * A análise de UMA conta, para o modal — o que o Roberto listou que olha quando
@@ -29,7 +35,21 @@ const PERIODOS = [7, 15, 30, 60] as const;
  */
 export default function AnaliseConta({ conta }: { conta: ContaMap }) {
   const { dados, erro } = useDadosPainel();
-  const [dias, setDias] = useState<number>(30);
+
+  /**
+   * ETAPA 1 do período compartilhado: este é o PRIMEIRO leitor.
+   *
+   * ⚠️ SEMEIA, não segue. O valor entra no inicializador do `useState`, que roda
+   * UMA VEZ por abertura do modal — daí em diante os botões abaixo mandam, e
+   * mudar o período em outra aba não mexe neste modal. É a TRAVA DURA do
+   * PeriodoGlobalProvider: nada aqui pode virar `useEffect`, porque o bloco de
+   * criativos desta mesma tela consulta a Meta AO VIVO.
+   *
+   * `?? PADRAO_MODAL` é a outra metade: sem escolha na sessão, a tela abre no
+   * padrão dela — o comportamento de antes, não um 15 herdado de ninguém.
+   */
+  const { janelaDias } = usePeriodoGlobal();
+  const [dias, setDias] = useState<number>(janelaDias ?? PADRAO_MODAL);
 
   const analise = useMemo(() => {
     if (!dados) return null;
@@ -89,8 +109,15 @@ export default function AnaliseConta({ conta }: { conta: ContaMap }) {
         </div>
       )}
 
-      {/* Seletor de período: o modal não herda o do Dashboard porque a /carteira
-          não tem período nenhum — ele precisa perguntar. */}
+      {/* Seletor de período: o modal CONTINUA perguntando — a /carteira não tem
+          período, então o controle precisa existir aqui. O que mudou (etapa 1 do
+          período compartilhado) é de onde ele PARTE: da última janela que o
+          usuário escolheu no Dashboard, e do padrão desta tela quando não houve
+          escolha nenhuma.
+          ⚠️ A restrição antiga dizia "o modal não herda o do Dashboard porque a
+          /carteira não tem período nenhum". O motivo dela era não haver período
+          disponível para herdar — e é esse motivo que expirou, não a regra de que
+          o modal precisa perguntar. Ele pergunta; só não começa do zero. */}
       <div className="mb-5 flex flex-wrap items-center gap-1.5">
         {PERIODOS.map((d) => (
           <button
