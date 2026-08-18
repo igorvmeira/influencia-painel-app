@@ -455,6 +455,28 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   o valor recebido (uma tela de mês fechado apara o mês corrente para o anterior — e diz na
   tela que aparou). Mas a adaptação NUNCA volta para o estado compartilhado: se voltasse,
   navegar de volta moveria a outra tela sem nenhum clique, e não haveria o que rastrear.
+  🔑 **E O TERCEIRO CASO, que fecha a régua: AUSÊNCIA DE ESCOLHA E ESCOLHA DE AUSÊNCIA
+  SÃO COISAS DIFERENTES — e é a segunda que precisa viajar.** Todo filtro tem um estado
+  "sem filtro", e é tentador representá-lo pelo mesmo `null` de "ninguém escolheu ainda".
+  Aí desligar o filtro deixa de ser gravável, o estado guarda o último valor escolhido, e
+  voltar para a tela **reaplica justamente o filtro que a pessoa acabou de desligar** — a
+  única escolha que o sistema desfaz sozinha é a de NÃO filtrar.
+  Caso real: o "todos os períodos" da /comercial ganhou valor próprio (`MES_NENHUM`) ao
+  lado de `{ano, mes}` e de `null`. Quem não entende esse valor — a /gestores, que só
+  existe em mês fechado — simplesmente o ignora e usa o padrão dela, que é o que a régua
+  das duas casas já mandava fazer com o que não se entende.
+  **Teste rápido: se desligar o filtro não gera escrita, o estado está guardando a
+  intenção antiga.**
+- ⚠️ **QUEM APARA UM VALOR RECEBIDO DIZ O MOTIVO, NÃO SÓ QUE APAROU** — porque o motivo é
+  o que decide o que a pessoa faz a seguir. "Não dá" trata como iguais situações que
+  pedem ações opostas.
+  Caso real: a /gestores recebe mês da /comercial e recusa por três razões distintas —
+  *ainda não fechou* (volta a servir sozinho no dia 1º), *fora da janela de ~95 dias*
+  (não volta nunca, a retenção é móvel) e *sem o mês anterior inteiro* (é limite da
+  COMPARAÇÃO, não do dado). Uma mensagem só apagaria a diferença entre esperar, desistir
+  e escolher outro recorte.
+  ⚠️ O aviso descreve a CHEGADA e some no primeiro clique do seletor: depois disso ele
+  passaria a explicar uma escolha que não está mais na tela.
 - 🛑 **IMPORT DE VALOR NUM COMPONENTE ARRASTA A CADEIA INTEIRA PARA O BUNDLE DO CLIENTE.**
   `import type` é apagado na compilação; import de valor não é. Caso real: a tela importou
   uma constante de `lib/comercialAgregado.ts`, que importa `lib/comercial.ts`, que importa
