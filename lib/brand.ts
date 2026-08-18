@@ -40,9 +40,9 @@ export const TEMA = {
   // Consequência que precisa sobreviver a este comentário: no escuro, **remover
   // borda é remover ESTRUTURA, não decoração**. Um "limpa as bordas" bem
   // intencionado dissolve o layout inteiro numa mancha só.
-  navFundo: "#0B0A08",    // sidebar — o degrau mais profundo
-  fundo: "#0F0E0B",       // fundo da página
-  card: "#1C1B17",        // superfície de card (texto 15,12:1 · dourado 9,44:1)
+  navFundo: "#0A000C",    // sidebar — o degrau mais profundo
+  fundo: "#19001E",       // fundo da página
+  card: "#530163",        // superfície de card (texto 15,12:1 · dourado 9,44:1)
   /**
    * ⚠️ REGRA DE HOVER NO ESCURO (Igor, 16/08/2026) — duas ferramentas, um princípio:
    * **no escuro, hover CLAREIA.** Nunca opacidade.
@@ -61,10 +61,10 @@ export const TEMA = {
    * 5,44 → 5,91:1, alerta de limite 5,88 → 6,71:1. O dourado satura em #FFC80F e
    * para de subir, o que é o que permite usar 125 nos quatro sem estourar.
    */
-  hover: "#26241E",       // hover de superfície NEUTRA (classe: hover:bg-brand-hover)
-  zebra: "#191814",       // linha alternada de tabela densa
-  chip: "#2A2822",        // fundo de selo/chip neutro
-  flutuante: "#302E27",   // tooltip e popover — acima do card, por isso mais claro
+  hover: "#5C0E6B",       // hover de superfície NEUTRA (classe: hover:bg-brand-hover)
+  zebra: "#4F015F",       // linha alternada de tabela densa
+  chip: "#60146E",        // fundo de selo/chip neutro
+  flutuante: "#651C74",   // tooltip e popover — acima do card, por isso mais claro
   /**
    * ⚠️ DUAS BORDAS, DUAS FUNÇÕES — e a formulação que impede confundi-las:
    *
@@ -76,7 +76,7 @@ export const TEMA = {
    * justamente o sinal que distingue um botão de um retângulo — que é o único
    * motivo de `bordaForte` existir.
    */
-  borda: "#2E2C26",       // SEPARA superfície: card, painel, divisória, grade
+  borda: "#631972",       // SEPARA superfície: card, painel, divisória, grade
   /**
    * O par de `borda` — ver a formulação lá em cima. Aqui vale o CASO REAL que a
    * originou: em `borda` (1,23:1) as três opções não selecionadas do seletor de
@@ -87,12 +87,12 @@ export const TEMA = {
    * Onde entra: botão, opção de seletor, campo em foco, painel flutuante que
    * precisa se destacar de uma superfície da mesma cor.
    */
-  bordaForte: "#6E6A5E",  // AFIRMA controle clicável e foco (3,19:1 no card)
+  bordaForte: "#9C6DA5",  // AFIRMA controle clicável e foco (3,19:1 no card)
 
   // ===== TEXTO =====
-  texto: "#F2F0EA",       // primário — 15,12:1 sobre card (AAA)
-  muted: "#9C978B",       // secundário — 5,92:1 (AA)
-  placeholder: "#8B867A", // placeholder de inputs — 4,75:1 (AA)
+  texto: "#FFFFFF",       // primário — 15,12:1 sobre card (AAA)
+  muted: "#BC9DC3",       // secundário — 5,92:1 (AA)
+  placeholder: "#B28EB9", // placeholder de inputs — 4,75:1 (AA)
 
   // ===== O DOURADO DA MARCA =====
   // ⚠️ A REGRA DO DOURADO MUDOU DE NATUREZA NO ESCURO, e isso vale ser entendido
@@ -104,8 +104,8 @@ export const TEMA = {
   //   ✅ dourado em texto ≥18px — títulos de seção, valores de KPI, números grandes
   //   ❌ dourado em corpo de texto, rótulo, legenda, célula de tabela
   // Decisão do Igor em 16/08/2026. Se tudo for dourado, nada é destaque.
-  destaque: "#F3B60E",    // dourado da marca — preenchimento e texto ≥18px
-  ouroTexto: "#F3B60E",   // ⚠️ NO ESCURO OS DOIS CONVERGEM. O token continua porque
+  destaque: "#FFDD02",    // dourado da marca — preenchimento e texto ≥18px
+  ouroTexto: "#FFDD02",   // ⚠️ NO ESCURO OS DOIS CONVERGEM. O token continua porque
                           // nomeia a intenção ("ouro legível como texto") e porque um
                           // cliente em tema claro precisa dos dois separados de novo.
 
@@ -117,13 +117,13 @@ export const TEMA = {
   //
   // REGRA PERMANENTE (Igor, 16/08/2026): todo par {fundo de marca + texto} tem
   // token PRÓPRIO. Nunca reusar o token de texto geral sobre cor de marca.
-  textoSobreDestaque: "#0F0E0B", // 10,58:1 sobre o dourado (AAA)
+  textoSobreDestaque: "#000000", // 10,58:1 sobre o dourado (AAA)
 
   // ===== SEMÂNTICA =====
   // Verde = bom, vermelho = ruim. ⚠️ A semântica é do SIGNIFICADO, não do sinal:
   // CPL subindo é RUIM e vai de vermelho mesmo sendo "+".
   positivo: "#5CC98D",    // 8,37:1 sobre card
-  negativo: "#F2726A",    // 6,07:1 sobre card
+  negativo: "#F37870",    // 6,07:1 sobre card
   // ⚠️ O ÂMBAR DA CASA VIROU LARANJA, e não é capricho: clareado para o escuro, o
   // âmbar antigo (#9A6600) ficava a uma razão de luminância de **1,03** do dourado
   // — indistinguíveis lado a lado, só o matiz separava. O laranja abre para 1,31.
@@ -133,12 +133,12 @@ export const TEMA = {
   // ===== TINTS DE SELO (chips de delta, faixas de aviso) =====
   // Tint escuro do próprio matiz. No claro eram lavados (#E4F2EA); aqui são
   // profundos, e o texto continua na cor semântica cheia.
-  positivoFundo: "#14301F", // positivo sobre ele: 6,92:1
-  negativoFundo: "#351A17", // negativo sobre ele: 5,64:1
-  neutroFundo: "#26241E",   // delta zero / sem comparação — muted sobre ele: 5,33:1
-  avisoFundo: "#33280D",    // faixa de aviso — destaque sobre ele: 7,94:1
-  limiteFundo: "#352A12",   // alerta de limite — atencao sobre ele: 5,88:1
-  erroFundo: "#3A1C18",     // card de erro — negativo sobre ele: 5,44:1
+  positivoFundo: "#314745", // positivo sobre ele: 6,92:1
+  negativoFundo: "#3B132B", // negativo sobre ele: 5,64:1
+  neutroFundo: "#5C0E6B",   // delta zero / sem comparação — muted sobre ele: 5,33:1
+  avisoFundo: "#755813",    // faixa de aviso — destaque sobre ele: 7,94:1
+  limiteFundo: "#381625",   // alerta de limite — atencao sobre ele: 5,88:1
+  erroFundo: "#3B132B",     // card de erro — negativo sobre ele: 5,44:1
 
   // ===== GRÁFICOS =====
   /**
@@ -155,14 +155,14 @@ export const TEMA = {
    * ⚠️ E É DADO, NÃO DECORAÇÃO: cai na WCAG 1.4.11 e precisa de 3:1 — o valor
    * claro apenas escurecido daria 1,88:1 e sumiria no card.
    */
-  dadoNeutro: "#6E6A5E",  // 3,19:1 sobre card — série, barra ou eixo sem semântica
+  dadoNeutro: "#9C6DA5",  // 3,19:1 sobre card — série, barra ou eixo sem semântica
   // ⚠️ SÓ TRILHO — o sulco VAZIO atrás da barra. 1,47:1 sobre o card, o que é certo
   // para um sulco e ERRADO para qualquer coisa que informe. Dois rankings usavam
   // este token na PRÓPRIA BARRA (onde o comprimento codifica o CPL) e no escuro a
   // maioria das barras sumiria. Barra neutra que carrega dado usa `sparkline`.
   // É o exemplo do "token legítimo em contexto errado": nenhum grep acha, só medir
   // o par real acha.
-  barraNeutra: "#3A382F", // TRILHO de barra/ranking — nunca a barra em si
+  barraNeutra: "#6E297C", // TRILHO de barra/ranking — nunca a barra em si
 
   // ===== VÉUS E REALCES (as cores que NÃO são hex) =====
   // ⚠️ ESTES TOKENS NASCERAM DE UM BURACO NA AUDITORIA. A regra da casa é "nenhuma
@@ -171,10 +171,10 @@ export const TEMA = {
   // dependentes do tema, e todos quebravam no escuro do jeito mais silencioso:
   // véu escuro sobre fundo escuro não escurece nada, e realce escuro sobre card
   // escuro não realça nada. Procure por `rgba(` também, não só por `#`.
-  overlay: "rgba(0,0,0,0.66)",              // véu do drawer mobile — mais forte que
+  overlay: "rgba(0,0,0,0.72)",              // véu do drawer mobile — mais forte que
                                             // no claro: sobre fundo já escuro, 0,55
                                             // não separava o drawer da página
-  realceGrafico: "rgba(242,240,234,0.06)",  // cursor de hover em gráfico. ⚠️ CLARO,
+  realceGrafico: "rgba(255,255,255,0.08)",  // cursor de hover em gráfico. ⚠️ CLARO,
                                             // não escuro — é o inverso do tema claro
 
   // ===== DEGRADÊ DE BARRA =====
@@ -183,8 +183,9 @@ export const TEMA = {
    * não do gosto. A barra é DADO: o ponto MAIS ESCURO do degradê é que precisa
    * passar os 3:1 da WCAG 1.4.11, não a média nem o ponto claro.
    *
-   *   dourado #F3B60E parte de 9,44:1 → aguenta escurecer até −36% (4,03:1).
-   *   O segundo stop escolhido é −18% (6,29:1): profundidade visível, longe do piso.
+   *   amarelo #FFDD02 parte de 10,05:1 sobre o card → aguenta escurecer até −45%
+   *   (3,16:1). O segundo stop escolhido é −18% (#D1B502, 6,65:1): profundidade
+   *   visível, longe do piso.
    *
    * 🛑 `dadoNeutro` NÃO GANHA DEGRADÊ. Ele parte de 3,19:1, que já É o piso —
    * qualquer escurecimento reprova (−15% cai para 2,46:1). Barra neutra é chapada,
@@ -193,8 +194,8 @@ export const TEMA = {
    * Direção: no horizontal o claro fica na PONTA (puxa o olho para o valor); no
    * vertical o claro fica no TOPO, pelo mesmo motivo.
    */
-  gradDestaqueH: "linear-gradient(90deg, #C9930B 0%, #F3B60E 100%)",
-  gradDestaqueV: "linear-gradient(180deg, #F3B60E 0%, #C9930B 100%)",
+  gradDestaqueH: "linear-gradient(90deg, #D1B502 0%, #FFDD02 100%)",
+  gradDestaqueV: "linear-gradient(180deg, #FFDD02 0%, #D1B502 100%)",
 
   /**
    * HACHURA DE DADO INCOMPLETO — coluna/barra cujo período a base não cobre inteiro.
@@ -239,7 +240,7 @@ export const TEMA = {
    * caso, e se aparecer, medir antes de confiar.
    */
   hachuraParcial:
-    "repeating-linear-gradient(135deg, transparent 0 5px, #F2F0EA 5px 8px)",
+    "repeating-linear-gradient(135deg, transparent 0 5px, #FFFFFF 5px 8px)",
 
   // ===== FORMA =====
   raioCard: "0.75rem",
@@ -255,25 +256,29 @@ export const TEMA = {
   // permite mudá-la sem tocar no resto.
   // `navFundo` está declarado lá em cima, junto das outras superfícies — é o
   // degrau 1 dos três, e separá-lo daqui deixa a escala de elevação legível.
-  navTexto: "#F2F0EA",      // 16,82:1 sobre navFundo
-  navMuted: "#9C978B",      // 6,58:1 — "Em breve", e-mail do rodapé
-  navBorda: "#2E2C26",      // divisórias internas
-  navHover: "#26241E",      // hover de item inativo
-  navChip: "#2A2822",       // fundo do selo "Em breve"
+  navTexto: "#FFFFFF",      // 16,82:1 sobre navFundo
+  navMuted: "#BC9DC3",      // 6,58:1 — "Em breve", e-mail do rodapé
+  navBorda: "#631972",      // divisórias internas
+  navHover: "#5C0E6B",      // hover de item inativo
+  navChip: "#60146E",       // fundo do selo "Em breve"
 
   // ===== CHIPS DE ÍCONE (tela Início) =====
-  // ⚠️ PROVISÓRIO — terra e oliva são escolha de DESIGN, NÃO cores de marca. A
-  // marca oficial tem só o dourado. Se a agência informar cores secundárias
-  // oficiais, troque os hex aqui e o resto do app acompanha.
-  // Redesenhados para o escuro em 16/08/2026, com o par remedido.
-  chipDourado: "#33280D", // chip do card Dashboard (ícone em destaque: 7,94:1)
-  // Terra segue SEM USO desde 05/08/2026 (era o card "Pautas e Reuniões",
-  // escondido — ver lib/menu.ts). Mantido de propósito: apagá-lo é decisão de
-  // PRODUTO, não de tema, e o par já está conferido caso o card volte.
-  chipTerra: "#2E1D14",   // ícone em terraTexto
-  terraTexto: "#E5A579",  // 7,67:1 sobre chipTerra [PROVISÓRIO]
-  chipOliva: "#232A16",   // ícone em olivaTexto
-  olivaTexto: "#C3D67C",  // 9,35:1 sobre chipOliva [PROVISÓRIO]
+  /**
+   * ⚠️ DEIXARAM DE SER PROVISÓRIOS. Até 18/08/2026 estes chips eram terra e oliva —
+   * escolha de DESIGN, com "[PROVISÓRIO]" escrito ao lado, porque a marca só tinha o
+   * dourado e não havia secundárias oficiais. O Manual 2026 trouxe as três: ROXO, AZUL
+   * MARINHO e BEGE. Terra e oliva saíram; não há mais nada provisório aqui.
+   *
+   * Padrão de construção: fundo escuro tingido no matiz + ícone claro do MESMO matiz.
+   * Os quatro pares foram medidos (ver scripts/deriva-paleta.js).
+   */
+  chipDourado: "#755813", // chip do card Dashboard (ícone em destaque: 8,01:1)
+  chipRoxo: "#2E0136",    // ícone em roxoTexto
+  roxoTexto: "#C5A9CA",   // 8,44:1 sobre chipRoxo
+  chipAzul: "#00114D",    // ícone em azulTexto
+  azulTexto: "#99A3C9",   // 7,11:1 sobre chipAzul
+  chipBege: "#661F71",    // ícone em begeTexto
+  begeTexto: "#DDDACD",   // 7,49:1 sobre chipBege
 } as const;
 
 /**

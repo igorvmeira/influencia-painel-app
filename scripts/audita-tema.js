@@ -97,9 +97,35 @@ const PARES = [
   ["negativo", "card", 4.5], ["negativo", "negativoFundo", 4.5], ["negativo", "erroFundo", 4.5],
   ["atencao", "card", 4.5], ["atencao", "limiteFundo", 4.5],
   ["navTexto", "navFundo", 4.5], ["navMuted", "navFundo", 4.5], ["navMuted", "navChip", 4.5],
-  ["olivaTexto", "chipOliva", 4.5], ["terraTexto", "chipTerra", 4.5],
+  ["roxoTexto", "chipRoxo", 4.5], ["azulTexto", "chipAzul", 4.5],
+  ["begeTexto", "chipBege", 4.5],
   ["dadoNeutro", "card", 3], ["bordaForte", "card", 3],
 ];
+
+/**
+ * O PAR DE HIERARQUIA — texto contra texto, e a conferência que NÃO existia.
+ *
+ * ⚠️ ELE MEDE OUTRA COISA. Todos os pares acima medem TINTA CONTRA FUNDO, e o piso vem
+ * da WCAG: abaixo dele a pessoa não LÊ. Este mede `texto` contra `muted` — a distância
+ * que separa RÓTULO de VALOR em dezenas de lugares do painel. Não é legibilidade, é
+ * HIERARQUIA, e ela não tem piso normativo.
+ *
+ * 🛑 POR QUE ELE PRECISOU EXISTIR. Na migração de marca 2026 os dois passavam folgados
+ * sobre o card — 13,53:1 e 5,72:1 — enquanto a distância ENTRE eles caía de 2,56:1 para
+ * 1,62:1. Nenhuma régua do projeto olhava esse par, então a hierarquia teria achatado 37%
+ * com todas as conferências verdes. Só apareceu porque alguém mediu à mão.
+ *
+ * ⚠️ PISO DE REGRESSÃO, NÃO META. 2,3 fica logo abaixo do valor entregue (2,40) para
+ * disparar se alguém achatar de novo — teria pego o bege na hora. NÃO afrouxe este piso
+ * para "passar": se ele acusar, o que quebrou foi a hierarquia da tela, não o teste.
+ *
+ * ⚠️ E ELE NÃO TEM FOLGA de 0,3 como os outros — por geometria, não por exceção. Os dois
+ * pisos prendem a MESMA variável por lados opostos: `muted` mais claro passa os 4,8:1
+ * sobre card/chip/hover e achata a hierarquia; mais escuro preserva a hierarquia e
+ * reprova como texto. Medido: a distância máxima alcançável é ~2,53. Exigir folga aqui
+ * obrigaria a afrouxar um piso de LEGIBILIDADE para ganhar hierarquia — a troca errada.
+ */
+const PAR_HIERARQUIA = ["texto", "muted", 2.3];
 L("");
 L("=".repeat(74));
 L("2) CONTRASTE — medido dos valores que estão no arquivo");
@@ -121,6 +147,53 @@ const rz = (lum(T.get("atencao")) + 0.05) / (lum(T.get("destaque")) + 0.05);
 const razao = rz < 1 ? 1 / rz : rz;
 if (razao < 1.25) erro(`atencao e destaque colidem (razão ${razao.toFixed(2)}, mínimo 1.25)`);
 else L(`   atencao vs destaque: razão ${razao.toFixed(2)} — distinguíveis`);
+
+// -------------------------------------------------- 2b) hierarquia texto/muted
+{
+  const [a, b, piso] = PAR_HIERARQUIA;
+  L("");
+  L("   HIERARQUIA — a distância que separa RÓTULO de VALOR (não é legibilidade)");
+  if (!T.get(a) || !T.get(b)) erro(`token ausente: ${a} ou ${b}`);
+  else {
+    const r = cr(T.get(a), T.get(b));
+    if (r < piso) erro(`${a} vs ${b}: ${r.toFixed(2)}:1 achatou (piso ${piso}) — a tela perde a hierarquia entre rótulo e valor, mesmo com os dois legíveis`);
+    else L(`      ${a} vs ${b}: ${r.toFixed(2)}:1   (piso ${piso} — regressão, não meta)`);
+  }
+}
+
+// ------------------------------------------- 2c) vizinhas da rampa categórica
+/**
+ * ⚠️ A CONFERÊNCIA QUE IMPEDE A FATIA INVISÍVEL DE VOLTAR POR OUTRO CAMINHO.
+ *
+ * Duas séries podem passar folgado contra o CARD e serem indistinguíveis ENTRE SI —
+ * e aí a barra empilhada não fica "meio apagada": ela vira uma barra cheia, e a tela
+ * passa a afirmar 100% onde havia 40%. O piso de 1,3:1 é entre VIZINHAS.
+ *
+ * ⚠️ Par abaixo de 1,3 não é proibido: é permitido SÓ com canal redundante (legenda
+ * com rótulo e valor em texto). O amarelo e o bege do manual ficam em 1,08:1 e são
+ * exatamente esse caso. O que a conferência faz é NOMEAR o par, para ninguém usar a
+ * rampa sem legenda achando que dá.
+ *
+ * A rampa entra no commit 4. Até lá esta seção diz que não há o que medir — e isso é
+ * melhor que não existir, porque conferência que nasce junto da feature nasce esquecida.
+ */
+L("");
+L("=".repeat(74));
+L("2d) RAMPA CATEGÓRICA — vizinhas (piso 1,3:1)");
+L("=".repeat(74));
+{
+  const RAMPA = ["serie1", "serie2", "serie3", "serie4", "serie5"].filter((k) => T.get(k));
+  if (!RAMPA.length) {
+    L("   a rampa ainda não existe em lib/brand.ts — entra no commit 4 da marca 2026.");
+  } else {
+    let soMatiz = 0;
+    for (let i = 0; i < RAMPA.length - 1; i++) {
+      const r = cr(T.get(RAMPA[i]), T.get(RAMPA[i + 1]));
+      if (r < 1.3) { soMatiz++; L(`   ⚠ ${RAMPA[i]} vs ${RAMPA[i + 1]}: ${r.toFixed(2)}:1 — separam SÓ por matiz, exigem legenda rotulada`); }
+    }
+    if (!soMatiz) L(`   OK — as ${RAMPA.length} vizinhas separam por luminância`);
+  }
+}
 
 // ---------------------------------------------------------------- 3) chumbado
 L("");

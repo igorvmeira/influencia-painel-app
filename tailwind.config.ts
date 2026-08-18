@@ -9,31 +9,31 @@ const config: Config = {
         // (hover:, placeholder: etc.), que não conseguem ler valores de JS.
         // Fonte única conceitual: brand.ts. Ao mudar lá, atualize aqui.
         //
-        // TEMA ESCURO (16/08/2026). Os contrastes medidos e o porquê de cada decisão
-        // estão em lib/brand.ts — este arquivo é só o espelho, nunca a explicação.
+        // MARCA 2026 — arranjo C (18/08/2026). Os contrastes medidos e o porquê de cada
+        // decisão estão em lib/brand.ts — este arquivo é só o espelho, nunca a explicação.
         brand: {
-          ink: "#F2F0EA",        // TEXTO primário (TEMA.texto) — off-white, não mais preto
-          yellow: "#F3B60E",     // dourado da marca (TEMA.destaque)
-          yellowDeep: "#F3B60E", // no escuro converge com o de cima (TEMA.ouroTexto)
-          onYellow: "#0F0E0B",   // ⚠️ texto SOBRE o dourado (TEMA.textoSobreDestaque)
-          bg: "#0F0E0B",         // fundo da página (TEMA.fundo)
-          card: "#1C1B17",       // superfície de card (TEMA.card)
-          hover: "#26241E",      // hover de linha/superfície (TEMA.hover)
-          line: "#2E2C26",       // borda 1px — ESTRUTURAL no escuro (TEMA.borda)
-          lineStrong: "#6E6A5E", // foco/seleção (TEMA.bordaForte)
-          muted: "#9C978B",      // texto secundário (TEMA.muted)
-          placeholder: "#8B867A",// placeholder de inputs (TEMA.placeholder)
-          zebra: "#191814",      // linha alternada de tabela (TEMA.zebra)
+          ink: "#FFFFFF",        // TEXTO primário (TEMA.texto) — branco puro, ver a nota lá
+          yellow: "#FFDD02",     // AMARELO do manual 2026 (TEMA.destaque)
+          yellowDeep: "#FFDD02", // converge com o de cima (TEMA.ouroTexto)
+          onYellow: "#000000",   // ⚠️ texto SOBRE o amarelo (TEMA.textoSobreDestaque) — 15,60:1
+          bg: "#19001E",         // fundo da página (TEMA.fundo)
+          card: "#530163",       // superfície de card (TEMA.card)
+          hover: "#5C0E6B",      // hover de linha/superfície (TEMA.hover)
+          line: "#631972",       // borda 1px — ESTRUTURAL no escuro (TEMA.borda)
+          lineStrong: "#9C6DA5", // foco/seleção (TEMA.bordaForte)
+          muted: "#BC9DC3",      // texto secundário (TEMA.muted)
+          placeholder: "#B28EB9",// placeholder de inputs (TEMA.placeholder)
+          zebra: "#4F015F",      // linha alternada de tabela (TEMA.zebra)
         },
         // Sidebar — o degrau MAIS PROFUNDO da escala (TEMA.nav*). Paleta separada
         // para poder mudar a navegação sem tocar no conteúdo.
         nav: {
-          bg: "#0B0A08",     // fundo da sidebar (TEMA.navFundo)
-          text: "#F2F0EA",   // itens do menu (TEMA.navTexto)
-          muted: "#9C978B",  // secundário na sidebar (TEMA.navMuted)
-          line: "#2E2C26",   // divisória interna (TEMA.navBorda)
-          hover: "#26241E",  // hover de item inativo (TEMA.navHover)
-          chip: "#2A2822",   // selo "Em breve" (TEMA.navChip)
+          bg: "#0A000C",     // fundo da sidebar (TEMA.navFundo)
+          text: "#FFFFFF",   // itens do menu (TEMA.navTexto)
+          muted: "#BC9DC3",  // secundário na sidebar (TEMA.navMuted)
+          line: "#631972",   // divisória interna (TEMA.navBorda)
+          hover: "#5C0E6B",  // hover de item inativo (TEMA.navHover)
+          chip: "#60146E",   // selo "Em breve" (TEMA.navChip)
         },
       },
       fontFamily: {
