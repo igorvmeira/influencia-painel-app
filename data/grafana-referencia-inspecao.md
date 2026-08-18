@@ -161,7 +161,11 @@ Aplicado nos 7 rótulos de 11px em caps: `KpiCard`, `Inicio` (2), `Comercial`,
 > unificação é decisão à parte. Os títulos de seção de 13px ficam como estão — .13em num
 > heading de 13px fica arejado demais.
 
-### 🛑 RECUSADO — as cinco, com o porquê
+### 🛑 RECUSADO POR PRINCÍPIO — as cinco, com o porquê
+
+> ⚠️ Só entra aqui o que foi rejeitado por uma razão que **não depende de medida**. O que
+> foi apenas calibrado tem seção própria logo abaixo — misturar os dois faz a lista dizer
+> que um caminho está fechado quando ele só está aferido.
 
 Registrado porque **daqui a três meses alguém vai olhar um print da referência e tentar
 trazer**. Cada recusa tem motivo próprio, não é conservadorismo:
@@ -174,7 +178,7 @@ trazer**. Cada recusa tem motivo próprio, não é conservadorismo:
 | **Animação infinita** (`inf-ttl-pulse`, 2,4s, `Infinity`) | Movimento perpétuo **compete com a leitura o tempo todo**. É a mesma família do alarme que dispara todo dia: o que está sempre acontecendo deixa de ser sinal. |
 | **Peso 800 nos números** | Com `tabular-nums` e o dourado, **600 já sustenta a hierarquia**. 800 num número grande vira mancha, e a régua da casa é tipografia forte sem peso decorativo. |
 
-### Também não adotado, mas por outro motivo
+### ⚖️ AJUSTADO, NÃO RECUSADO — mesmo princípio, número diferente
 
 **A duração da barra (1,1s deles contra 520ms nossos).** Não é recusa de princípio — é a
 nossa regra aplicada: *se a animação faz alguém esperar para ler o número, ela está errada.*

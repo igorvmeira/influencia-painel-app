@@ -541,4 +541,21 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   outro (ela nunca chegou à conferência; falhou antes, num ponto diferente). Um exemplo
   falso vira referência: alguém vai desenhar em cima dele. **Lição sem exemplo é honesta;
   lição com exemplo inventado é dívida.**
+- ⚠️ **"DECIDIMOS CONTRA" E "DECIDIMOS DIFERENTE" NÃO ENTRAM NA MESMA LISTA.** Toda lista de
+  recusas mistura duas coisas de naturezas opostas: o que foi rejeitado **por princípio** (a
+  razão vale sempre e não depende de medida) e o que foi apenas **ajustado por medida** (o
+  princípio é o mesmo, o número é outro). Juntas, a segunda herda o peso da primeira — e
+  quem lê daqui a três meses conclui que rejeitamos uma ideia inteira quando só calibramos
+  um valor.
+  Caso real: das seis linhas da inspeção da instância de referência, cinco eram recusa de
+  princípio (paleta roxa, `clamp()` no número herói, sombras pesadas, animação infinita,
+  peso 800) e uma **não era**: a duração da barra (1,1s deles contra 520ms nossos). Ali o
+  princípio é idêntico dos dois lados — animação não pode fazer esperar para ler — e só o
+  número diverge. Na mesma lista, lia como "somos contra animação longa"; separada, lê como
+  o que é: a nossa própria regra aplicada.
+  **A régua: se o motivo da recusa contém um NÚMERO, provavelmente é ajuste, não recusa.**
+  Princípio se escreve sem medida ("sombra não eleva no escuro porque não há luz para
+  bloquear"); ajuste não se escreve sem ela. Separe as duas seções — a lista de recusas é
+  lida justamente por quem NÃO participou da decisão, e para essa pessoa a diferença entre
+  "caminho fechado" e "número aferido" é a única coisa que importa.
 - Ao mexer em algo que já está no ar sendo usado, mostre o **plano antes do código**.
