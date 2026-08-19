@@ -117,6 +117,12 @@ const PARES = [
   ["negativo", "fundo", 4.5], ["atencao", "fundo", 4.5],
   // A moldura do DeltaChip neutralizado: superficie ELEVADA, nao card.
   ["bordaForteElevada", "neutroFundo", 3],
+  // O botao de FECHAR do Modal pousa no `chip` — a superficie elevada mais clara.
+  ["bordaForteElevada", "chip", 3],
+  // A BarraSplit aparece em card, chip e zebra na /comercial. A rampa nunca tinha
+  // sido medida fora do card.
+  ["serie1", "chip", 3], ["serie2", "chip", 3],
+  ["serie1", "zebra", 3], ["serie2", "zebra", 3],
 ];
 
 /**

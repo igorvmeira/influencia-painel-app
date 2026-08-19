@@ -273,6 +273,61 @@ vem escrito ao lado ("contas com CPL alto", "contas gastando sem converter"). A 
 ⚠️ **Mesma condição, mesmo risco:** remover o texto descritivo transforma os dois pares em
 defeito sem ninguém tocar em cor.
 
+### 11. Botão de fechar do `Modal` — 🛑 REPROVAVA · corrigido no commit 7
+
+| | |
+|---|---|
+| **onde** | `components/Modal.tsx`, botão "fechar" do cabeçalho |
+| **declarado** | `bordaForte` sobre `card` — **3,31:1** ✅ |
+| **a tela pinta** | `bordaForte` sobre `chip` (o botão tem fundo próprio) |
+| **contraste real** | **2,82:1** 🛑 (piso 3) |
+
+🔑 **TERCEIRA ocorrência do mesmo defeito** — botão "Sair" 2,97 · `DeltaChip`
+neutralizado 2,97 · este 2,82. E a mais grave das três pelo que ela é: **o controle que a
+pessoa procura quando quer sair**.
+
+**Conserto:** `bordaForteElevada`, que já existia. **Custou zero** — e é aí que a
+renomeação do commit 5 se paga. Com o nome posicional (`navBordaForte`), esta terceira
+teria exigido um TERCEIRO token para um valor que já existia duas vezes.
+
+⚠️ **O conserto é no COMPONENTE, não na tela.** O `Modal` é compartilhado com a
+/carteira (Análise de Conta), então a correção alcança as duas — o commit 8 **não deve
+tratar isto como achado novo**.
+
+### 12. O véu do modal quase não escurece — ⚠️ dependência invisível
+
+| | |
+|---|---|
+| **onde** | `components/Modal.tsx`, `TEMA.overlay` |
+| **medido** | a página vai de L=0,0030 para L=0,0006 — razão **1,05×** |
+| **desfecho** | não é defeito; é o padrão do tema escuro |
+
+O véu é `rgba(0,0,0,0.72)` sobre uma página que **já é quase preta** (`#19001E`).
+Escurecer o escuro não separa nada. **Quem separa o modal do fundo é a MOLDURA**, em
+`bordaForte` sobre o véu: **5,08:1**.
+
+⚠️ **É dependência invisível, e é por isso que está aqui.** Quem clarear a superfície do
+modal, ou enfraquecer a moldura achando que "o véu segura", faz a separação sumir sem
+nenhuma conferência acusar — o véu continuará lá, aplicando 72% de preto sobre nada.
+
+É o mesmo padrão do card contra a página (entrada 10): no tema escuro **a borda é
+estrutura, não decoração**. A diferença é que aqui o elemento que parece fazer o trabalho
+(o véu) é o que não faz.
+
+### 13. /comercial — a rampa saiu do card pela primeira vez
+
+A `BarraSplit` aparece sobre `card`, `chip` e `zebra` nesta tela. A rampa só tinha sido
+medida contra o card (commit 4). Medida agora nas três, e as quatro passam:
+
+```
+         card    chip   zebra   fundo
+serie1  10,05    8,56   10,38   14,71
+serie2   6,19    5,27    6,40    9,06     entre si: 1,62
+```
+
+Os quatro pares entraram como declarados no `audita-tema` — antes a rampa passava por
+sorte fora do card, que é o mesmo erro de reprovar por engano.
+
 ---
 
 ## Fechamento (commit 10)
@@ -280,6 +335,7 @@ defeito sem ninguém tocar em cor.
 - [x] Commit 4 — gráficos e rampa (3 entradas: sparkline reprovava, CPL adiado, HeroChart geométrico)
 - [x] Commit 5 — Dashboard (4 entradas: selo reprovava, colisão de área, contorno do DeltaChip, inputs)
 - [x] Commit 6 — Início + chips (zero desencontros; 2 falsos positivos da régua registrados)
-- [ ] Commit 7 — Comercial + Gestores
+- [x] Commit 7 — Comercial (3 entradas: Modal reprovava, véu invisível, rampa fora do card)
+- [ ] Commit 7b — Gestores
 - [ ] Commit 8 — Carteira, Orientações, Fila, Recuperação, modais
 - [ ] Commit 10 — revisar a lista inteira e decidir o que vira par declarado novo

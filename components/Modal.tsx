@@ -95,7 +95,16 @@ export default function Modal({
             onClick={aoFechar}
             aria-label="Fechar"
             className="shrink-0 rounded-lg px-2.5 py-1 text-[16px] leading-none transition hover:brightness-125"
-            style={{ background: TEMA.chip, color: TEMA.muted, border: `1px solid ${TEMA.bordaForte}` }}
+            /**
+             * ⚠️ `bordaForteElevada`, não `bordaForte`. Este botão pousa no `chip`, que é
+             * mais claro que o card — e ali o `bordaForte` dá **2,82:1**, abaixo do piso de
+             * 3:1 da WCAG 1.4.11.
+             *
+             * TERCEIRA ocorrência do mesmo defeito (botão "Sair" 2,97 · `DeltaChip`
+             * neutralizado 2,97 · este 2,82), e a mais grave das três pelo que ela é: o
+             * controle que a pessoa procura quando quer SAIR.
+             */
+            style={{ background: TEMA.chip, color: TEMA.muted, border: `1px solid ${TEMA.bordaForteElevada}` }}
           >
             ✕
           </button>

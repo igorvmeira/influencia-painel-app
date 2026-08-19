@@ -581,7 +581,7 @@ export default function Comercial() {
                     indice={i}
                     titulo={`${n(f.pessoas)} pessoas — ${f.rotulo}`}
                   />
-                  <span className="w-8 text-right text-[12.5px] font-medium tabular-nums text-brand-ink">{n(f.pessoas)}</span>
+                  <span className="w-8 text-right text-[12.5px] font-medium tabular-nums font-mono text-brand-ink">{n(f.pessoas)}</span>
                 </div>
               );
             })}
@@ -803,7 +803,7 @@ function FunilCentrado({
               className="group flex w-full items-center gap-3 rounded-lg px-2 py-1 text-left transition-colors hover:bg-brand-hover disabled:cursor-default disabled:hover:bg-transparent"
               title={temLista ? `Ver as ${n(nv.pessoas)} pessoas do nível ${nv.nivel}` : undefined}
             >
-              <span className="w-4 shrink-0 text-[11px] tabular-nums" style={{ color: MUTED }}>{nv.nivel}</span>
+              <span className="w-4 shrink-0 text-[11px] tabular-nums font-mono" style={{ color: MUTED }}>{nv.nivel}</span>
               <span className="w-40 shrink-0 truncate text-[13px] font-medium text-brand-ink">{nv.nome}</span>
 
               {/*
@@ -829,11 +829,11 @@ function FunilCentrado({
               </span>
 
               <span className="w-32 shrink-0 text-right">
-                <b className="text-[15px] font-semibold tabular-nums text-brand-ink">{n(nv.pessoas)}</b>
+                <b className="text-[15px] font-semibold tabular-nums font-mono text-brand-ink">{n(nv.pessoas)}</b>
                 <span className="ml-1 text-[11.5px]" style={{ color: MUTED }}>pessoas</span>
               </span>
               {mostrarOportunidades && (
-                <span className="w-28 shrink-0 text-right text-[11.5px] tabular-nums" style={{ color: MUTED }}>
+                <span className="w-28 shrink-0 text-right text-[11.5px] tabular-nums font-mono" style={{ color: MUTED }}>
                   {n(nv.oportunidades)} oportunidades
                 </span>
               )}
@@ -922,13 +922,13 @@ function ListaDaEtapa({ nivel }: { nivel: NivelDoFunil }) {
                 <span className="min-w-0 flex-1 truncate" style={{ color: TEMA.texto }} title={p.tituloCrm ?? p.nome}>
                   {p.tituloCrm ?? p.nome}
                 </span>
-                <span className="w-20 shrink-0 text-right tabular-nums" style={{ color: MUTED }}>
+                <span className="w-20 shrink-0 text-right tabular-nums font-mono" style={{ color: MUTED }}>
                   {p.diasParado === null ? "—" : `${n(p.diasParado)} dias`}
                 </span>
                 {/* ⚠️ NUNCA "R$ 0" — zero é um valor real e desconhecido não é, a mesma
                     regra do `mrrCent: null` no agregado. O que muda com o nível é só o
                     PESO: pendência (âmbar) onde a régua cobra, ausência neutra onde não. */}
-                <span className="w-32 shrink-0 text-right tabular-nums"
+                <span className="w-32 shrink-0 text-right tabular-nums font-mono"
                   style={{ color: p.mrrCent === null ? (cobraValor ? AMBER : MUTED) : TEMA.destaque }}>
                   {p.mrrCent === null ? (cobraValor ? "sem valor informado" : "—") : reais(p.mrrCent)}
                 </span>

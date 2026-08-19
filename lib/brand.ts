@@ -309,8 +309,16 @@ export const TEMA = {
    * 🛑 ELE NASCEU COM O NOME ERRADO — `navBordaForte`, em 18/08/2026. Nome POSICIONAL,
    * e o segundo consumidor apareceu fora da sidebar em dois dias. O achado que forçou
    * a renomeação: `neutroFundo` e `navHover` são o MESMO valor, ou seja o token certo
-   * já existia e só o nome mentia sobre onde ele servia. Nome de lugar bloqueia reuso
-   * legítimo e força um terceiro token que seria duplicata.
+   * já existia e só o nome mentia sobre onde ele servia.
+   *
+   * 🔑 E VEIO A TERCEIRA, no commit 7: o botão de FECHAR do `Modal`, sobre o `chip`,
+   * em **2,82:1**. Três ocorrências em três dias — 2,97 · 2,97 · 2,82 — e a classe
+   * estava lá desde o começo.
+   *
+   * **A renomeação não foi cosmética.** Com o nome posicional, esta terceira teria
+   * exigido um TERCEIRO token (`chipBordaForte`?) para um valor que já existia duas
+   * vezes. Com o nome semântico ela custou ZERO: era só usar. Nome de lugar bloqueia
+   * reuso legítimo e força duplicata — e a conta só aparece na terceira vez.
    *
    * ⚠️ E É TOKEN VÁLIDO EM CONTEXTO ERRADO, a armadilha que nenhuma busca acha: o
    * `audita-tema` media `bordaForte` contra o `card` (3,31:1, passa) enquanto a tela o
