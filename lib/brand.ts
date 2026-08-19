@@ -164,6 +164,38 @@ export const TEMA = {
   // o par real acha.
   barraNeutra: "#6E297C", // TRILHO de barra/ranking — nunca a barra em si
 
+  // ===== RAMPA CATEGÓRICA — séries que se distinguem SEM julgamento =====
+  /**
+   * ⚠️ ELA NUNCA EXISTIU ANTES. Até 18/08/2026 todo gráfico deste painel pintava por
+   * SEMÂNTICA (`positivo`/`negativo`/`atencao`) ou por `dadoNeutro`. Esta é a primeira
+   * vez que o painel distingue série por IDENTIDADE — e por isso a régua de quem usa
+   * qual está escrita aqui, não descoberta caso a caso.
+   *
+   * 🛑 COR SEMÂNTICA NÃO VIRA CATEGÓRICA. Onde a cor significa bom/ruim ela FICA
+   * semântica: SlopeCpl, Waterfall e a sparkline do CardGestor pintam pela variação do
+   * CPL, e trocar por identidade apagaria o julgamento. A rampa é só para séries que
+   * se distinguem sem julgar — formulário vs WhatsApp, gasto vs leads.
+   *
+   * ⚠️ SÃO TRÊS, E A QUARTA NÃO EXISTE — medido, não escolhido. As quatro candidatas
+   * passavam folgado CONTRA O CARD (10,05 · 9,27 · 6,19 · 3,56) e o par que quebra
+   * está ENTRE elas: **amarelo × bege dá 1,08:1**. As duas cores mais legíveis da
+   * paleta quando sozinhas são indistinguíveis quando vizinhas.
+   * Sem o bege o pior par vira 1,62:1 — folga de 0,32 sobre o piso de 1,3, sem exceção
+   * e sem legenda obrigatória. E custa zero: nenhum gráfico do painel tem 4 séries.
+   *
+   * ⚠️ O BEGE VOLTA COMO 4ª SÉRIE **só com legenda rotulada como CONDIÇÃO** — rótulo,
+   * valor e percentual em texto, como a BarraSplit já faz. Hoje ele tem UM papel: a
+   * hachura de parcial.
+   *
+   * ⚠️ A ORDEM É SEGURA POR CONSTRUÇÃO: pegar as N primeiras nunca produz par ruim.
+   *   1×2 = 1,62 · 2×3 = 1,74 · 1×3 = 2,82   (piso 1,3 + folga 0,3 = 1,6)
+   * Contra o card: 10,05 · 6,19 · 3,56 — as três passam o piso de 3:1 da WCAG 1.4.11,
+   * que vale porque em série o TAMANHO e a POSIÇÃO codificam informação.
+   */
+  serie1: "#FFDD02", // amarelo do manual — 10,05:1 no card
+  serie2: "#C3A6C8", // roxo +65% branco — 6,19:1 no card · 1,62:1 da serie1
+  serie3: "#7381B4", // azul marinho +45% branco — 3,56:1 no card · 1,74:1 da serie2
+
   // ===== VÉUS E REALCES (as cores que NÃO são hex) =====
   // ⚠️ ESTES TOKENS NASCERAM DE UM BURACO NA AUDITORIA. A regra da casa é "nenhuma
   // cor chumbada fora dos tokens", e a conferência procurava `#RRGGBB` — então

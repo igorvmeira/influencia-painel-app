@@ -18,7 +18,19 @@ export default function Sparkline({
 
   return (
     <svg width={largura} height={altura} viewBox={`0 0 ${largura} ${altura}`} preserveAspectRatio="none" aria-hidden="true">
-      <polyline points={pts} fill="none" stroke={cor} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" opacity={0.9} />
+      {/*
+        ⚠️ O `opacity={0.9}` SAIU, e não foi estética: ele fazia a linha pintar uma cor
+        que NENHUMA régua media. A 90% sobre o card roxo, o `dadoNeutro` virava outra cor e
+        caía para **2,91:1** — abaixo do piso de 3:1 da WCAG 1.4.11, que vale aqui porque
+        a POSIÇÃO da linha codifica a tendência do CPL.
+
+        O par declarado dizia 3,31:1 e estava certo sobre o token; errado sobre o que a
+        tela pintava. É a mesma família do token em contexto errado, por outro mecanismo:
+        não é a superfície que muda, é a TINTA que a opacidade transforma em outra cor.
+
+        Sem opacidade, o que a tela pinta é o token — e a régua volta a descrever a tela.
+      */}
+      <polyline points={pts} fill="none" stroke={cor} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

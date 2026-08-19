@@ -75,11 +75,90 @@ adotaram no commit 2. A régua descrevia uma superfície que aquele texto nunca 
 
 **Conserto:** o par declarado virou `["placeholder", "fundo", 4.5]`.
 
+### 3. Linha da sparkline — 🛑 REPROVAVA · corrigido no commit 4
+
+| | |
+|---|---|
+| **onde** | `components/Sparkline.tsx`, a linha do CardGestor |
+| **declarado** | `dadoNeutro` sobre `card` — **3,31:1** ✅ |
+| **a tela pintava** | `dadoNeutro` **a 90% de opacidade** sobre o card = `#95629E` |
+| **contraste real** | **2,91:1** 🛑 (piso 3:1, WCAG 1.4.11) |
+| **desfecho** | reprovava |
+
+⚠️ **Mecanismo NOVO — não é a superfície, é a tinta.** Nos casos 1 e 2 o par errava a
+superfície. Aqui a superfície estava certa e a TINTA era outra: um `opacity={0.9}` no
+`stroke` transformava o token numa terceira cor que nenhuma régua media.
+
+A posição da linha codifica a tendência do CPL, então o piso de 3:1 vale.
+
+**Conserto:** a opacidade saiu. Sem ela o que a tela pinta é o token, e a régua volta a
+descrever a tela. As outras duas cores da sparkline passariam mesmo com a opacidade
+(positivo 5,42 e negativo 4,28) — **só a neutra reprovava**, que é justamente a que
+ninguém olha.
+
+**Procure por isto nos próximos commits:** `opacity=`, `opacity:` e `fill-opacity` em
+qualquer coisa que carregue dado. A busca por `#` e `rgba(` não acha nenhum deles.
+
+### 4. Linha de CPL do HeroChart — ⚠️ PERGUNTA DE SIGNIFICADO · adiada de propósito
+
+| | |
+|---|---|
+| **onde** | `components/HeroChart.tsx`, linha tracejada de CPL |
+| **cor** | `negativo` (vermelho) — **4,98:1** sobre o card ✅ |
+| **desfecho** | passa; a dúvida não é de contraste |
+
+A linha inteira é vermelha **mesmo quando o CPL cai** — ou seja, mesmo quando o que ela
+mostra é bom. A régua da casa diz "CPL subindo é RUIM → vermelho", e aqui o vermelho pinta
+a SÉRIE, não o movimento dela. Pode ser identidade disfarçada de semântica.
+
+⚠️ **Adiado de propósito** (decisão do Igor, 18/08/2026): é questão de SIGNIFICADO, não de
+contraste, e resolver no meio da migração de paleta mistura dois eixos — o mesmo motivo de
+a fonte ter vindo antes da cor.
+
+Medido, para quem for retomar: **se o vermelho virasse `serie3`**, os pares do gráfico
+ficariam gasto×leads 2,82 · gasto×cpl 1,62 · leads×cpl 1,74 — todos com folga. É a única
+configuração em que as três séries fecham, e ela depende dessa resposta.
+
+### 5. As três séries do HeroChart não fecham — ⚠️ IMPOSSIBILIDADE GEOMÉTRICA
+
+| | |
+|---|---|
+| **onde** | `components/HeroChart.tsx` |
+| **par no fio** | gasto (amarelo) × leads (branco) — **1,35:1** |
+| **desfecho** | passa o piso de 1,3; sem a folga de 0,3 |
+
+Com `serie1` (amarelo, decisão do dono) e `negativo` (vermelho, semântico) FIXOS, **não
+existe cor para a linha de leads** que feche os dois pares:
+
+```
+para >=1,6 do amarelo  ->  L <= 0,437
+para >=1,6 do vermelho ->  L <= 0,192  ou  L >= 0,569
+para >=3,3 do card     ->  L >= 0,206
+janela útil: entre 0,206 e 0,192  ->  VAZIA
+```
+
+Testados os três candidatos, pelo pior par de cada:
+
+| linha de leads | pior par | contra o card |
+|---|---|---|
+| **branco `#FFFFFF` (hoje)** | **1,35** | 13,53 |
+| `serie2 #C3A6C8` | 1,24 | 6,19 |
+| `serie3 #7381B4` | 1,40 | 3,56 |
+
+O `serie3` ganha 0,05 no pior par e custa **10 pontos de contraste** na linha principal do
+gráfico principal. Troca ruim.
+
+**Decisão: fica como está**, e não por desistência — o par gasto×leads é separado por
+FORMA (barras contra linha), que é o canal redundante que a régua da casa aceita. A
+BarraSplit precisou da rampa porque lá as duas fatias têm a MESMA forma e só a cor separa.
+
+O desbloqueio real é a pergunta do item 4.
+
 ---
 
 ## Fechamento (commit 10)
 
-- [ ] Commit 4 — gráficos e rampa
+- [x] Commit 4 — gráficos e rampa (3 entradas: sparkline reprovava, CPL adiado, HeroChart geométrico)
 - [ ] Commit 5 — Dashboard
 - [ ] Commit 6 — Início + chips
 - [ ] Commit 7 — Comercial + Gestores

@@ -110,6 +110,9 @@ const PARES = [
   // controle com borda ali, e era este par que faltava: `bordaForte` contra `navHover`
   // dava 2,97:1 enquanto o par declarado (contra o card) dizia 3,31:1 e passava.
   ["navBordaForte", "navHover", 3], ["navBordaForte", "navFundo", 3],
+  // A rampa categorica contra a superficie onde ela e pintada (piso 3:1 da WCAG
+  // 1.4.11 — em serie o TAMANHO e a POSICAO codificam informacao).
+  ["serie1", "card", 3], ["serie2", "card", 3], ["serie3", "card", 3],
 ];
 
 /**
@@ -196,12 +199,34 @@ L("=".repeat(74));
   if (!RAMPA.length) {
     L("   a rampa ainda não existe em lib/brand.ts — entra no commit 4 da marca 2026.");
   } else {
+    /**
+     * ⚠️⚠️ PEÇA QUE PASSA SOZINHA NÃO PASSA NECESSARIAMENTE JUNTO.
+     *
+     * Duas vezes num único dia um par quebrou sem nenhuma conferência acusar, e as duas
+     * pelo MESMO motivo: a régua media cada cor contra a SUPERFÍCIE, e o problema estava
+     * ENTRE as cores.
+     *
+     *   texto × muted ..... os dois passavam folgado sobre o card (13,53 e 5,72), e a
+     *                       distância entre eles caiu de 2,56 para 1,62 em silêncio.
+     *   amarelo × bege .... as duas cores MAIS legíveis da paleta sozinhas (10,05 e
+     *                       9,27) dão 1,08:1 uma contra a outra.
+     *
+     * Toda vez que dois tokens forem VIZINHOS na tela — fatias de uma barra, séries de
+     * um gráfico, rótulo e valor — o par entre eles precisa de régua PRÓPRIA. Passar
+     * contra a superfície não basta, e é justamente isso que engana.
+     *
+     * ⚠️ TODOS os pares, não só os adjacentes: numa barra empilhada de 3 fatias a 1ª e a
+     * 3ª podem encostar quando a do meio for pequena.
+     */
     let soMatiz = 0;
-    for (let i = 0; i < RAMPA.length - 1; i++) {
-      const r = cr(T.get(RAMPA[i]), T.get(RAMPA[i + 1]));
-      if (r < 1.3) { soMatiz++; L(`   ⚠ ${RAMPA[i]} vs ${RAMPA[i + 1]}: ${r.toFixed(2)}:1 — separam SÓ por matiz, exigem legenda rotulada`); }
+    for (let i = 0; i < RAMPA.length; i++) {
+      for (let j = i + 1; j < RAMPA.length; j++) {
+        const r = cr(T.get(RAMPA[i]), T.get(RAMPA[j]));
+        if (r < 1.3) { soMatiz++; erro(`${RAMPA[i]} vs ${RAMPA[j]}: ${r.toFixed(2)}:1 — separam SÓ por matiz; numa barra empilhada a fatia some e a barra passa a afirmar 100% onde havia 40%`); }
+        else if (r < 1.6) L(`   ⚠ ${RAMPA[i]} vs ${RAMPA[j]}: ${r.toFixed(2)}:1 — passa o piso 1,3 mas sem a folga de 0,3`);
+      }
     }
-    if (!soMatiz) L(`   OK — as ${RAMPA.length} vizinhas separam por luminância`);
+    if (!soMatiz) L(`   OK — as ${RAMPA.length} séries separam por luminância em TODOS os pares`);
   }
 }
 
