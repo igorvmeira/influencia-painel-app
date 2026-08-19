@@ -283,11 +283,111 @@ for (const f of arquivos) {
 if (mortos) falhas += mortos;
 else L("   OK — nenhum hover morto");
 
+// ------------------------------------------------- 5) tinta transformada
+/**
+ * ⚠️ OPACIDADE MUDA A COR, E NENHUMA BUSCA DE `#` OU `rgba(` ACHA ISSO.
+ *
+ * Caso real (18/08/2026): a Sparkline tinha `opacity={0.9}` no stroke. O token era
+ * `dadoNeutro`, que passa 3,31:1 sobre o card — mas a 90% ele pintava OUTRA cor, com
+ * 2,91:1, abaixo do piso de 3:1 da WCAG 1.4.11. O par declarado estava certo sobre o
+ * token e errado sobre a tela.
+ *
+ * Esta seção mede a cor RESULTANTE. Ela derruba o job quando a opacidade é o que quebra
+ * — token que passa sozinho e reprova depois de misturado — porque alerta em documento
+ * depende de alguém lembrar de ler.
+ */
+L("");
+L("=".repeat(74));
+L("5) TINTA TRANSFORMADA — opacidade sobre cor de dado");
+L("=".repeat(74));
+{
+  const mistura = (a, b, t) => "#" + hex(a).map((v, i) => Math.round(v + (hex(b)[i] - v) * t))
+    .map((v) => v.toString(16).padStart(2, "0").toUpperCase()).join("");
+  const CARD = T.get("card");
+  let achados = 0, quebrados = 0, decorativos = 0;
+  for (const arq of arquivos) {
+    const linhas = fs.readFileSync(path.join(RAIZ, arq), "utf8").split(/\r?\n/);
+    // ⚠️ Estado de BLOCO, não linha a linha: um comentário que EXPLICA uma opacidade
+    // (e este projeto tem varios) acusaria a si mesmo. Aconteceu na primeira versao.
+    let dentroDeComentario = false;
+    linhas.forEach((linha, i) => {
+      const limpa = linha.trim();
+      if (limpa.includes("/*")) dentroDeComentario = true;
+      const fecha = limpa.includes("*/");
+      const eraComentario = dentroDeComentario;
+      if (fecha) dentroDeComentario = false;
+      if (eraComentario || limpa.startsWith("//") || limpa.startsWith("*")) return;
+      const op = linha.match(/(?:fill-opacity|fillOpacity|strokeOpacity|opacity)\s*[=:]\s*\{?\s*([01]?\.\d+)/);
+      if (!op) return;
+      const alfa = parseFloat(op[1]);
+      achados++;
+      // que token essa linha pinta?
+      const tok = linha.match(/(?:stroke|fill|background|color)\s*[=:]\s*\{?\s*TEMA\.([a-zA-Z]+)/);
+      if (!tok || !T.get(tok[1])) {
+        L(`   ? ${arq}:${i + 1} — opacidade ${alfa}, mas não deu para amarrar a um token: MEÇA À MÃO`);
+        return;
+      }
+      /**
+       * ⚠️ EXCEÇÃO DECLARADA, NUNCA INFERIDA. Existe uso legítimo de opacidade baixa em
+       * cor de dado: a área sob a linha do KpiCard é PREENCHIMENTO — quem carrega o
+       * valor é a linha, desenhada por cima em opacidade cheia. A área a 18% dá 1,18:1 e
+       * está certa assim.
+       *
+       * Mas a conferência NÃO adivinha isso. Quem quiser a exceção escreve
+       * `audita-tema: decorativo` na linha, e aí ela é CONTADA no relatório em vez de
+       * sumir. Inferir "é fill, então é enfeite" transformaria esta seção numa que
+       * aprova o defeito sozinha.
+       */
+      const marcador = linha + " " + (linhas[i - 1] ?? "") + " " + (linhas[i - 2] ?? "");
+      if (marcador.includes("audita-tema: decorativo")) {
+        decorativos++;
+        L(`   ~ ${arq}:${i + 1} — ${tok[1]} a ${Math.round(alfa * 100)}%: DECORATIVO declarado`);
+        return;
+      }
+      const puro = T.get(tok[1]);
+      const real = mistura(CARD, puro, alfa);
+      const rPuro = cr(puro, CARD), rReal = cr(real, CARD);
+      if (rPuro >= 3 && rReal < 3) {
+        quebrados++;
+        erro(`${arq}:${i + 1} — ${tok[1]} passa sozinho (${rPuro.toFixed(2)}:1) e a ${Math.round(alfa * 100)}% cai para ${rReal.toFixed(2)}:1 sobre o card. A opacidade É o defeito.`);
+      } else {
+        L(`   OK ${arq}:${i + 1} — ${tok[1]} a ${Math.round(alfa * 100)}%: ${rReal.toFixed(2)}:1 (puro ${rPuro.toFixed(2)}:1)`);
+      }
+    });
+  }
+  if (!achados) L("   nenhuma opacidade sobre cor de dado");
+  else if (!quebrados) L(`   ${achados} opacidade(s): ${achados - decorativos} medida(s), ${decorativos} declarada(s) decorativa(s) — nenhuma derruba o piso`);
+}
+
 // ---------------------------------------------------------------- veredito
 L("");
 L("=".repeat(74));
 if (falhas) { L(`REPROVOU — ${falhas} problema(s).`); process.exit(1); }
 L("PASSOU — e leia o que isto NÃO quer dizer.");
+L("");
+L("╔══════════════════════════════════════════════════════════════════════╗");
+L("║ AS TRÊS FAMÍLIAS DE CEGUEIRA — nenhuma sai de busca por # ou rgba(  ║");
+L("╚══════════════════════════════════════════════════════════════════════╝");
+L("");
+L("  1. SUPERFÍCIE ERRADA — o par declara `card`, a tela pinta outra coisa.");
+L("     bordaForte declarado sobre card (3,31) e pintado sobre navHover (2,97).");
+L("     placeholder declarado sobre card (4,80) e pintado sobre fundo (7,04) —");
+L("     esse PASSAVA, e passar por sorte é o mesmo erro: mede outra tela.");
+L("     → seção 2 mede o declarado. O real só sai LENDO o componente.");
+L("");
+L("  2. PAR NÃO MEDIDO — as duas peças passam sozinhas e quebram JUNTAS.");
+L("     texto e muted: 13,53 e 5,72 sobre o card, 1,62 entre si (era 2,56).");
+L("     amarelo e bege: 10,05 e 9,27 sobre o card, 1,08 entre si.");
+L("     → seções 2b e 2d medem PARES. Vizinho na tela precisa de régua própria.");
+L("");
+L("  3. TINTA TRANSFORMADA — o token está certo e a opacidade muda a cor.");
+L("     Sparkline: dadoNeutro 3,31 puro, 2,91 a 90%. O declarado não mentia");
+L("     sobre o token; mentia sobre o que a tela pintava.");
+L("     → seção 5 mede a cor RESULTANTE.");
+L("");
+L("  As três apareceram na migração de marca 2026, e as três passaram por");
+L("  conferências verdes antes de alguém medir à mão.");
+L("");
 L("");
 L("⚠️ ZERO ACUSAÇÃO NÃO É ZERO PAR ERRADO. Esta ferramenta mede os pares que");
 L("   ALGUÉM DECLAROU na lista PARES acima. Se a tela pintar aquela tinta sobre");

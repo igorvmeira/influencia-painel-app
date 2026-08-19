@@ -185,6 +185,8 @@ function SerieDeFundo({ pontos }: { pontos: number[] }) {
       className="pointer-events-none absolute inset-x-0 bottom-0"
       style={{ height: "46%" }}
     >
+      {/* area sob a linha: PREENCHIMENTO, nao dado — quem carrega o valor e a linha
+          desenhada por cima em opacidade cheia. audita-tema: decorativo */}
       <path d={area} fill={TEMA.dadoNeutro} opacity={0.18} />
       <path
         d={linha}
