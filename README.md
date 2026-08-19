@@ -102,13 +102,98 @@ A agência entregou o Manual de Marca 2026. A migração é feita em commits num
 `audita-tema.js` rodando entre eles:
 
 ```
-1   fontes (Space Grotesk + Inconsolata)        FEITO  5f3c5db
-1b  correção de peso (face 600 + b/strong)      FEITO  este commit
-1c  calibração tipográfica                    FEITO  este commit
-2   flip atômico da paleta                      pendente
-3-8 tela a tela                                 pendente
-9   logo                                        pendente (SVGs recebidos)
-10  auditoria final (a /tipografia e a Poppins saem aqui)
+1   fontes (Space Grotesk + Inconsolata)        FEITO
+1b  correção de peso (face 600 + b/strong)      FEITO
+1c  calibração tipográfica                      FEITO
+2   flip atômico da paleta                      FEITO
+3   Shell, sidebar, login                       FEITO
+4   gráficos e rampa categórica                 FEITO
+5   Dashboard                                   FEITO
+6   Início (+ remoção dos chips órfãos)         FEITO
+7   Comercial                                   FEITO
+7b  Gestores                                    FEITO
+8   Carteira, Orientações, Fila, Recuperação    FEITO
+9   logo                                        🔶 BLOQUEADO — SVGs não chegaram
+10  auditoria final                             FEITO
+```
+
+### Retrospectiva — o que a migração ensinou
+
+13 commits, 41 pares de contraste declarados, **6 reprovações**. Todas encontradas por
+LEITURA; nenhuma por ferramenta. As conferências novas nasceram DEPOIS de cada defeito, e
+existem para o próximo não depender de alguém olhar.
+
+#### As cinco famílias de cegueira
+
+Nenhuma sai de busca por `#` ou `rgba(`, e as cinco passaram por conferência verde antes
+de alguém medir à mão:
+
+| família | o caso |
+|---|---|
+| **superfície errada** | `bordaForte` declarado sobre `card` (3,31) e pintado sobre `navHover` (2,97) |
+| **par não medido** | `texto` e `muted` passavam sozinhos e a distância entre eles caiu 37% |
+| **tinta transformada** | `dadoNeutro` 3,31 puro, 2,91 a 90% de opacidade |
+| **consumo por classe** | a varredura de órfãos acusou `placeholder` e `navHover`, que são usados por classe Tailwind |
+| **valor em variável** | `opacity={op}` no `SlopeCpl` — a busca procurava literal |
+
+🔑 **O formato é sempre o mesmo:** *conferência que exige duas informações num formato só
+enxerga apenas o código que as escreve assim.* Antes de escrever qualquer conferência,
+pergunte **em quantos formatos o código pode escrever a mesma coisa**.
+
+#### A métrica que previu onde estava o defeito
+
+| tela | linhas | superfícies | empilhamento | achados |
+|---|---|---|---|---|
+| Início | 480 | 1 | — | **0** |
+| Dashboard | 1.400 | 12 | sim | **2** |
+| Fila de Contas | 607 | 9 | plano | **0** |
+| Carteira | 272 | 9 | **três andares** | **2** |
+
+**Não é quantas superfícies, é quantas se SOBREPÕEM.** A Fila tem o mesmo número de
+superfícies que a Carteira e menos da metade dos achados — porque são oito avisos lado a
+lado, não empilhados. Para planejar a próxima: **conte os níveis de aninhamento, não os
+tokens de fundo.**
+
+#### Quatro réguas que ficaram
+
+**Empilhamento além de um nível se resolve por BORDA, não por superfície.** A escada de
+elevação inteira cabe entre 1,03 e 1,27 — no escuro nenhuma elevação chega a 3:1. `card`
+sobre `card` em 1,00:1 não é defeito quando há borda medida (3,31:1). Criar um
+`cardEncaixado` prometeria um nível abaixo que a paleta não pode entregar.
+
+**A régua do esmaecimento é a DURAÇÃO, não o número.** Transitório com gesto reversível é
+FOCO (sem piso); persistente sem o gesto é DADO ESCONDIDO (piso 3:1). Se o realce do
+`SlopeCpl` virar clique-para-fixar em vez de hover, ele muda de categoria e o piso passa a
+valer. Não é o 0,25 que decide; é o gesto.
+
+**Nome POSICIONAL bloqueia reuso legítimo.** `navBordaForte` nasceu com nome de lugar e o
+segundo consumidor apareceu fora da sidebar em dois dias; o terceiro, no dia seguinte. A
+renomeação para `bordaForteElevada` não foi cosmética — foi o que fez a terceira aparição
+custar zero em vez de exigir um terceiro token duplicado.
+
+**O primeiro suspeito de uma divergência é a RÉGUA, não o medido.** Duas vezes num dia a
+medição acusou o que não existia (o balão media `dadoNeutro` quando usa `muted`; a
+varredura de pares não via fundo herdado de ancestral). ⚠️ E o custo é **assimétrico**: um
+falso positivo vira trabalho inventado, um falso NEGATIVO vira defeito que ninguém procura
+mais.
+
+#### O que a medição derrubou
+
+Três decisões já aprovadas caíram porque o número disse o contrário:
+
+- **bege como cor de texto** — a cor de maior proporção do manual (35%) achatava a
+  distância `texto`↔`muted` de 2,56 para 1,62. Virou branco.
+- **rampa de 4 séries** — as quatro passavam contra o card e o par amarelo × bege dava
+  **1,08:1** entre si. Virou 3.
+- **`serie2` na linha de leads do HeroChart** — consertava um par (1,35 → 1,62) e quebrava
+  outro (2,72 → 1,24). Ficou como estava.
+
+#### Números finais
+
+```
+41 pares declarados     19 espelhos brand.ts ↔ tailwind
+ 3 séries categóricas    0 cor chumbada     0 hover morto
+ 6 reprovações corrigidas               3 pendências nomeadas
 ```
 
 ### Divergências e correções registradas

@@ -1,5 +1,73 @@
 # Pares desencontrados — declarado ≠ pintado
 
+> **FECHADA em 18/08/2026**, no commit 10 da migração de marca 2026. 19 entradas
+> revisadas: **6 reprovavam e foram corrigidas**, 13 passavam (algumas por sorte) e viraram
+> par declarado ou condição escrita.
+
+---
+
+## 🔶 PENDÊNCIAS NOMEADAS — o que fica em aberto, e o que custa
+
+Três coisas saem desta migração sem conserto. **Nenhuma é esquecimento; as três são
+decisão registrada**, com o motivo e o custo de não mexer.
+
+### 1. O balão de orientação — três semânticas sem texto simultâneo
+
+**O que é:** verde, amarelo e vermelho num símbolo de 13px, colidindo em 1,16 · 1,13 ·
+1,32. O `title` só existe no hover e **não existe no toque**.
+
+**O que custa se ninguém mexer:** quem não distingue matiz — ou usa a tabela no celular —
+vê a mesma bolinha em três situações diferentes. A informação "esta conta vai mal" fica
+invisível para essa pessoa, na tela onde ela decidiria agir.
+
+**A saída já está desenhada:** forma por estado (preenchido / vazado / meio-preenchido).
+Sem token novo. Ver entrada 17.
+
+### 2. "CPL caindo é bom" implementado em quatro arquivos
+
+**O que é:** `DeltaChip`, `SlopeCpl`, `CardGestor` e `Waterfall` cada um com sua expressão
+da mesma regra. Hoje as quatro concordam — foram lidas uma a uma no commit 7b.
+
+🛑 **O que custa se ninguém mexer:** divergência entre elas aparece como **bônus errado**,
+não como tela feia. Um verde onde devia ser vermelho é alguém recebendo por um CPL que
+subiu. E não há conferência que pegue: as quatro passam contraste, passam typecheck, e a
+divergência só aparece no contracheque.
+
+**A saída:** a regra num módulo só, consumida pelas quatro. É mudança estrutural.
+
+### 3. A logo definitiva (commit 9) não entrou
+
+**O que é:** `LOGO_E_SIMBOLO.svg` e `PATTERN_INFLUENCIA.svg` **nunca chegaram ao
+repositório**. Procurados em `public/`, no `git ls-files` e na pasta pai.
+
+⚠️ **NÃO é regressão:** o `NodeMark` placeholder já estava lá antes da migração e
+acompanhou o flip sozinho — ele usa `TEMA.destaque`, e está em **15,32:1** sobre a
+sidebar, que é a versão AMARELA que o manual manda em fundo escuro. A tela está correta;
+o que falta é a marca de verdade.
+
+**O que falta chegar da agência:**
+
+| arquivo | formato | onde entra |
+|---|---|---|
+| assinatura completa | SVG, texto em curvas, 4 cores (amarela, branca, roxa, preta) | login |
+| símbolo isolado | SVG, mesmas 4 cores | sidebar, carregamento, estado vazio |
+| versão monocromática 1 cor | SVG, silhueta chapada | favicon 16px |
+| horizontal e empilhada | SVG, se existirem | sidebar de 240px vs login |
+
+**E três perguntas sem resposta:** área de respiro e tamanho mínimo; se a logo pode ir
+**sobre o amarelo** (o manual cobre fundo escuro e claro, não o amarelo, e nós usamos
+amarelo como preenchimento); e se já existe favicon desenhado.
+
+### ⚠️ E uma divergência ainda sem resposta da agência
+
+**`#530163` (manual) contra `#530263` (SVG entregue)** — um dígito. Vale o do MANUAL, e é
+o que está em `lib/brand.ts`. Se a resposta for que o manual errou, o token muda **num
+lugar só** e o `audita-tema` reconfere os 41 pares automaticamente. Registrada no README
+desde o commit 1b.
+
+---
+
+
 Lista viva, aberta em **18/08/2026** durante a migração de marca 2026.
 Cada commit de tela (4 a 8) acrescenta o que achar; o **commit 10 fecha**.
 
@@ -485,12 +553,23 @@ tokens de fundo.**
 
 ---
 
-## Fechamento (commit 10)
+## Fechamento — commit 10, 18/08/2026
 
-- [x] Commit 4 — gráficos e rampa (3 entradas: sparkline reprovava, CPL adiado, HeroChart geométrico)
-- [x] Commit 5 — Dashboard (4 entradas: selo reprovava, colisão de área, contorno do DeltaChip, inputs)
-- [x] Commit 6 — Início + chips (zero desencontros; 2 falsos positivos da régua registrados)
-- [x] Commit 7 — Comercial (3 entradas: Modal reprovava, véu invisível, rampa fora do card)
-- [x] Commit 7b — Gestores (1 entrada + 1 pendência nomeada; zero reprovações)
-- [x] Commit 8 — Carteira, Orientações, Fila, Recuperação (5 entradas: card sobre card, selos, balão pendente, nota da régua, métrica refinada)
-- [ ] Commit 10 — revisar a lista inteira e decidir o que vira par declarado novo
+| commit | tela | achados |
+|---|---|---|
+| 3 | Shell, sidebar, login | 🛑 1 (moldura do "Sair") |
+| 4 | gráficos e rampa | 🛑 1 (opacidade da sparkline) + 2 registros |
+| 5 | Dashboard | 🛑 2 (selo do alerta, contorno do DeltaChip) |
+| 6 | Início | 0 — uma superfície só |
+| 7 | Comercial | 🛑 1 (botão de fechar do Modal) |
+| 7b | Gestores | 0 de cor · 1 pendência estrutural |
+| 8 | Carteira, Orientações, Fila, Recuperação | 0 de cor · 3 registros |
+
+**Seis reprovações, todas encontradas por LEITURA — nenhuma por ferramenta.** As três
+conferências novas (hierarquia, vizinhas da rampa, tinta transformada) foram escritas
+DEPOIS de cada defeito, e existem para o próximo não depender de alguém olhar.
+
+🔑 **Quatro das seis eram o mesmo defeito**: `bordaForte` pousando em superfície mais
+clara que o card (2,97 · 2,97 · 2,82) e o selo do alerta sobre o `chip` (4,24). A família
+1 não é um punhado de casos isolados — é uma classe, e ela some quando o token tem nome
+semântico em vez de posicional.
