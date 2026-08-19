@@ -530,13 +530,13 @@ export default function Gestores() {
                         <span className="mr-1.5 inline-block text-[10px]" style={{ color: MUTED }}>{aberto ? "▼" : "▶"}</span>
                         {g.nome}
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>
+                      <td className="px-4 py-3 text-right tabular-nums font-mono" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>
                         {brl(g.gasto)}
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>
+                      <td className="px-4 py-3 text-right tabular-nums font-mono" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>
                         {num(g.conversas)}
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums font-semibold" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>
+                      <td className="px-4 py-3 text-right tabular-nums font-mono font-semibold" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>
                         {g.conversas > 0 ? brlDec(g.cpl) : "—"}
                       </td>
                       <td className="px-4 py-3 text-right" style={{ borderBottom: `1px solid ${LINE}` }}>
@@ -711,11 +711,11 @@ function DetalheGestor({
 
             return (
               <tr key={c.accountId}>
-                <td className="py-2 pr-3 text-right tabular-nums" style={{ color: MUTED }}>{i + 1}</td>
+                <td className="py-2 pr-3 text-right tabular-nums font-mono" style={{ color: MUTED }}>{i + 1}</td>
                 <td className="py-2 pr-3" style={{ color: TEMA.texto }}>{c.cliente}</td>
-                <td className="py-2 pr-3 text-right tabular-nums" style={{ color: TEMA.texto }}>{brl(c.gasto)}</td>
-                <td className="py-2 pr-3 text-right tabular-nums" style={{ color: TEMA.texto }}>{num(c.conversas)}</td>
-                <td className="py-2 pr-3 text-right tabular-nums" style={{ color: TEMA.texto }}>
+                <td className="py-2 pr-3 text-right tabular-nums font-mono" style={{ color: TEMA.texto }}>{brl(c.gasto)}</td>
+                <td className="py-2 pr-3 text-right tabular-nums font-mono" style={{ color: TEMA.texto }}>{num(c.conversas)}</td>
+                <td className="py-2 pr-3 text-right tabular-nums font-mono" style={{ color: TEMA.texto }}>
                   {c.conversas > 0 ? brlDec(c.cplSemanal) : "—"}
                 </td>
                 <td className="py-2 pr-3 text-right">
@@ -858,7 +858,7 @@ function BlocoDestaques({ d }: { d: NonNullable<ReturnType<typeof calcularDestaq
   const Item = ({ c }: { c: ContribuicaoConta }) => (
     <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
       <span style={{ color: TEMA.texto }}>{c.cliente}</span>
-      <span className="tabular-nums font-medium" style={{ color: c.contribuicao < 0 ? TEMA.positivo : TEMA.negativo }}>
+      <span className="tabular-nums font-mono font-medium" style={{ color: c.contribuicao < 0 ? TEMA.positivo : TEMA.negativo }}>
         {c.contribuicao > 0 ? "+" : "−"}{brlDec(Math.abs(c.contribuicao))}
       </span>
       <span className="tabular-nums" style={{ color: MUTED }}>({Math.round(c.pesoPct)}%)</span>

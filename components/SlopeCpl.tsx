@@ -116,6 +116,26 @@ export default function SlopeCpl({
   const excedente = rotulos[rotulos.length - 1].yFinal - (ALTURA - PAD_BASE);
   if (excedente > 0) for (const r of rotulos) r.yFinal -= excedente;
 
+  /**
+   * ESMAECIMENTO DE FOCO — e por que ele NÃO tem piso de contraste.
+   *
+   * ⚠️ A RÉGUA É A DURAÇÃO, não o número. Esmaecimento TRANSITÓRIO com gesto REVERSÍVEL
+   * é FOCO: a pessoa pediu para isolar uma série, as outras estarem apagadas É a função,
+   * e soltar o mouse devolve tudo. Esmaecimento que PERSISTE sem o gesto seria DADO
+   * ESCONDIDO, e aí o piso de 3:1 volta a valer.
+   *
+   * 🔑 SE UM DIA O REALCE VIRAR CLIQUE-PARA-FIXAR em vez de hover, ele MUDA DE CATEGORIA
+   * — e esta linha passa a precisar de 3:1. Não é o valor 0,25 que decide; é o gesto.
+   *
+   * ⚠️ E O PISO NÃO É ALCANÇÁVEL SEM MATAR A FUNÇÃO: medido em 18/08/2026, para as
+   * linhas esmaecidas chegarem a 3:1 sobre o card a opacidade teria que subir a ~0,75, e
+   * aí não há realce nenhum. Mesmo raciocínio do `disabled:`, isento pela WCAG 1.4.3.
+   *
+   * NÚMEROS, para ninguém culpar nem absolver a migração por engano:
+   *   tema anterior (card quase-preto) .. positivo a 25% = 1,69:1
+   *   marca 2026 (card roxo) ............ positivo a 25% = 1,34:1
+   * PIOROU, e já estava abaixo de 3:1 antes. Não é regressão da paleta.
+   */
   const opacidadeDe = (nome: string) => (destacado && destacado !== nome ? 0.25 : 1);
 
   return (

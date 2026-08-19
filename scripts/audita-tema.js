@@ -313,7 +313,11 @@ else L("   OK — nenhum hover morto");
  *   · a varredura de pares não vê fundo herdado de ANCESTRAL — e é assim que a maior
  *     parte do painel pinta (o `Bloco` embrulha a seção 400 linhas acima);
  *   · a primeira versão desta seção não via `opacity-70` de CLASSE, porque a cor vinha
- *     do `style` do elemento PAI e a opacidade estava na classe do filho.
+ *     do `style` do elemento PAI e a opacidade estava na classe do filho;
+ *   · esta seção não vê `opacity={op}` com VARIÁVEL — o `SlopeCpl` esmaece as linhas
+ *     não destacadas com um valor calculado, e a busca procura literal;
+ *   · a varredura de token órfão não vê consumo por CLASSE Tailwind (`placeholder:`,
+ *     `bg-nav-hover`) — apagar por ela quebraria dois consumos reais.
  *
  * Toda vez que uma conferência nova precisar de duas informações para decidir, pergunte
  * ANTES: e se o código escrever as duas em lugares diferentes? A resposta honesta costuma

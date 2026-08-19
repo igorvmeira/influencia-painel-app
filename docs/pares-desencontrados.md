@@ -328,6 +328,66 @@ serie2   6,19    5,27    6,40    9,06     entre si: 1,62
 Os quatro pares entraram como declarados no `audita-tema` — antes a rampa passava por
 sorte fora do card, que é o mesmo erro de reprovar por engano.
 
+### 14. Esmaecimento de foco do `SlopeCpl` — ✅ isento, e a régua é a DURAÇÃO
+
+| | |
+|---|---|
+| **onde** | `components/SlopeCpl.tsx`, `opacidadeDe` |
+| **medido** | linhas não destacadas a 25%: **1,34:1** (positivo), 1,44 (negativo) |
+| **desfecho** | isento — é estado de FOCO, não dado escondido |
+
+**A régua é a DURAÇÃO, não o número:**
+
+> Esmaecimento **transitório com gesto reversível** é FOCO — a pessoa pediu para isolar
+> uma série, as outras estarem apagadas *é a função*, e soltar o mouse devolve tudo.
+> Esmaecimento que **persiste sem o gesto** é DADO ESCONDIDO, e aí o piso de 3:1 vale.
+
+🔑 **Se um dia o realce virar clique-para-fixar em vez de hover, ele MUDA DE CATEGORIA** e
+esta linha passa a precisar de 3:1. Não é o valor 0,25 que decide; é o gesto.
+
+E o piso não é alcançável sem matar a função: para as esmaecidas chegarem a 3:1 a
+opacidade teria que subir a ~0,75, e aí não há realce. Mesmo raciocínio do `disabled:`,
+isento pela WCAG 1.4.3.
+
+⚠️ **Os dois números, para ninguém culpar nem absolver a migração por engano:**
+
+```
+tema anterior (card quase-preto) .. 1,69:1
+marca 2026 (card roxo) ............ 1,34:1
+```
+
+**Piorou — e já estava abaixo de 3:1 antes.** Não é regressão da paleta.
+
+⚠️ **QUINTA aparição do formato:** a conferência não pegou porque o valor é
+`opacity={op}` com **variável**, e a busca procura literal. Somada às outras quatro no
+`audita-tema`.
+
+---
+
+## 🔶 PENDÊNCIA NOMEADA — "CPL caindo é bom" está implementado QUATRO vezes
+
+**Não é par desencontrado. É dívida estrutural, e vai para o EM ABERTO do projeto.**
+
+A regra de negócio mais importante desta tela vive em quatro arquivos, cada um com a sua
+expressão:
+
+| arquivo | trecho |
+|---|---|
+| `components/DeltaChip.tsx` | `(menorMelhor ? delta < 0 : delta > 0) ? TEMA.positivo : TEMA.negativo` |
+| `components/SlopeCpl.tsx` | `p.cplAtual < p.cplAnterior ? TEMA.positivo : p.cplAtual > p.cplAnterior ? TEMA.negativo : TEMA.muted` |
+| `components/CardGestor.tsx` | `semConversao ? TEMA.dadoNeutro : cplVar < 0 ? TEMA.positivo : cplVar > 0 ? TEMA.negativo : TEMA.dadoNeutro` |
+| `components/Waterfall.tsx` | `p.contribuicao < 0 ? TEMA.positivo : TEMA.negativo` |
+
+**Hoje as quatro concordam** — li as quatro, uma a uma, no commit 7b. Nada garante que
+continuem concordando.
+
+🛑 **O risco em uma frase: divergência entre elas aparece como BÔNUS ERRADO, não como
+tela feia.** Esta tela embasa bonificação de gestor. Um verde onde devia ser vermelho não
+é defeito visual — é alguém recebendo por um CPL que subiu.
+
+O `CLAUDE.md` já manda regra de negócio morar num módulo só, consumida por todas as
+telas. Consertar é mudança estrutural: **não cabe em commit de cor**.
+
 ---
 
 ## Fechamento (commit 10)
@@ -336,6 +396,6 @@ sorte fora do card, que é o mesmo erro de reprovar por engano.
 - [x] Commit 5 — Dashboard (4 entradas: selo reprovava, colisão de área, contorno do DeltaChip, inputs)
 - [x] Commit 6 — Início + chips (zero desencontros; 2 falsos positivos da régua registrados)
 - [x] Commit 7 — Comercial (3 entradas: Modal reprovava, véu invisível, rampa fora do card)
-- [ ] Commit 7b — Gestores
+- [x] Commit 7b — Gestores (1 entrada + 1 pendência nomeada; zero reprovações)
 - [ ] Commit 8 — Carteira, Orientações, Fila, Recuperação, modais
 - [ ] Commit 10 — revisar a lista inteira e decidir o que vira par declarado novo
