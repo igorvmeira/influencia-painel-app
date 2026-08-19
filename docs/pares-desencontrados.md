@@ -388,6 +388,101 @@ tela feia.** Esta tela embasa bonificação de gestor. Um verde onde devia ser v
 O `CLAUDE.md` já manda regra de negócio morar num módulo só, consumida por todas as
 telas. Consertar é mudança estrutural: **não cabe em commit de cor**.
 
+### 15. Card sobre card na /carteira — ⚠️ 1,00:1, resolvido por BORDA · NÃO é regressão
+
+| | |
+|---|---|
+| **onde** | `Modal` → `AnaliseConta` → `CriativosDaConta`, três andares |
+| **medido** | andar 1 (`card` do Modal) e andar 3 (`card` do bloco) = **1,00:1** |
+| **o que separa** | a borda do bloco, `bordaForte` sobre `card` = **3,31:1** |
+
+🛑 **NÃO É REGRESSÃO DA PALETA.** `card` sobre `card` sempre deu 1,00:1 — no tema escuro
+anterior também, e no claro antes dele. **A diferença é que agora foi medido.** Quem
+reencontrar isto precisa saber que a migração de marca não causou.
+
+A escada inteira cabe entre 1,03 e 1,27, porque foi desenhada para UM nível de elevação.
+**A regra ficou escrita no `brand.ts`:** empilhamento além de um nível se resolve por
+borda, não por superfície.
+
+Rejeitados, com o motivo:
+
+- **token `cardEncaixado`** — prometeria um nível abaixo para o quarto andar, e a escada
+  não tem para onde ir. Promessa que a paleta não pode cumprir.
+- **tirar o fundo do `CriativosDaConta`** — ele é componente COMPARTILHADO; o fundo
+  próprio é o que o faz funcionar fora do modal.
+
+### 16. Selos "Ativa" / "Pausada" — ⚠️ 1,16:1, condição textual
+
+| | |
+|---|---|
+| **onde** | `components/Carteira.tsx`, coluna de status |
+| **par** | `positivoFundo` × `chip` — **1,16:1** |
+| **desfecho** | passa **com condição** |
+
+Os dois selos colidem como superfície. **Passa porque cada um tem a palavra escrita
+dentro** — "Ativa" e "Pausada". A cor nunca é o único portador.
+
+⚠️ **CONDIÇÃO:** se alguém trocar o texto por um ponto colorido, o par vira defeito sem
+ninguém tocar em cor. Terceira vez que esta condição aparece (Dashboard, Início, aqui).
+
+### 17. 🔶 O balão de orientação — PENDÊNCIA: três semânticas sem texto simultâneo
+
+| | |
+|---|---|
+| **onde** | `components/BalaoOrientacao.tsx`, em TODAS as linhas da tabela |
+| **pares** | positivo × atencao **1,16** · atencao × negativo **1,13** · positivo × negativo **1,32** |
+| **desfecho** | 🔶 dívida registrada, conserto fora deste commit |
+
+Verde, amarelo e vermelho são indistinguíveis por luminância num símbolo de **13px**.
+
+🛑 **NÃO é regressão:** as três semânticas sempre foram próximas em luminância (6,57 ·
+5,65 · 4,98 sobre o card). **O que muda é o CONTEXTO** — aqui elas aparecem como símbolo
+sem texto ao lado, ao contrário do Dashboard (rótulo escrito) e da Início (frase). É o
+ÚNICO lugar do painel onde as três aparecem sem texto simultâneo.
+
+⚠️ **O `title` existe e não basta:** só aparece no HOVER e **não existe no TOQUE**.
+Registrar isto como "resolvido pelo title" seria escrever que está resolvido só para quem
+usa mouse.
+
+✅ **A saída conhecida:** forma diferente por estado — **preenchido / vazado /
+meio-preenchido**. É a mesma solução do selo de alerta do commit 5: resolve por ÁREA e
+FORMA, sem token novo. Não entrou aqui porque é mudança de FORMA, e commit de cor não
+carrega isso — a regra que segurou a migração desde o commit 1.
+
+### 18. 🔑 NOTA PERMANENTE — o primeiro suspeito de uma divergência é a RÉGUA
+
+**Duas vezes em um dia** a medição acusou algo que não existia, e nas duas o defeito era
+do teste:
+
+| o que a régua disse | o que era |
+|---|---|
+| balão vazado × cheio cinza = **1,00:1** | medi `dadoNeutro`; o balão usa **`muted`** — o par real é **1,70:1** |
+| 6 pares declarados "que a tela não pinta" | a varredura só via o mesmo `style={{}}`; o fundo vinha de ANCESTRAL |
+
+Nos dois casos eu **fui conferir antes de reportar**, e nos dois o código estava certo.
+
+> **Antes de confiar num verde ou investigar um vermelho, releia o que o teste assume.**
+
+⚠️ E o custo de não fazer isso é assimétrico: um falso positivo reportado vira trabalho
+inventado; um falso NEGATIVO vira defeito que ninguém procura mais.
+
+### 19. As quatro telas do commit 8 — a métrica refinada
+
+| tela | linhas | superfícies | empilhamento | achados |
+|---|---|---|---|---|
+| Carteira | 272 | 9 | **três andares** | **2** |
+| Fila de Contas | 607 | 9 | plano | 0 |
+| Recuperação | 187 | 6 | plano | 0 |
+| Orientações | 281 | 6 | plano | 0 |
+
+🔑 **A métrica não é quantas superfícies, é quantas se SOBREPÕEM.** A Fila tem 8
+superfícies próprias — o maior número do lote — e **zero achados**: são oito avisos lado a
+lado, nenhum empilhado. A Carteira tem 272 linhas e três níveis de profundidade, e rendeu
+os dois.
+
+Para quem for planejar a próxima migração: **conte os níveis de aninhamento, não os
+tokens de fundo.**
+
 ---
 
 ## Fechamento (commit 10)
@@ -397,5 +492,5 @@ telas. Consertar é mudança estrutural: **não cabe em commit de cor**.
 - [x] Commit 6 — Início + chips (zero desencontros; 2 falsos positivos da régua registrados)
 - [x] Commit 7 — Comercial (3 entradas: Modal reprovava, véu invisível, rampa fora do card)
 - [x] Commit 7b — Gestores (1 entrada + 1 pendência nomeada; zero reprovações)
-- [ ] Commit 8 — Carteira, Orientações, Fila, Recuperação, modais
+- [x] Commit 8 — Carteira, Orientações, Fila, Recuperação (5 entradas: card sobre card, selos, balão pendente, nota da régua, métrica refinada)
 - [ ] Commit 10 — revisar a lista inteira e decidir o que vira par declarado novo

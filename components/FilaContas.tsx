@@ -212,7 +212,7 @@ export default function FilaContas() {
                       className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5"
                       style={{ background: TEMA.zebra, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard }}>
                       <span className="text-[12.5px]" style={{ color: TEMA.texto }}>
-                        <span className="tabular-nums">{i.accountId}</span>
+                        <span className="tabular-nums font-mono">{i.accountId}</span>
                         <span style={{ color: MUTED }}>
                           {" "}· por {i.por} em {new Date(i.em).toLocaleDateString("pt-BR", { timeZone: MARCA.fuso })}
                           {i.motivo ? ` · ${i.motivo}` : ""}
@@ -341,7 +341,9 @@ function CardCandidata({ c, nichos, tipos, nomesExistentes, aoDecidir, aoErrar }
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-brand-ink">{c.nomeNaMeta ?? "(sem nome na Meta)"}</p>
-          <p className="mt-0.5 text-[11px] tabular-nums" style={{ color: MUTED }}>{c.accountId}</p>
+          {/* accountId: identificador de FORMATO FIXO numa lista — quarto caso da régua.
+    Mono é o que deixa a pessoa conferir dígito a dígito, que é o uso real dele. */}
+<p className="mt-0.5 text-[11px] tabular-nums font-mono" style={{ color: MUTED }}>{c.accountId}</p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           {/* MOEDA sempre visível, não só quando diverge: o selo é a conferência, e

@@ -36,6 +36,24 @@ export const TEMA = {
   // melhor deu 1,18:1, e chegar a 3:1 exigiria clarear o card até virar cinza
   // médio, o que mata o "escuro profundo" da referência.
   //
+  /**
+   * ⚠️⚠️ EMPILHAMENTO ALÉM DE UM NÍVEL SE RESOLVE POR BORDA, NÃO POR SUPERFÍCIE.
+   *
+   * A escada acima foi desenhada para UM nível de elevação, e o intervalo inteiro dela
+   * cabe entre 1,03 e 1,27 — no escuro nenhuma elevação chega a 3:1, e é por isso que a
+   * borda virou estrutura desde o V3.
+   *
+   * **Card sobre card em 1,00:1 não é defeito quando há borda medida.** Caso real
+   * (commit 8, 18/08/2026): a /carteira empilha três andares — `Modal` → `AnaliseConta`
+   * → `CriativosDaConta` — e o primeiro e o terceiro usam `card`. O bloco não se
+   * distingue do modal por superfície nenhuma; quem o separa é a borda dele,
+   * `bordaForte` em 3,31:1.
+   *
+   * 🛑 NÃO CRIE UM `cardEncaixado` PARA ISSO. Ele prometeria um nível abaixo para o
+   * quarto andar, e a escada não tem para onde ir — seria uma promessa que a paleta não
+   * pode cumprir. E não tire o fundo próprio do componente aninhado: em componente
+   * COMPARTILHADO o fundo é o que o faz funcionar fora do modal também.
+   */
   // QUEM SEPARA O CARD É A BORDA — e ela lê contra o FUNDO, não contra o card.
   // Consequência que precisa sobreviver a este comentário: no escuro, **remover
   // borda é remover ESTRUTURA, não decoração**. Um "limpa as bordas" bem

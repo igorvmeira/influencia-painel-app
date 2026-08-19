@@ -179,7 +179,7 @@ function LinhaOrientacao({ conta, atual, ordem, aoSalvar }: {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-2 text-sm font-medium text-brand-ink">
-            <span className="w-6 shrink-0 text-right text-[11px] font-normal tabular-nums" style={{ color: MUTED }}>{ordem}</span>
+            <span className="w-6 shrink-0 text-right text-[11px] font-normal tabular-nums font-mono" style={{ color: MUTED }}>{ordem}</span>
             <span className="truncate">{conta.cliente}</span>
             <SeloSemaforo s={atual?.semaforo ?? null} />
           </p>

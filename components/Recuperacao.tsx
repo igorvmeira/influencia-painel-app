@@ -127,7 +127,7 @@ export default function Recuperacao() {
         <div ref={refDist} className="space-y-1.5">
           {r.distribuicao.map((d, i) => (
             <div key={d.vezes} className="flex items-center gap-3">
-              <span className="w-10 text-right text-[12px] tabular-nums" style={{ color: MUTED }}>{d.vezes}×</span>
+              <span className="w-10 text-right text-[12px] tabular-nums font-mono" style={{ color: MUTED }}>{d.vezes}×</span>
               <BarraDado
                 pct={(d.pessoas / maxDist) * 100}
                 cor={d.vezes >= 5 ? AMBER : GOLD}
@@ -136,7 +136,7 @@ export default function Recuperacao() {
                 indice={i}
                 titulo={`${n(d.pessoas)} pessoas trabalhadas ${d.vezes}×`}
               />
-              <span className="w-12 text-right text-[12.5px] font-medium tabular-nums text-brand-ink">{n(d.pessoas)}</span>
+              <span className="w-12 text-right text-[12.5px] font-medium tabular-nums font-mono text-brand-ink">{n(d.pessoas)}</span>
             </div>
           ))}
         </div>

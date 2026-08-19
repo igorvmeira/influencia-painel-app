@@ -209,7 +209,7 @@ function LinhaConta({ conta, ordem, onAnalisar }: {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             {/* Largura fixa para os nomes alinharem mesmo com 1, 2 ou 3 dígitos. */}
-            <span className="w-6 shrink-0 text-right text-[11px] tabular-nums" style={{ color: MUTED }}>{ordem}</span>
+            <span className="w-6 shrink-0 text-right text-[11px] tabular-nums font-mono" style={{ color: MUTED }}>{ordem}</span>
             {/* ⚠️ O NOME é o alvo do clique, não a linha inteira: a linha tem o
                 <select> de gestor e o botão Salvar, e um clique de container
                 engoliria a interação deles. Botão de verdade, não div com
