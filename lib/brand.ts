@@ -261,6 +261,24 @@ export const TEMA = {
   navBorda: "#631972",      // divisórias internas
   navHover: "#5C0E6B",      // hover de item inativo
   navChip: "#60146E",       // fundo do selo "Em breve"
+  /**
+   * MOLDURA DE CONTROLE NA SIDEBAR — o `bordaForte` da sidebar.
+   *
+   * ⚠️ POR QUE UM TOKEN PRÓPRIO. `bordaForte` foi derivado contra o CARD, e a sidebar é
+   * outro degrau da escala. O botão "Sair" pinta a moldura contra `navHover`, e ali o
+   * `bordaForte` dá **2,97:1** — falta 0,03 para o piso de 3:1 da WCAG 1.4.11. É o tipo
+   * de diferença que ninguém enxerga e que decide passar ou reprovar.
+   *
+   * ⚠️ E É TOKEN VÁLIDO EM CONTEXTO ERRADO, a armadilha que nenhuma busca acha: o
+   * `audita-tema` media `bordaForte` contra o `card` (3,31:1, passa) enquanto a tela o
+   * pintava contra `navHover`. O par declarado descrevia uma superfície que aquele
+   * controle nunca pisa.
+   *
+   * Medido contra as TRÊS superfícies onde um controle da sidebar pode pousar, para o
+   * próximo não cair no mesmo buraco:
+   *   navHover 3,49:1 · navFundo 5,94:1 · navChip 3,32:1
+   */
+  navBordaForte: "#A57BAE",
 
   // ===== CHIPS DE ÍCONE (tela Início) =====
   /**

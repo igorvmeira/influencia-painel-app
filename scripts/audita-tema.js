@@ -75,6 +75,7 @@ const ESPELHO = [
 const ESPELHO_NAV = [
   ["bg", "navFundo"], ["text", "navTexto"], ["muted", "navMuted"],
   ["line", "navBorda"], ["hover", "navHover"], ["chip", "navChip"],
+  ["lineStrong", "navBordaForte"],
 ];
 for (const [tw, tema] of ESPELHO) {
   if (TW.get(tw) !== T.get(tema)) erro(`brand.${tw} = ${TW.get(tw)} mas TEMA.${tema} = ${T.get(tema)}`);
@@ -82,7 +83,7 @@ for (const [tw, tema] of ESPELHO) {
 for (const [tw, tema] of ESPELHO_NAV) {
   if (TWNAV.get(tw) !== T.get(tema)) erro(`nav.${tw} = ${TWNAV.get(tw)} mas TEMA.${tema} = ${T.get(tema)}`);
 }
-L(falhas ? "" : "   OK — os 18 espelhos batem");
+L(falhas ? "" : `   OK — os ${ESPELHO.length + ESPELHO_NAV.length} espelhos batem`);
 
 // ---------------------------------------------------------------- 2) contraste
 // Piso 4.5 = texto normal · 3 = texto ≥18px, dado não-textual e limite de controle.
@@ -90,7 +91,12 @@ const PARES = [
   ["texto", "fundo", 4.5], ["texto", "card", 4.5], ["texto", "hover", 4.5],
   ["texto", "zebra", 4.5], ["texto", "flutuante", 4.5], ["texto", "chip", 4.5],
   ["muted", "fundo", 4.5], ["muted", "card", 4.5], ["muted", "chip", 4.5],
-  ["muted", "neutroFundo", 4.5], ["placeholder", "card", 4.5],
+  ["muted", "neutroFundo", 4.5],
+  // ⚠️ PLACEHOLDER PISA O `fundo`, NÃO O `card`. O input do /login tem
+  // `background: TEMA.fundo` DENTRO do card — encaixado, não elevado. O par declarado
+  // contra o card passava por SORTE (4,80 aqui, 7,04 na superfície real), e passar por
+  // sorte é o mesmo erro de reprovar por engano: mede outra tela.
+  ["placeholder", "fundo", 4.5],
   ["destaque", "card", 3], ["destaque", "fundo", 3], ["destaque", "avisoFundo", 4.5],
   ["destaque", "chipDourado", 3], ["textoSobreDestaque", "destaque", 4.5],
   ["positivo", "card", 4.5], ["positivo", "positivoFundo", 4.5],
@@ -100,6 +106,10 @@ const PARES = [
   ["roxoTexto", "chipRoxo", 4.5], ["azulTexto", "chipAzul", 4.5],
   ["begeTexto", "chipBege", 4.5],
   ["dadoNeutro", "card", 3], ["bordaForte", "card", 3],
+  // ⚠️ A MOLDURA DA SIDEBAR PISA `navHover`, não o card. O botão "Sair" é o único
+  // controle com borda ali, e era este par que faltava: `bordaForte` contra `navHover`
+  // dava 2,97:1 enquanto o par declarado (contra o card) dizia 3,31:1 e passava.
+  ["navBordaForte", "navHover", 3], ["navBordaForte", "navFundo", 3],
 ];
 
 /**
