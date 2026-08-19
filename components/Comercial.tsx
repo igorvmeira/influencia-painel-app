@@ -168,6 +168,7 @@ export default function Comercial() {
           style={{ background: TEMA.erroFundo, color: RED, border: `1px solid ${TEMA.negativo}` }}
         >
           <div className="text-[13px] font-medium">Não foi possível carregar o funil.</div>
+          {/* negativo a 90% sobre erroFundo. audita-tema: medido 5,05 */}
           <div className="mt-1 text-[12.5px] opacity-90">{erro}</div>
           <button
             type="button"

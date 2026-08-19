@@ -295,6 +295,20 @@ else L("   OK — nenhum hover morto");
  * Esta seção mede a cor RESULTANTE. Ela derruba o job quando a opacidade é o que quebra
  * — token que passa sozinho e reprova depois de misturado — porque alerta em documento
  * depende de alguém lembrar de ler.
+ *
+ * ⚠️⚠️ O FORMATO DO BURACO, que já apareceu DUAS VEZES com caras diferentes:
+ * **conferência que exige duas informações na MESMA LINHA só enxerga o código que as
+ * escreve juntas.**
+ *
+ *   · a varredura de pares não vê fundo herdado de ANCESTRAL — e é assim que a maior
+ *     parte do painel pinta (o `Bloco` embrulha a seção 400 linhas acima);
+ *   · a primeira versão desta seção não via `opacity-70` de CLASSE, porque a cor vinha
+ *     do `style` do elemento PAI e a opacidade estava na classe do filho.
+ *
+ * Toda vez que uma conferência nova precisar de duas informações para decidir, pergunte
+ * ANTES: e se o código escrever as duas em lugares diferentes? A resposta honesta costuma
+ * ser "não enxergo" — e aí ela precisa DIZER que não enxergou, nunca passar em silêncio.
+ * É por isso que o caso não resolvido abaixo imprime "MEÇA À MÃO" em vez de sumir.
  */
 L("");
 L("=".repeat(74));
@@ -304,7 +318,7 @@ L("=".repeat(74));
   const mistura = (a, b, t) => "#" + hex(a).map((v, i) => Math.round(v + (hex(b)[i] - v) * t))
     .map((v) => v.toString(16).padStart(2, "0").toUpperCase()).join("");
   const CARD = T.get("card");
-  let achados = 0, quebrados = 0, decorativos = 0;
+  let achados = 0, quebrados = 0, decorativos = 0, naoResolvidos = 0, isentos = 0, declarados = 0;
   for (const arq of arquivos) {
     const linhas = fs.readFileSync(path.join(RAIZ, arq), "utf8").split(/\r?\n/);
     // ⚠️ Estado de BLOCO, não linha a linha: um comentário que EXPLICA uma opacidade
@@ -317,46 +331,92 @@ L("=".repeat(74));
       const eraComentario = dentroDeComentario;
       if (fecha) dentroDeComentario = false;
       if (eraComentario || limpa.startsWith("//") || limpa.startsWith("*")) return;
-      const op = linha.match(/(?:fill-opacity|fillOpacity|strokeOpacity|opacity)\s*[=:]\s*\{?\s*([01]?\.\d+)/);
-      if (!op) return;
-      const alfa = parseFloat(op[1]);
-      achados++;
-      // que token essa linha pinta?
-      const tok = linha.match(/(?:stroke|fill|background|color)\s*[=:]\s*\{?\s*TEMA\.([a-zA-Z]+)/);
-      if (!tok || !T.get(tok[1])) {
-        L(`   ? ${arq}:${i + 1} — opacidade ${alfa}, mas não deu para amarrar a um token: MEÇA À MÃO`);
-        return;
-      }
+      // duas formas: inline (`opacity={0.9}`) e CLASSE do Tailwind (`opacity-70`)
+      const inline = linha.match(/(?:fill-opacity|fillOpacity|strokeOpacity|opacity)\s*[=:]\s*\{?\s*([01]?\.\d+)/);
+      const classe = linha.match(/\bopacity-(\d{1,3})\b/);
+      if (!inline && !classe) return;
       /**
-       * ⚠️ EXCEÇÃO DECLARADA, NUNCA INFERIDA. Existe uso legítimo de opacidade baixa em
-       * cor de dado: a área sob a linha do KpiCard é PREENCHIMENTO — quem carrega o
-       * valor é a linha, desenhada por cima em opacidade cheia. A área a 18% dá 1,18:1 e
-       * está certa assim.
+       * ⚠️ `disabled:opacity-NN` FICA DE FORA — e não por conveniência: a WCAG 1.4.3
+       * isenta explicitamente componente de interface INATIVO de piso de contraste.
+       * Um botão desligado precisa parecer desligado, e exigir 4,5:1 dele proibiria
+       * justamente o sinal que ele existe para dar.
        *
-       * Mas a conferência NÃO adivinha isso. Quem quiser a exceção escreve
-       * `audita-tema: decorativo` na linha, e aí ela é CONTADA no relatório em vez de
-       * sumir. Inferir "é fill, então é enfeite" transformaria esta seção numa que
-       * aprova o defeito sozinha.
+       * ⚠️ A ISENÇÃO É DO ESTADO `disabled:`, não da opacidade. `opacity-90` num texto
+       * de erro é outra coisa — esse continua sendo medido.
        */
-      const marcador = linha + " " + (linhas[i - 1] ?? "") + " " + (linhas[i - 2] ?? "");
+      if (/disabled:opacity-/.test(linha)) { isentos++; return; }
+      const alfa = inline ? parseFloat(inline[1]) : parseInt(classe[1], 10) / 100;
+      achados++;
+      /**
+       * ⚠️ OS MARCADORES VÊM PRIMEIRO, antes de qualquer desistência. Na primeira versão
+       * o "não achei o token" retornava ANTES de olhar o marcador — e uma linha já medida
+       * à mão continuava sendo cobrada em toda execução. Conferência que ignora a resposta
+       * que alguém já deu ensina a ignorar a conferência.
+       */
+      const marcador = [linhas[i - 2], linhas[i - 1], linha].filter(Boolean).join(" ");
+
+      // Exceção DECLARADA: preenchimento que não carrega o valor (a área sob uma linha).
       if (marcador.includes("audita-tema: decorativo")) {
         decorativos++;
-        L(`   ~ ${arq}:${i + 1} — ${tok[1]} a ${Math.round(alfa * 100)}%: DECORATIVO declarado`);
+        L(`   ~ ${arq}:${i + 1} — opacidade ${alfa}: DECORATIVO declarado`);
+        return;
+      }
+
+      /**
+       * Medição HUMANA registrada. Quando a cor vem de um ancestral distante a janela não
+       * alcança — e um "MEÇA À MÃO" que reaparece em toda execução vira o alarme diário
+       * que ninguém lê. Quem mediu escreve o número no comentário, e ele fica NO CÓDIGO.
+       *
+       * ⚠️ NÃO é isenção, é registro: se a paleta mudar, o número declarado fica velho.
+       * Por isso ele aparece no relatório, com o pedido de reconferência.
+       */
+      const medido = marcador.match(/audita-tema: medido ([0-9]+[,.][0-9]+)/);
+      if (medido) {
+        declarados++;
+        L(`   = ${arq}:${i + 1} — opacidade ${alfa}: ${medido[1]}:1 medido à mão (reconfira se a paleta mudar)`);
+        return;
+      }
+
+      /**
+       * ⚠️ A COR PODE NÃO ESTAR NA MESMA LINHA. Com `opacity-NN` de classe ela costuma vir
+       * do `style` do elemento, às vezes num ternário duas linhas acima. A janela olha 3
+       * para cima e 1 para baixo — e quando não acha, DIZ que não achou.
+       */
+      const janela = [linhas[i - 3], linhas[i - 2], linhas[i - 1], linha, linhas[i + 1]]
+        .filter(Boolean).join(" ");
+      // ⚠️ `background` NÃO entra na alternativa da TINTA: ele casava primeiro e a
+      // conferência media "destaque sobre destaque", imprimindo OK com um número que não
+      // existe na tela. Conferência que não resolve tem que DIZER — nunca fabricar.
+      const tok = janela.match(/(?:stroke|fill|(?:^|[^a-zA-Z])color)\s*[=:]\s*\{?\s*TEMA\.([a-zA-Z]+)/);
+      const sup = janela.match(/background\s*[=:]\s*\{?\s*(?:TEMA\.)?([a-zA-Z]+)/);
+      if (!tok || !T.get(tok[1])) {
+        naoResolvidos++;
+        L(`   ? ${arq}:${i + 1} — opacidade ${alfa}, sem token na janela: MEÇA À MÃO e registre com \`audita-tema: medido N,NN\``);
         return;
       }
       const puro = T.get(tok[1]);
-      const real = mistura(CARD, puro, alfa);
-      const rPuro = cr(puro, CARD), rReal = cr(real, CARD);
+      /**
+       * ⚠️ A MISTURA É CONTRA A SUPERFÍCIE REAL, não contra o card por padrão. O seletor
+       * de período do Dashboard é o caso: o texto opaco pousa sobre a PILL AMARELA, não
+       * sobre o card, e medir contra o card daria um número que não existe na tela.
+       */
+      const nomeSup = sup && T.get(sup[1]) ? sup[1] : "card";
+      const fundo = T.get(nomeSup);
+      const real = mistura(fundo, puro, alfa);
+      const rPuro = cr(puro, fundo), rReal = cr(real, fundo);
       if (rPuro >= 3 && rReal < 3) {
         quebrados++;
-        erro(`${arq}:${i + 1} — ${tok[1]} passa sozinho (${rPuro.toFixed(2)}:1) e a ${Math.round(alfa * 100)}% cai para ${rReal.toFixed(2)}:1 sobre o card. A opacidade É o defeito.`);
+        erro(`${arq}:${i + 1} — ${tok[1]} sobre ${nomeSup} passa sozinho (${rPuro.toFixed(2)}:1) e a ${Math.round(alfa * 100)}% cai para ${rReal.toFixed(2)}:1. A opacidade É o defeito.`);
       } else {
-        L(`   OK ${arq}:${i + 1} — ${tok[1]} a ${Math.round(alfa * 100)}%: ${rReal.toFixed(2)}:1 (puro ${rPuro.toFixed(2)}:1)`);
+        L(`   OK ${arq}:${i + 1} — ${tok[1]} sobre ${nomeSup} a ${Math.round(alfa * 100)}%: ${rReal.toFixed(2)}:1 (puro ${rPuro.toFixed(2)}:1)`);
       }
     });
   }
   if (!achados) L("   nenhuma opacidade sobre cor de dado");
-  else if (!quebrados) L(`   ${achados} opacidade(s): ${achados - decorativos} medida(s), ${decorativos} declarada(s) decorativa(s) — nenhuma derruba o piso`);
+  else if (!quebrados) {
+    L(`   ${achados} medida(s) · ${decorativos} decorativa(s) declarada(s) · ${declarados} medida(s) à mão · ${naoResolvidos} sem token · ${isentos} disabled: (isento pela WCAG 1.4.3)`);
+    if (naoResolvidos) L("   ⚠ as SEM TOKEN precisam de medição humana — a conferência não as cobre");
+  }
 }
 
 // ---------------------------------------------------------------- veredito

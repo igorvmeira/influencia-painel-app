@@ -38,6 +38,7 @@ export default function Recuperacao() {
         <h1 className="mb-4 text-lg font-semibold text-brand-ink">Recuperação de leads</h1>
         <div className="rounded-xl px-4 py-4" style={{ background: TEMA.erroFundo, color: RED, border: `1px solid ${TEMA.negativo}` }}>
           <div className="text-[13px] font-medium">Não foi possível carregar a recuperação.</div>
+          {/* negativo a 90% sobre erroFundo. audita-tema: medido 5,05 */}
           <div className="mt-1 text-[12.5px] opacity-90">{erro}</div>
           <button
             type="button" onClick={recarregar}

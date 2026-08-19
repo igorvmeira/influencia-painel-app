@@ -607,6 +607,7 @@ export default function Dashboard(
                   title={faixa ? `Janela: ${faixa}` : undefined}
                 >
                   {ROTULO_CURTO[p]}
+                  {/* textoSobreDestaque a 70% sobre a pill amarela. audita-tema: medido 7,44 */}
                   {ativo && faixa && (
                     <span className="ml-1.5 font-normal tabular-nums opacity-70">· {faixa}</span>
                   )}
