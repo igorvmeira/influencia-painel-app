@@ -34,7 +34,7 @@ const config: Config = {
           line: "#631972",   // divisória interna (TEMA.navBorda)
           hover: "#5C0E6B",  // hover de item inativo (TEMA.navHover)
           chip: "#60146E",   // selo "Em breve" (TEMA.navChip)
-          lineStrong: "#A57BAE", // moldura de controle na sidebar (TEMA.navBordaForte)
+          lineStrong: "#A57BAE", // moldura de controle na sidebar (TEMA.bordaForteElevada)
         },
       },
       fontFamily: {

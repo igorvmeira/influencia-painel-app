@@ -294,12 +294,23 @@ export const TEMA = {
   navHover: "#5C0E6B",      // hover de item inativo
   navChip: "#60146E",       // fundo do selo "Em breve"
   /**
-   * MOLDURA DE CONTROLE NA SIDEBAR — o `bordaForte` da sidebar.
+   * MOLDURA DE CONTROLE SOBRE SUPERFÍCIE ELEVADA.
    *
-   * ⚠️ POR QUE UM TOKEN PRÓPRIO. `bordaForte` foi derivado contra o CARD, e a sidebar é
-   * outro degrau da escala. O botão "Sair" pinta a moldura contra `navHover`, e ali o
-   * `bordaForte` dá **2,97:1** — falta 0,03 para o piso de 3:1 da WCAG 1.4.11. É o tipo
-   * de diferença que ninguém enxerga e que decide passar ou reprovar.
+   * ⚠️ "ELEVADA" QUER DIZER: mais clara que o `card`. Hoje são `hover`, `neutroFundo`
+   * (que é o mesmo valor), `chip` e `flutuante`. Se o seu controle pousa numa dessas,
+   * a moldura é esta — não o `bordaForte`.
+   *
+   * ⚠️ POR QUE UM TOKEN PRÓPRIO. `bordaForte` foi derivado contra o CARD. Sobre uma
+   * superfície mais clara ele dá **2,97:1** — falta 0,03 para o piso de 3:1 da WCAG
+   * 1.4.11, a diferença que ninguém enxerga e que decide passar ou reprovar. Aconteceu
+   * em DOIS lugares: o botão "Sair" da sidebar e o contorno do `DeltaChip`
+   * neutralizado, com o mesmo número.
+   *
+   * 🛑 ELE NASCEU COM O NOME ERRADO — `navBordaForte`, em 18/08/2026. Nome POSICIONAL,
+   * e o segundo consumidor apareceu fora da sidebar em dois dias. O achado que forçou
+   * a renomeação: `neutroFundo` e `navHover` são o MESMO valor, ou seja o token certo
+   * já existia e só o nome mentia sobre onde ele servia. Nome de lugar bloqueia reuso
+   * legítimo e força um terceiro token que seria duplicata.
    *
    * ⚠️ E É TOKEN VÁLIDO EM CONTEXTO ERRADO, a armadilha que nenhuma busca acha: o
    * `audita-tema` media `bordaForte` contra o `card` (3,31:1, passa) enquanto a tela o
@@ -310,7 +321,7 @@ export const TEMA = {
    * próximo não cair no mesmo buraco:
    *   navHover 3,49:1 · navFundo 5,94:1 · navChip 3,32:1
    */
-  navBordaForte: "#A57BAE",
+  bordaForteElevada: "#A57BAE",
 
   // ===== CHIPS DE ÍCONE (tela Início) =====
   /**

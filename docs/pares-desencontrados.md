@@ -154,12 +154,104 @@ BarraSplit precisou da rampa porque lá as duas fatias têm a MESMA forma e só 
 
 O desbloqueio real é a pergunta do item 4.
 
+### 6. Selo de tipo do alerta — 🛑 REPROVAVA · corrigido no commit 5
+
+| | |
+|---|---|
+| **onde** | `components/Dashboard.tsx`, `AlertaCardRow`, aba Alertas |
+| **declarado** | `negativo` sobre `card` — **4,98:1** ✅ |
+| **a tela pintava** | `negativo` sobre `chip` (o selo tinha `background: TEMA.chip`) |
+| **contraste real** | **4,24:1** 🛑 (piso 4,5) |
+| **desfecho** | reprovava — e só o vermelho |
+
+O `chip` é 1,17× mais claro que o card, e o `negativo` é a semântica de MENOR luminância:
+ela come a folga primeiro. `destaque` (8,56) e `atencao` (4,81) passavam. **Das três, só
+uma caía** — a assinatura desta família.
+
+⚠️ E a linha de alerta tem `background: INK` (= `fundo`), não `card`. Tirando o chip, o
+selo pousa numa superfície MAIS ESCURA que o card, não mais clara:
+
+| | no chip | no fundo |
+|---|---|---|
+| destaque | 8,56 | **14,71** |
+| negativo | **4,24** 🛑 | **7,29** |
+| atencao | 4,81 | **8,27** |
+
+**Conserto:** o selo perdeu o fundo e ganhou contorno na própria cor do tipo. Zero token
+novo. As três semânticas voltam a pousar na superfície contra a qual foram derivadas —
+a família 1 **desaparece** em vez de ser contornada com um `negativoElevado` que criaria
+uma classe (o positivo e o atenção iam querer a versão elevada também).
+
+### 7. `negativo` × `atencao` — ⚠️ 1,13:1, e o conserto foi de ÁREA, não de cor
+
+| | |
+|---|---|
+| **onde** | `components/Dashboard.tsx`, os selos de tipo de alerta |
+| **par** | `negativo` × `atencao` — **1,13:1** |
+| **desfecho** | passa **com condição** |
+
+Os dois passam folgado contra a superfície e colidem entre si — família 2. **Passa porque
+o canal redundante é TEXTUAL:** o tipo sai por extenso ao lado (`TIPO_ROTULO` — "CPL
+alto", "Perto do limite"), então a cor nunca é o único portador.
+
+⚠️ **CONDIÇÃO:** se alguém remover o rótulo de texto, o par vira defeito **sem ninguém
+tocar em cor**. É a mesma forma do amarelo × bege, que só vale com legenda rotulada.
+
+🔑 **E o conserto do commit 5 é um caminho que nenhuma medição de contraste sugere
+sozinha.** O chip ESCONDIA a colisão: com os três selos no mesmo fundo, a diferença entre
+"CPL alto" e "Perto do limite" ficava só na cor do texto. O contorno na cor do tipo DOBRA
+a área colorida — **o número dos dois continua 1,13:1; o que mudou foi quanto dele a tela
+pinta.** Contraste é razão entre duas cores; legibilidade depende também de quanta
+superfície carrega cada uma, e a régua não mede isso.
+
+### 8. Contorno do `DeltaChip` neutralizado — 🛑 REPROVAVA · corrigido no commit 5
+
+| | |
+|---|---|
+| **onde** | `components/DeltaChip.tsx`, estado neutralizado |
+| **declarado** | `bordaForte` sobre `card` — **3,31:1** ✅ |
+| **a tela pinta** | `bordaForte` sobre `neutroFundo` |
+| **contraste real** | **2,97:1** 🛑 (piso 3) |
+
+**Mesmo número e mesma causa do botão "Sair"** do commit 3 — `bordaForte` é derivado
+contra o card e pousa numa superfície mais clara.
+
+🛑 **E revelou um erro meu de nomeação.** O token criado no commit 3 se chamava
+`navBordaForte` — nome POSICIONAL — e o segundo consumidor apareceu fora da sidebar em
+dois dias. O achado que forçou a renomeação: **`neutroFundo` e `navHover` são o MESMO
+valor**, ou seja o token certo já existia e só o nome mentia sobre onde ele servia.
+
+**Conserto:** renomeado para **`bordaForteElevada`**, com "Elevada" definido no `brand.ts`
+como *superfície mais clara que o card* (`hover`, `neutroFundo`, `chip`, `flutuante`).
+Nome de lugar bloqueia reuso legítimo e força um terceiro token que seria duplicata.
+
+### 9. Inputs de data em Inconsolata — ⚠️ métrica de fonte, não defeito
+
+| | |
+|---|---|
+| **onde** | `components/Dashboard.tsx`, período personalizado (4 campos) |
+| **testado** | servido por HTTP, as duas fontes, widget nativo |
+| **desfecho** | Inconsolata aprovada — nada cortado |
+
+```
+                 largura   altura   scrollW = clientW ?
+Space Grotesk     155px     38px     sim
+Inconsolata       134px     36px     sim
+```
+
+Ícone do calendário intacto, placeholder `dd/mm/aaaa` inteiro. **Fica Inconsolata** — é o
+quarto caso da régua (campo de formulário com valor de formato fixo).
+
+⚠️ **A registrar:** o campo fica **21px mais estreito e 2px mais baixo**. Dois campos de
+data ao lado de um botão de 38px vão desalinhar 2px. É métrica de FONTE, não layout — e o
+conserto, se ficar visível, é do commit 8 ou depois, **nunca dentro de um commit de cor**.
+
 ---
 
 ## Fechamento (commit 10)
 
 - [x] Commit 4 — gráficos e rampa (3 entradas: sparkline reprovava, CPL adiado, HeroChart geométrico)
-- [ ] Commit 5 — Dashboard
+- [x] Commit 5 — Dashboard (4 entradas: selo reprovava, colisão de área, contorno do DeltaChip, inputs)
 - [ ] Commit 6 — Início + chips
 - [ ] Commit 7 — Comercial + Gestores
 - [ ] Commit 8 — Carteira, Orientações, Fila, Recuperação, modais

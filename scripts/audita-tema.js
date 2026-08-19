@@ -75,7 +75,7 @@ const ESPELHO = [
 const ESPELHO_NAV = [
   ["bg", "navFundo"], ["text", "navTexto"], ["muted", "navMuted"],
   ["line", "navBorda"], ["hover", "navHover"], ["chip", "navChip"],
-  ["lineStrong", "navBordaForte"],
+  ["lineStrong", "bordaForteElevada"],
 ];
 for (const [tw, tema] of ESPELHO) {
   if (TW.get(tw) !== T.get(tema)) erro(`brand.${tw} = ${TW.get(tw)} mas TEMA.${tema} = ${T.get(tema)}`);
@@ -109,10 +109,16 @@ const PARES = [
   // ⚠️ A MOLDURA DA SIDEBAR PISA `navHover`, não o card. O botão "Sair" é o único
   // controle com borda ali, e era este par que faltava: `bordaForte` contra `navHover`
   // dava 2,97:1 enquanto o par declarado (contra o card) dizia 3,31:1 e passava.
-  ["navBordaForte", "navHover", 3], ["navBordaForte", "navFundo", 3],
+  ["bordaForteElevada", "navHover", 3], ["bordaForteElevada", "navFundo", 3],
   // A rampa categorica contra a superficie onde ela e pintada (piso 3:1 da WCAG
   // 1.4.11 — em serie o TAMANHO e a POSICAO codificam informacao).
   ["serie1", "card", 3], ["serie2", "card", 3], ["serie3", "card", 3],
+  // ⚠️ PARES QUE A LEITURA DO DASHBOARD REVELOU (commit 5). Os tres primeiros sao o
+  // selo de tipo do alerta, que pousa no  (a linha tem background: INK), nao no
+  // card — e o  reprovava sobre o  que ele usava antes.
+  ["negativo", "fundo", 4.5], ["atencao", "fundo", 4.5],
+  // A moldura do DeltaChip neutralizado: superficie ELEVADA, nao card.
+  ["bordaForteElevada", "neutroFundo", 3],
 ];
 
 /**

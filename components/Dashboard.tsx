@@ -633,7 +633,7 @@ export default function Dashboard(
                 min={primeiroDia ?? undefined}
                 max={custFim || ultimoDia || undefined}
                 onChange={(e) => setCustIni(e.target.value)}
-                className="mt-1 block rounded-lg px-3 py-2 text-sm outline-none tabular-nums"
+                className="mt-1 block rounded-lg px-3 py-2 text-sm outline-none tabular-nums font-mono"
                 style={{ background: INK, color: TEXTO, border: `1px solid ${LINE}` }}
               />
             </label>
@@ -645,7 +645,7 @@ export default function Dashboard(
                 min={custIni || primeiroDia || undefined}
                 max={ultimoDia ?? undefined}
                 onChange={(e) => setCustFim(e.target.value)}
-                className="mt-1 block rounded-lg px-3 py-2 text-sm outline-none tabular-nums"
+                className="mt-1 block rounded-lg px-3 py-2 text-sm outline-none tabular-nums font-mono"
                 style={{ background: INK, color: TEXTO, border: `1px solid ${LINE}` }}
               />
             </label>
@@ -684,7 +684,7 @@ export default function Dashboard(
                   min={primeiroDia ?? undefined}
                   max={compFim || ultimoDia || undefined}
                   onChange={(e) => setCompIni(e.target.value)}
-                  className="mt-1 block rounded-lg px-3 py-2 text-sm outline-none tabular-nums"
+                  className="mt-1 block rounded-lg px-3 py-2 text-sm outline-none tabular-nums font-mono"
                   style={{ background: INK, color: TEXTO, border: `1px solid ${LINE}` }}
                 />
               </label>
@@ -696,7 +696,7 @@ export default function Dashboard(
                   min={compIni || primeiroDia || undefined}
                   max={ultimoDia ?? undefined}
                   onChange={(e) => setCompFim(e.target.value)}
-                  className="mt-1 block rounded-lg px-3 py-2 text-sm outline-none tabular-nums"
+                  className="mt-1 block rounded-lg px-3 py-2 text-sm outline-none tabular-nums font-mono"
                   style={{ background: INK, color: TEXTO, border: `1px solid ${LINE}` }}
                 />
               </label>
@@ -974,7 +974,7 @@ export default function Dashboard(
                         O 1º NÃO vai em dourado: o selo "melhor" ao lado já é o dourado
                         da linha, e a casa não usa a cor de destaque como texto. */}
                     <span
-                      className="w-5 shrink-0 text-sm font-medium tabular-nums"
+                      className="w-5 shrink-0 text-sm font-medium tabular-nums font-mono"
                       style={{ color: melhor ? TEMA.texto : MUTED }}
                     >
                       {i + 1}
@@ -1004,7 +1004,7 @@ export default function Dashboard(
                   />
                   <div className="ml-auto flex shrink-0 flex-col items-end sm:ml-0 sm:w-52">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium tabular-nums" style={{ color: TEMA.texto }}>{brlDec(g.cpl)}</span>
+                      <span className="text-sm font-medium tabular-nums font-mono" style={{ color: TEMA.texto }}>{brlDec(g.cpl)}</span>
                       {g.cplVar === 0 ? (
                         <span className="text-xs font-medium" style={{ color: MUTED }} title="sem histórico suficiente pra comparar">—</span>
                       ) : (
@@ -1276,9 +1276,30 @@ function AlertaCardRow({ a, limite }: { a: AlertaCard; limite?: LimiteConta }) {
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="truncate text-sm font-medium text-brand-ink">{a.nome}</span>
+          {/*
+            ⚠️ O SELO PERDEU O FUNDO E GANHOU CONTORNO — e não foi estética.
+
+            Com `background: TEMA.chip`, o `negativo` dava 4,24:1 e REPROVAVA o piso de
+            4,5. É a família 1: o audita declarava `negativo/card` (4,98) enquanto a tela
+            pintava sobre o `chip`, mais claro. Das três semânticas só o vermelho caía —
+            ele é o de menor luminância e come a folga primeiro.
+
+            A linha de alerta tem `background: INK` (= `fundo`), então sem o chip o selo
+            pousa no FUNDO, mais escuro que o card: destaque 14,71 · negativo 7,29 ·
+            atencao 8,27. As três voltam a pousar na superfície contra a qual foram
+            derivadas, e a família 1 desaparece em vez de ser contornada com token novo.
+
+            ⚠️ E O CHIP ESCONDIA UMA COLISÃO. Com os três selos no mesmo fundo, a
+            diferença entre "CPL alto" e "Perto do limite" ficava só na cor do TEXTO — e
+            `negativo` × `atencao` é 1,13:1. O contorno na cor do tipo DOBRA a área
+            colorida: continua sendo matiz, com muito mais superfície para o olho pegar,
+            além do rótulo textual que já distinguia.
+
+            Zero token novo: a borda é o próprio `TIPO_COR`.
+          */}
           <span
             className="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase"
-            style={{ background: TEMA.chip, color: TIPO_COR[a.tipo] }}
+            style={{ color: TIPO_COR[a.tipo], border: `1px solid ${TIPO_COR[a.tipo]}` }}
           >
             {TIPO_ROTULO[a.tipo]}
           </span>
@@ -1291,13 +1312,13 @@ function AlertaCardRow({ a, limite }: { a: AlertaCard; limite?: LimiteConta }) {
         {ehLimite ? (
           <>
             <BarraLimite limite={limite} />
-            <span className="w-24 text-right text-[12px] tabular-nums" style={{ color: MUTED }}>
+            <span className="w-24 text-right text-[12px] tabular-nums font-mono" style={{ color: MUTED }}>
               resta {brlDec(a.restante ?? 0)}
             </span>
           </>
         ) : (
           <>
-            <span className="text-sm font-medium tabular-nums text-brand-ink">{brlDec(a.cpl ?? 0)}</span>
+            <span className="text-sm font-medium tabular-nums font-mono text-brand-ink">{brlDec(a.cpl ?? 0)}</span>
             <Trend v={a.cplVar ?? 0} menorMelhor />
           </>
         )}
@@ -1326,7 +1347,7 @@ function LinhaClienteRow({ c, ordem, limite, orientacao, par, onVerOrientacao }:
     // Zebra sutil (linhas alternadas) melhora a leitura horizontal em tabela densa;
     // hover:bg-brand-hover = TEMA.hover (classe Tailwind, ver tailwind.config).
     <tr className="transition-colors hover:bg-brand-hover" style={par ? { background: TEMA.zebra } : undefined}>
-      <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: MUTED }}>{ordem}</td>
+      <td className="px-4 py-3 text-right tabular-nums font-mono" style={{ borderBottom: `1px solid ${LINE}`, color: MUTED }}>{ordem}</td>
       <td className="px-4 py-3" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>
         <span className="inline-flex items-center gap-1.5">
           {c.cliente}
@@ -1371,9 +1392,9 @@ function LinhaClienteRow({ c, ordem, limite, orientacao, par, onVerOrientacao }:
           {c.tipo}
         </span>
       </td>
-      <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>{brl(c.gasto)}</td>
-      <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>{num(c.conversas)}</td>
-      <td className="px-4 py-3 text-right tabular-nums" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>{brlDec(c.cplSemanal)}</td>
+      <td className="px-4 py-3 text-right tabular-nums font-mono" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>{brl(c.gasto)}</td>
+      <td className="px-4 py-3 text-right tabular-nums font-mono" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>{num(c.conversas)}</td>
+      <td className="px-4 py-3 text-right tabular-nums font-mono" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>{brlDec(c.cplSemanal)}</td>
       {/* Alcance/Impressões retirados da exibição (ver <thead>). c.reach e
           c.impressions continuam chegando preenchidos em LinhaCliente. */}
       <td className="px-4 py-3" style={{ borderBottom: `1px solid ${LINE}` }}>
@@ -1400,7 +1421,7 @@ function BarraLimite({ limite }: { limite?: LimiteConta }) {
       <div className="h-1.5 w-20 overflow-hidden rounded-full" style={{ background: TEMA.barraNeutra }}>
         <div className="h-full rounded-full" style={{ width: `${larg}%`, background: cor }} />
       </div>
-      <span className="text-[12px] tabular-nums" style={{ color: cor }}>{Math.round(usoPct * 100)}%</span>
+      <span className="text-[12px] tabular-nums font-mono" style={{ color: cor }}>{Math.round(usoPct * 100)}%</span>
     </div>
   );
 }

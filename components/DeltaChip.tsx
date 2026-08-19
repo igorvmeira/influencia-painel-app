@@ -84,7 +84,10 @@ export default function DeltaChip({
          * quando está dizendo "não confie na cor". A borda AFIRMA que ele existe
          * — é a mesma regra de `bordaForte` do resto do app.
          */
-        border: neutralizar ? `1px solid ${TEMA.bordaForte}` : undefined,
+        // ⚠️ `bordaForteElevada`, não `bordaForte`. O chip neutralizado pousa em
+        // `neutroFundo`, que é MAIS CLARO que o card — e ali o `bordaForte` dá 2,97:1,
+        // abaixo do piso de 3:1. Mesmo número e mesma causa do botão "Sair" da sidebar.
+        border: neutralizar ? `1px solid ${TEMA.bordaForteElevada}` : undefined,
       }}
       title={dica ?? undefined}
     >

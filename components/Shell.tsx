@@ -93,11 +93,11 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           // inline vence stylesheet, então o hover NUNCA pintou. Defeito anterior ao
           // tema escuro; só apareceu porque a migração mediu par a par.
           className="mt-2 w-full rounded-lg bg-nav-hover px-3 py-1.5 text-sm font-medium transition-colors hover:bg-nav-chip"
-          // ⚠️ `navBordaForte`, não `bordaForte`. O motivo original continua valendo —
+          // ⚠️ `bordaForteElevada`, não `bordaForte`. O motivo original continua valendo —
           // `navBorda` dá ~1,5:1 aqui e o botão fica sem limite visível — mas o
           // `bordaForte` é derivado contra o CARD, e sobre `navHover` ele caiu para
           // 2,97:1 na paleta 2026. A sidebar é outro degrau e tem a moldura dela.
-          style={{ color: NAV_TEXTO, border: `1px solid ${TEMA.navBordaForte}` }}
+          style={{ color: NAV_TEXTO, border: `1px solid ${TEMA.bordaForteElevada}` }}
         >
           Sair
         </button>
