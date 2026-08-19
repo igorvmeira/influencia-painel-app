@@ -246,13 +246,40 @@ quarto caso da régua (campo de formulário com valor de formato fixo).
 data ao lado de um botão de 38px vão desalinhar 2px. É métrica de FONTE, não layout — e o
 conserto, se ficar visível, é do commit 8 ou depois, **nunca dentro de um commit de cor**.
 
+### 10. Início — nenhum par desencontrado, e o porquê importa
+
+A Início tem **uma superfície só**: tudo pousa no `card`. Sem empilhamento, a família 1 não
+tem onde acontecer — foi a única tela até aqui em que a leitura não achou nada.
+
+Vale registrar o contraste com o Dashboard (12 superfícies, 2 reprovações): **o risco da
+família 1 é proporcional ao número de SUPERFÍCIES distintas da tela, não ao tamanho dela.**
+A Início tem 480 linhas e zero achados; o Dashboard tem 1.400 e dois. Para as telas que
+faltam (7 e 8), contar as superfícies antes é melhor previsão de esforço que contar linhas.
+
+#### Dois falsos positivos da minha própria régua, registrados para não voltarem
+
+**A borda do card contra a página é 1,80:1 — e não tem piso.** Apliquei 3:1 por reflexo. A
+WCAG 1.4.11 cobre *componentes de interface* e *objetos gráficos*; a borda que separa
+superfície é ESTRUTURA, não controle. E ela melhorou na migração: era 1,23:1 no tema escuro
+anterior. O `brand.ts` já dizia isso — "nenhuma elevação chega a 3:1 e quem separa é a
+borda" — eu é que medi contra um piso que não é dela.
+
+**`negativo` × `atencao` (1,13) e `positivo` × `atencao` (1,16) nos alertas.** Passam pela
+mesma condição do Dashboard: o canal redundante é TEXTUAL. A linha é
+`<strong style={{color}}>{n}</strong> {texto}` — o número é colorido e o que ele significa
+vem escrito ao lado ("contas com CPL alto", "contas gastando sem converter"). A cor é
+ênfase redundante, nunca o único portador.
+
+⚠️ **Mesma condição, mesmo risco:** remover o texto descritivo transforma os dois pares em
+defeito sem ninguém tocar em cor.
+
 ---
 
 ## Fechamento (commit 10)
 
 - [x] Commit 4 — gráficos e rampa (3 entradas: sparkline reprovava, CPL adiado, HeroChart geométrico)
 - [x] Commit 5 — Dashboard (4 entradas: selo reprovava, colisão de área, contorno do DeltaChip, inputs)
-- [ ] Commit 6 — Início + chips
+- [x] Commit 6 — Início + chips (zero desencontros; 2 falsos positivos da régua registrados)
 - [ ] Commit 7 — Comercial + Gestores
 - [ ] Commit 8 — Carteira, Orientações, Fila, Recuperação, modais
 - [ ] Commit 10 — revisar a lista inteira e decidir o que vira par declarado novo

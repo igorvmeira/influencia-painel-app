@@ -334,12 +334,24 @@ export const TEMA = {
    * Os quatro pares foram medidos (ver scripts/deriva-paleta.js).
    */
   chipDourado: "#755813", // chip do card Dashboard (ícone em destaque: 8,01:1)
-  chipRoxo: "#2E0136",    // ícone em roxoTexto
-  roxoTexto: "#C5A9CA",   // 8,44:1 sobre chipRoxo
-  chipAzul: "#00114D",    // ícone em azulTexto
-  azulTexto: "#99A3C9",   // 7,11:1 sobre chipAzul
-  chipBege: "#661F71",    // ícone em begeTexto
-  begeTexto: "#DDDACD",   // 7,49:1 sobre chipBege
+
+  /**
+   * 🛑 NÃO CRIE `chipRoxo` / `chipAzul` / `chipBege` DE NOVO. Eles existiram entre o
+   * commit 2 e o commit 6 da marca 2026 e SAÍRAM sem nunca terem tido consumidor.
+   *
+   * A história em uma linha: o manual trouxe as secundárias (roxo, azul, bege) e eu as
+   * transformei em chips por analogia com o terra e o oliva que saíam — sem conferir
+   * que terra e oliva também já estavam mortos. A Início deixou de ter cards de
+   * navegação em 16/08/2026, e com eles foram os chips.
+   *
+   * ⚠️ E SE A INÍCIO GANHAR CATEGORIA POR COR UM DIA, ELA USA A RAMPA (`serie1/2/3`),
+   * não chips novos. Motivo: a rampa JÁ está medida contra o card (10,05 · 6,19 · 3,56)
+   * e — o que importa mais — ENTRE AS VIZINHAS (pior par 1,62:1), que é a conferência
+   * que os chips nunca tiveram. Dois sistemas categóricos paralelos para o mesmo papel
+   * é dívida, não opção: o segundo nasce sem as regras que o primeiro aprendeu.
+   *
+   * O `chipDourado` FICA porque tem consumidor real: o `SecaoHeader`.
+   */
 } as const;
 
 /**

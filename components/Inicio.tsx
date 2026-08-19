@@ -276,7 +276,8 @@ export default function Inicio() {
                 {evolucao.linhas.filter((l) => l.elegivel).slice(0, TOP_DESTAQUES).map((l) => (
                   <div key={l.gestor} className="flex items-baseline justify-between gap-2 py-1 text-[12.5px]">
                     <span style={{ color: TEMA.texto }}>{l.gestor}</span>
-                    <span className="tabular-nums" style={{ color: MUTED }}>
+                    {/* COLUNA: três gestores empilhados, valores alinhados à direita. */}
+              <span className="tabular-nums font-mono" style={{ color: MUTED }}>
                       {brlDec(l.cplAnterior)} → <b style={{ color: TEMA.texto }}>{brlDec(l.cplAtual)}</b>{" "}
                       <b style={{ color: l.variacaoPct < 0 ? TEMA.positivo : TEMA.negativo }}>
                         {l.variacaoPct < 0 ? "−" : "+"}{Math.abs(Math.round(l.variacaoPct))}%
@@ -307,7 +308,8 @@ export default function Inicio() {
                 <div key={d.accountId} className="py-1 text-[12.5px]">
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="truncate" style={{ color: TEMA.texto }}>{d.cliente}</span>
-                    <b className="tabular-nums" style={{ color: TEMA.positivo }}>
+                    {/* COLUNA: três clientes empilhados, o % alinhado à direita. */}
+                <b className="tabular-nums font-mono" style={{ color: TEMA.positivo }}>
                       −{Math.abs(Math.round(d.desvioPct))}%
                     </b>
                   </div>
@@ -420,7 +422,7 @@ function Comercial({ agregado, erro }: {
             titulo={`${n.pessoas} pessoas em ${n.nome}`}
             className="h-2.5 flex-1 overflow-hidden rounded-full"
           />
-          <span className="w-8 shrink-0 text-right tabular-nums" style={{ color: TEMA.texto }}>{n.pessoas}</span>
+          <span className="w-8 shrink-0 text-right tabular-nums font-mono" style={{ color: TEMA.texto }}>{n.pessoas}</span>
         </div>
       ))}
 

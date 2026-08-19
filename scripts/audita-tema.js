@@ -103,8 +103,6 @@ const PARES = [
   ["negativo", "card", 4.5], ["negativo", "negativoFundo", 4.5], ["negativo", "erroFundo", 4.5],
   ["atencao", "card", 4.5], ["atencao", "limiteFundo", 4.5],
   ["navTexto", "navFundo", 4.5], ["navMuted", "navFundo", 4.5], ["navMuted", "navChip", 4.5],
-  ["roxoTexto", "chipRoxo", 4.5], ["azulTexto", "chipAzul", 4.5],
-  ["begeTexto", "chipBege", 4.5],
   ["dadoNeutro", "card", 3], ["bordaForte", "card", 3],
   // ⚠️ A MOLDURA DA SIDEBAR PISA `navHover`, não o card. O botão "Sair" é o único
   // controle com borda ali, e era este par que faltava: `bordaForte` contra `navHover`

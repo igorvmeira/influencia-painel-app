@@ -179,6 +179,15 @@ apareça na API.
 
 ## 7. Cores secundárias oficiais da marca
 
+> ✅ **RESPONDIDA em 18/08/2026 pelo Manual de Marca 2026.** As secundárias oficiais são
+> **roxo `#530163`**, **azul marinho `#001A77`** e **bege `#D9D6C7`**. Terra e oliva saíram.
+>
+> ⚠️ E os chips que eu criei com as cores novas saíram TAMBÉM, no commit 6: eles nunca
+> tiveram consumidor. A Início deixou de ter cards de navegação em 16/08/2026, e com eles
+> foram os chips — terra e oliva já estavam mortos quando esta pergunta foi escrita.
+> Se a Início ganhar categoria por cor um dia, ela usa a **rampa** (`serie1/2/3`), que já
+> está medida contra o card e entre as vizinhas. Ver a nota em `lib/brand.ts`.
+
 Dois tokens do painel (`chipTerra`/`terraTexto` e `chipOliva`/`olivaTexto`) estão marcados
 `[PROVISÓRIO]` em `lib/brand.ts`: são escolha de design, não cor de marca. A marca oficial
 tem só o dourado.
