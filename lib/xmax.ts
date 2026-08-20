@@ -1,5 +1,6 @@
 // Domínio do Xmax (CRM do comercial). Constantes e helpers que sobrevivem ao
-// endpoint de diagnóstico — a rota /api/diag-xmax é temporária, isto aqui não é.
+// endpoint de diagnóstico que os originou. A rota /api/diag-xmax foi REMOVIDA em
+// 20/08/2026 — este arquivo é o que sobrou dela, e é permanente.
 //
 // Instância: https://influencia40.atenderbem.com (white-label do AtenderBem).
 // Spec completa versionada em data/xmax-api.yaml; levantamento em

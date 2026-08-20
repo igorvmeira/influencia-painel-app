@@ -1030,7 +1030,45 @@ instância**, medido — o funil 1 devolve as mesmas 52 oportunidades com `queue
 ou 19. A fila autentica, não recorta. Usar a chave da fila não reduziria exposição
 nenhuma. `XMAX_API_KEY_FILA` fica documentada e **não é obrigatória**.
 
-## Plano do `/api/diag-xmax` (endpoint temporário — JÁ ESCRITO E RODADO)
+## 🪦 `/api/diag-xmax` foi REMOVIDA em 20/08/2026 — as 6 respostas e onde a lógica foi
+
+Ela cumpriu o papel: seis perguntas feitas ANTES de escrever qualquer feature, todas
+respondidas, e o que era permanente já tinha sido extraído para `lib/xmax.ts` e
+`lib/comercial.ts` (é o que diz o comentário no topo do `lib/xmax.ts`: *"a rota
+/api/diag-xmax é temporária, isto aqui não é"*).
+
+🛑 **E o motivo de sair não foi só a regra da casa.** O bloco `6_amostraCrua` devolvia
+**quatro objetos de oportunidade inteiros, sem filtro** — `title`, `mainphone` e
+`mainmail` de leads reais — atrás apenas do `CRON_SECRET`, que está registrado neste
+projeto como risco aceito por ser fraco. O próprio comentário assumia: *"Objeto inteiro,
+sem filtro nem renomeação."* Defensável por uma tarde; inaceitável como rota permanente.
+**Exposição de dado pessoal em produção não é diagnóstico esquecido — é vazamento com
+prazo indeterminado.**
+
+| # | pergunta | resposta | para onde a lógica foi |
+|---|---|---|---|
+| 1 | quais funis e etapas existem | 19 funis; o 4 é "Provedor de internet" com 12 etapas | `NIVEIS_FUNIL`, `ETAPAS_DO_FUNIL` e `ordemDeEtapas()` em `lib/comercial.ts` |
+| 2 | quais valores de `origin` aparecem | 6 origens, nenhuma é prospecção de lista | mapa `ORIGENS` em `lib/xmax.ts` |
+| 3 | **a varredura de ID funciona?** | **SIM** — `getOpportunity` devolve encerrada | virou `/api/comercial/backfill` |
+| 4 | quantas ganhas têm `closerecurrentvalue` | **32 de 38**, R$ 68.120,00 | o Marcos passa a preencher; as antigas ficam e a tela diz |
+| 5 | os ids de `tags` batem com `getTags`? | **é UM espaço de ids só** — ver seção 3 de `perguntas-agencia.md` | `ehDesqualificado()` / `TAG_SEM_PERFIL` |
+| 6 | amostra dos campos crus | modelou `OportunidadeXmax` e revelou o epoch do `closedat` | `epochParaISO()` e a interface, em `lib/xmax.ts` |
+
+⚠️ **A 3 é a que mais valeu, e por um motivo que não estava no plano.** O veredito dela
+("`getOpportunity` aceita encerrada") é o que hoje torna o backfill capaz de cobrir o
+histórico do `fk_campaign` — uma pergunta que nem existia quando a rota foi escrita. **Foi
+o diagnóstico barato que decidiu uma feature três semanas depois**, e é o argumento a favor
+de sondar a fonte antes de prometer, não contra.
+
+### O que NÃO foi respondido e some com ela
+
+Nada. As seis fecharam. Se voltar a fazer falta, a rota está no histórico do git — mas
+**quem a ressuscitar precisa cortar o `6_amostraCrua` ou filtrar os campos pessoais
+antes de subir.** É a única parte que não pode voltar como estava.
+
+---
+
+## ~~Plano do `/api/diag-xmax`~~ (histórico — a rota não existe mais)
 
 Mesmo padrão do `/api/diag-janelas` que já usamos e removemos: protegido por
 `CRON_SECRET`, somente leitura, e **removido no fim**. Ele existe para responder cinco
