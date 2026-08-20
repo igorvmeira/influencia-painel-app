@@ -873,6 +873,112 @@ vezes*. Um clone pode não ter campanha vinculada, e um lead de campanha pode se
 
 ---
 
+## 🛑 A MAIOR FAIXA DO CRM NÃO CHEGA ONDE A CARTEIRA CHEGA — 20/08/2026
+
+**Insumo direto para a conversa de padronização**, e independente de qualquer medição:
+existe porte MUITO acima do teto da escala.
+
+Dois títulos de oportunidades reais em Negociação trazem `20k` e `20 a50k`. A maior faixa
+cadastrada no CRM é **`[43] Mais de 10k`**.
+
+**Consequência:** um cliente de 11k e um de 50k caem no MESMO balde. A faixa mais alta é
+um teto aberto, e tudo que interessa acima dele — o cliente grande de verdade — fica
+indistinguível do cliente que passou raspando.
+
+⚠️ **Isto NÃO é o mesmo problema das taxonomias divergentes**, embora vão para a mesma
+conversa. São dois defeitos da escala:
+
+| | defeito | conserto |
+|---|---|---|
+| 1 | as faixas da Meta e do CRM não coincidem | alinhar os dois vocabulários |
+| 2 | **a escala do CRM termina cedo demais para a carteira real** | acrescentar faixa(s) acima de 10k |
+
+Alinhar as duas listas (1) **não resolve** o teto (2): as duas escalas ficariam iguais e as
+duas continuariam achatando 11k e 50k no mesmo ponto.
+
+### 🔑 E DAÍ SAI A ORDEM DE PRIORIDADE — é o que decide qual levar primeiro
+
+| | o que acontece enquanto não se resolve |
+|---|---|
+| **1 · taxonomias divergentes** | nada se perde. As duas listas continuam existindo, e o dia em que forem alinhadas o histórico continua legível. **Pode esperar.** |
+| **2 · teto da escala** | **cada lead novo classificado como `Mais de 10k` perde a informação de quão acima — e não volta.** |
+
+**Faixa-teto aberta destrói informação NA MARCAÇÃO, não na leitura.** Um vocabulário
+divergente se traduz depois; um valor achatado no momento em que foi registrado não se
+destraduz — ninguém vai reetiquetar cliente por cliente para recuperar a diferença entre
+11k e 50k.
+
+⚠️ **Por isso o teto vai primeiro ao Thiago**, mesmo sendo o menor dos dois em aparência: o
+custo dele é contínuo e irreversível, o do outro é pontual e reversível.
+
+🔑 **E o 2 tem uma propriedade que o 1 não tem: ele CORROMPE dado que já foi coletado.**
+Toda pessoa marcada como `Mais de 10k` hoje perdeu a informação de quão acima — e isso não
+volta com uma faixa nova, porque ninguém vai reetiquetar. **Faixa-teto aberta destrói
+informação no momento da marcação, não na leitura.**
+
+---
+
+## 📋 O valor apurado está no TÍTULO em vez da etiqueta? — MEDIDO, e é 4%
+
+**A hipótese:** o vendedor apura o porte na conversa e escreve no TÍTULO em vez de aplicar
+a etiqueta — então não seria "falta apurar", seria "apurado e não registrado". Ela nasceu
+de cinco títulos vistos na tela:
+
+```
+... | Expand Telecom| 20 a50k        ... | Grupo Life 20k | ...
+... | SBS TELECOM| 1A3K              ... | 500 ass.
+... | linknet| ate 500
+```
+
+### 🛑 MEDIDO: 5 de 128 (4%)
+
+Busca por FORMA, não por lista de exemplos — número seguido de `k`, número seguido de
+`mil`, `ass.` e `até`. Sobre as oportunidades abertas do funil 4, nos níveis 2 a 5, sem
+faixa e criadas a partir de 01/06/2026:
+
+| padrão | casos |
+|---|---|
+| número + `k` | 3 |
+| `ass.` | 1 |
+| `até` | 1 |
+| número + `mil` | 0 |
+
+**Os cinco encontrados são exatamente os cinco que apareceram na tela.** Não havia um sexto
+fora da parte visível.
+
+⚠️ **A hipótese não se sustenta como padrão.** "Várias pendentes já têm a faixa no título"
+era leitura de cinco casos numa lista de 121 — e 4% é anedota, não processo. Levar isso ao
+Thiago como "a informação existe e está no campo errado" afirmaria sobre 121 o que vale
+para 5.
+
+🔑 **E O MECANISMO DO ERRO VALE MAIS QUE O NÚMERO: cinco casos na parte VISÍVEL de uma
+lista de 121 viraram "várias" numa população que ninguém tinha olhado.** A lista mostrava
+20 linhas de cada vez; os cinco estavam entre as visíveis, e a extrapolação foi automática.
+
+**A régua: amostra que você VIU não é amostra que você TIROU.** O que aparece na primeira
+tela não é aleatório — é o topo de uma ordenação, e é justamente o recorte com maior chance
+de parecer padrão. **Antes de generalizar do que está à vista, pergunte quantos você não
+viu** — aqui eram 101 de 121.
+
+⚠️ Registrado do lado de quem PEDIU, não de quem mediu: a mesma armadilha das populações
+diferentes, num dia em que ela já tinha aparecido três vezes do outro lado da mesa.
+
+📌 **O que ainda vale dizer:** em Negociação são 2 de 5 (40%) contra 3 de 115 (3%) no
+Follow-up. Com `n` desse tamanho isso é ruído, não tendência — mas é a direção que a
+hipótese previa, e vira sinal se o padrão crescer. **Remedir quando a base de Negociação
+crescer**, não antes.
+
+### O método, para quem repetir
+
+`getPipeOpportunities` no funil 4, zero leitura de Firestore. ⚠️ O denominador (128) é
+**aproximação** das 121 da tela: usa `createdAt` da OPORTUNIDADE onde a tela usa
+`primeiroContato` da PESSOA. Serve para a ordem de grandeza, não para casar linha a linha.
+
+⚠️ **E não se tenta mapear título → faixa.** Formato livre não vira dado: `20 a50k` não cabe
+em faixa nenhuma do CRM (ver o defeito do teto acima), e `1A3K` só é legível para humano.
+
+---
+
 ## 📋 MEDIÇÃO ADIADA: o valor DECLARADO está em campo estruturado? — 20/08/2026
 
 **Contexto (Thiago, 20/08/2026):** a marcação de porte é obrigatória mas manual — o cliente

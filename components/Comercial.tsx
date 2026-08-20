@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useComercial } from "@/lib/useComercial";
 /**
@@ -1176,6 +1176,28 @@ function ehRedundante(nome: string, titulo: string | null): boolean {
  */
 const TAG_SEM_PERFIL_TELA = 38;
 
+/**
+ * O nível em que a venda JÁ ACONTECEU (`[20] Fechamento` — decisão do dono: estar ali
+ * É venda feita).
+ *
+ * ⚠️⚠️ ELE FICA NA PENDÊNCIA, E O NÍVEL 1 NÃO — e a diferença NÃO é de grau, é de
+ * NATUREZA. Quem vier "limpar a lista" tirando os dois juntos apaga isto:
+ *
+ *   · **nível 1 é IMPOSSIBILIDADE** — a etiqueta depende de a conversa ter acontecido,
+ *     e no Novo Lead ninguém conversou. A informação NÃO PODE existir ainda. Cobrar é
+ *     ruído, e ruído em alerta faz o resto ser ignorado.
+ *   · **nível 5 é OMISSÃO** — houve conversa, negociação e fechamento. O valor FOI
+ *     apurado; só não foi registrado. A informação existe e está se perdendo.
+ *
+ * Tirar os dois pelo mesmo motivo trataria "não dá para saber" e "sabia e não anotou"
+ * como a mesma coisa.
+ *
+ * 🔧 O QUE MUDA É A ORDEM E O RÓTULO, não a presença. A régua "mais avançado = mais
+ * urgente" mede o que ainda dá para INFLUENCIAR — vale até o Fechamento e inverte lá.
+ * Por isso ele vai para o FIM e recebe o próprio motivo.
+ */
+const NIVEL_POS_VENDA = 5;
+
 function SecaoPorte({
   porte, niveis,
 }: {
@@ -1229,9 +1251,15 @@ function SecaoPorte({
   const PRIMEIRO_NIVEL_COBRAVEL = 2;
   const pendencia = niveis
     .filter((nv) => nv.nivel >= PRIMEIRO_NIVEL_COBRAVEL)
-    // Mais avançado primeiro: quem está perto de fechar sem classificação é o que
-    // custa mais caro deixar passar.
-    .sort((a, b) => b.nivel - a.nivel)
+    /**
+     * Mais avançado primeiro — MENOS o pós-venda, que vai para o fim. Ver
+     * `NIVEL_POS_VENDA`: a régua da urgência mede o que ainda dá para influenciar.
+     */
+    .sort((a, b) => {
+      const posVenda = (nv: number) => (nv === NIVEL_POS_VENDA ? 1 : 0);
+      if (posVenda(a.nivel) !== posVenda(b.nivel)) return posVenda(a.nivel) - posVenda(b.nivel);
+      return b.nivel - a.nivel;
+    })
     .flatMap((nv) => nv.pessoasNaEtapa
       .filter((x) => x.faixaPorte === null)
       .map((x) => ({ ...x, nivelNome: nv.nome, nivel: nv.nivel }))
@@ -1281,6 +1309,7 @@ function SecaoPorte({
    * `FAIXAS_PORTE`. Aqui ela é só mais uma linha da TELA, e o id serve de chave.
    */
   const [faixaAberta, setFaixaAberta] = useState<number | null>(null);
+  const [pendenciaInteira, setPendenciaInteira] = useState(false);
 
   /**
    * QUEM DÁ PARA LISTAR — e por que não são todos.
@@ -1317,6 +1346,37 @@ function SecaoPorte({
     x.mesEntrada !== null && x.mesEntrada >= mesDoCorte;
   const pendenciaAtual = pendencia.filter(daEraNova);
   const forasDoCorte = pendencia.length - pendenciaAtual.length;
+
+  /**
+   * TETO DE EXIBIÇÃO — 🔑 GLOBAL, NÃO POR NÍVEL, e a escolha segue a ordenação.
+   *
+   * A lista é ordenada por urgência: nível mais avançado primeiro, porque quem está
+   * perto de fechar sem classificação custa mais caro deixar passar. **Um teto POR
+   * NÍVEL contradiria isso** — mostraria gente do Follow-up à frente de gente da
+   * Negociação que ficou escondida, invertendo exatamente a prioridade que a ordem
+   * acabou de estabelecer.
+   *
+   * ⚠️ NUNCA DOBRA, SEMPRE DENOMINADOR. Pendência é alerta, e alerta não nasce
+   * recolhido. O que existe aqui é TRUNCAGEM DECLARADA ("mostrando 20 de 121") com o
+   * total à vista antes de qualquer clique — quem não expandir já sabe o tamanho.
+   *
+   * `LINHAS_VISIVEIS` é o mesmo 20 do `QuemEstaParado`, e é o MESMO conceito: quantas
+   * linhas cabem antes de a rolagem virar peso. Constante compartilhada de propósito.
+   */
+  const pendenciaMostrada = pendenciaInteira
+    ? pendenciaAtual
+    : pendenciaAtual.slice(0, LINHAS_VISIVEIS);
+
+  /**
+   * Os dois grupos aparecem NA PARTE MOSTRADA?
+   *
+   * ⚠️ Calculado sobre `pendenciaMostrada`, não sobre a lista inteira: um rótulo que
+   * separa dois grupos precisa que os DOIS estejam visíveis. Com um só, ele vira
+   * cabeçalho de nada — e some sozinho se o pós-venda sair da lista um dia.
+   */
+  const temOsDoisGrupos =
+    pendenciaMostrada.some((x) => x.nivel === NIVEL_POS_VENDA)
+    && pendenciaMostrada.some((x) => x.nivel !== NIVEL_POS_VENDA);
 
   const maxFaixa = Math.max(1, ...porte.carteira.faixas.map((f) => f.pessoas));
 
@@ -1384,10 +1444,20 @@ function SecaoPorte({
               {" "}O Novo Lead não entra: a etiqueta depende de a conversa ter acontecido.
             </div>
             <div className="space-y-1">
-              {pendenciaAtual.map((pes, i) => (
+              {pendenciaMostrada.map((pes, i, arr) => (
                 /* ⚠️ `key` é o índice porque nome se repete e o agregado não publica id
                    de pessoa nesta lista — é a mesma escolha do QuemEstaParado. */
-                <div key={`${pes.nome}-${i}`} className="flex items-baseline gap-3 text-[13px]">
+                <React.Fragment key={`${pes.nome}-${i}`}>
+                  {/* O rótulo do grupo, na TROCA de grupo. Ver `temOsDoisGrupos`. */}
+                  {temOsDoisGrupos
+                    && (i === 0 || (arr[i - 1].nivel === NIVEL_POS_VENDA) !== (pes.nivel === NIVEL_POS_VENDA)) && (
+                    <div className="pt-2 text-[11.5px] uppercase" style={{ color: MUTED, letterSpacing: ".05em" }}>
+                      {pes.nivel === NIVEL_POS_VENDA
+                        ? "Já fecharam — etiquete para a carteira ficar classificada"
+                        : "Etiquete antes de fechar"}
+                    </div>
+                  )}
+                  <div className="flex items-baseline gap-3 text-[13px]">
                   <span className="min-w-0 flex-1 truncate" style={{ color: TEMA.texto }}>{pes.nome}</span>
                   {/* ⚠️ "título no CRM", NUNCA "empresa" — o Xmax mistura nome e empresa
                       no mesmo campo e partir a string afirmaria o que não se sabe.
@@ -1406,9 +1476,24 @@ function SecaoPorte({
                   <span className="w-40 text-right tabular-nums font-mono" style={{ color: MUTED }}>
                     {pes.diasParado === null ? "sem data no CRM" : `nesta etapa há ${n(pes.diasParado)}d`}
                   </span>
-                </div>
+                  </div>
+                </React.Fragment>
               ))}
             </div>
+            {/* ⚠️ O DENOMINADOR APARECE ANTES DO BOTÃO, e não dentro dele: quem não
+                clicar precisa saber o tamanho mesmo assim. */}
+            {pendenciaAtual.length > LINHAS_VISIVEIS && (
+              <button
+                type="button"
+                onClick={() => setPendenciaInteira((v) => !v)}
+                className="mt-2 rounded-lg px-2 py-1 text-[12px] transition-colors hover:bg-brand-hover"
+                style={{ color: TEMA.destaque }}
+              >
+                {pendenciaInteira
+                  ? `Mostrar só as primeiras ${LINHAS_VISIVEIS}`
+                  : `Mostrando ${n(LINHAS_VISIVEIS)} de ${n(pendenciaAtual.length)} — ver todas`}
+              </button>
+            )}
             {/* ⚠️ O QUE FICOU DE FORA, CONTADO. Ver o aviso no cálculo de `pendenciaAtual`. */}
             {forasDoCorte > 0 && (
               <div className="mt-2 text-[12px]" style={{ color: MUTED }}>
