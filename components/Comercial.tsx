@@ -583,6 +583,9 @@ export default function Comercial() {
         </div>
       </Bloco>
 
+      {/* ==================== QUALIFICAÇÃO POR PORTE ==================== */}
+      <SecaoPorte porte={agregado.porte} niveis={agregado.funil.niveis} />
+
       {/* ============ DINHEIRO PARADO E VALOR FALTANDO, POR ETAPA ============ */}
       <Bloco
         titulo="Dinheiro parado por etapa"
@@ -1118,5 +1121,227 @@ function SerieMensal({ itens }: { itens: SerieMes[] }) {
         </p>
       )}
     </div>
+  );
+}
+
+/* =========================================================================
+   QUALIFICAÇÃO POR PORTE — Demanda 2, 20/08/2026
+   =========================================================================
+
+   ⚠️⚠️ A HIERARQUIA DESTA TELA É PROVISÓRIA POR DESENHO, e quem mexer aqui daqui
+   a seis meses precisa saber disso antes de "arrumar".
+
+   O pedido original era DISTRIBUIÇÃO das cinco faixas entre quem está em
+   Negociação. Medido em 20/08/2026, Negociação tem 79 pessoas e **19 com faixa** —
+   dividir 19 em cinco dá ~4 por faixa, que é o critério da casa para DESCARTAR uma
+   faixa, não para desenhar em cima dela.
+
+   🔑 E a armadilha que quase passou: o patamar 77,3 / 78,9 / 80,0 é estável entre
+   os três cortes de era, e estabilidade PARECE solidez. Não é. **A estabilidade
+   valida a RÉGUA (o recorte é consistente); o `n` valida a CONCLUSÃO (dá para
+   dividir).** São dois testes, e passar num não dispensa o outro — os três números
+   estáveis são 22, 19 e 10 pessoas.
+
+   Por isso a manchete é COBERTURA (uma fila de trabalho) e não distribuição.
+
+   🔧 A FILA SE ESVAZIA, e é isso que torna a hierarquia provisória: conforme a
+   agência etiqueta, "faltam N" cai. No dia em que houver volume em Negociação, a
+   DISTRIBUIÇÃO vira manchete sozinha e a fila desce. Não é dívida técnica — é a
+   tela seguindo o dado.
+   ========================================================================= */
+function SecaoPorte({
+  porte, niveis,
+}: {
+  porte?: AgregadoComercial["porte"];
+  niveis: AgregadoComercial["funil"]["niveis"];
+}) {
+  const { ref, entrou } = useEntrada<HTMLDivElement>();
+
+  /**
+   * ⚠️⚠️ AUSÊNCIA DO CAMPO É "AINDA NÃO SINCRONIZADO", NUNCA ZERO.
+   * O bloco `porte` só passa a existir depois de um sync com `aplicar=1`. Renderizar
+   * "0 de 79 (0,0%)" enquanto ele não chega seria a tela AFIRMANDO uma cobertura que
+   * ninguém mediu — número falso é pior que tela fora do ar.
+   */
+  if (!porte) {
+    return (
+      <Bloco
+        titulo="Qualificação por porte"
+        icone="◇"
+        sub="Quantas pessoas em negociação têm o tamanho do cliente informado no CRM."
+      >
+        <Aviso>
+          Esta seção <b>ainda não foi sincronizada</b>. O porte passa a ser gravado no
+          próximo sync do comercial — até lá não há número, e mostrar zero seria afirmar
+          uma cobertura que ninguém mediu.
+        </Aviso>
+      </Bloco>
+    );
+  }
+
+  const doNivel = porte.porNivel.find((x) => x.nivel === porte.nivelConfiavel);
+  const nivelObj = niveis.find((x) => x.nivel === porte.nivelConfiavel);
+  const faltam = doNivel ? doNivel.pessoas - doNivel.comFaixa : 0;
+
+  /** ⚠️ A FILA são as pessoas SEM faixa do nível confiável, na ordem que o servidor
+   *  já definiu. `faixaPorte === null` é SEM INFORMAÇÃO, nunca "pequeno". */
+  const semFaixa = (nivelObj?.pessoasNaEtapa ?? []).filter((x) => x.faixaPorte === null);
+
+  const maxFaixa = Math.max(1, ...porte.carteira.faixas.map((f) => f.pessoas));
+
+  return (
+    <Bloco
+      titulo="Qualificação por porte"
+      icone="◇"
+      sub="Quantas pessoas em negociação têm o tamanho do cliente informado no CRM."
+    >
+      <div ref={ref} className="space-y-5">
+        {/* ---------- MANCHETE: cobertura, com o denominador à vista ---------- */}
+        <div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-[34px] leading-none font-semibold tabular-nums font-mono" style={{ color: TEMA.texto }}>
+              {n(doNivel?.comFaixa ?? 0)}
+            </span>
+            {/* ⚠️ O DENOMINADOR NÃO É LEGENDA, é parte do número. "19" sozinho não
+                significa nada; "19 de 79 em Negociação" significa. */}
+            <span className="text-[14px]" style={{ color: MUTED }}>
+              de {n(doNivel?.pessoas ?? 0)} pessoas em {doNivel?.nome ?? "Negociação"} têm porte informado
+            </span>
+          </div>
+          {faltam > 0 && (
+            <div className="mt-1 text-[13px]" style={{ color: TEMA.texto }}>
+              <b>{n(faltam)}</b> {faltam === 1 ? "pessoa está" : "pessoas estão"} em negociação sem classificação.
+            </div>
+          )}
+        </div>
+
+        {/* ---------- A FILA: quem falta etiquetar ---------- */}
+        {semFaixa.length > 0 && (
+          <div>
+            <div className="mb-2 text-[12px] uppercase" style={{ color: MUTED, letterSpacing: ".05em" }}>
+              Quem falta etiquetar
+            </div>
+            <div className="space-y-1">
+              {semFaixa.map((pes, i) => (
+                /* ⚠️ `key` é o índice porque nome se repete e o agregado não publica id
+                   de pessoa nesta lista — é a mesma escolha do QuemEstaParado. */
+                <div key={`${pes.nome}-${i}`} className="flex items-baseline gap-3 text-[13px]">
+                  <span className="min-w-0 flex-1 truncate" style={{ color: TEMA.texto }}>{pes.nome}</span>
+                  {/* ⚠️ "título no CRM", NUNCA "empresa" — o Xmax mistura nome e empresa
+                      no mesmo campo e partir a string afirmaria o que não se sabe. */}
+                  <span className="min-w-0 flex-1 truncate" style={{ color: MUTED }}>{pes.tituloCrm ?? "—"}</span>
+                  {/* ⚠️ "nesta etapa", não "no funil": o `stagebegintime` zera quando a
+                      pessoa volta atrás e avança de novo. O CRM não guarda o caminho. */}
+                  <span className="w-40 text-right tabular-nums font-mono" style={{ color: MUTED }}>
+                    {pes.diasParado === null ? "sem data no CRM" : `nesta etapa há ${n(pes.diasParado)}d`}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ---------- CONTEXTO: a cobertura por nível ---------- */}
+        {/* ⚠️ NÃO É ENFEITE. É esta linha que EXPLICA por que o denominador é
+            Negociação — sem ela, "19 de 79" parece um recorte escolhido a esmo. */}
+        <div>
+          <div className="mb-2 text-[12px] uppercase" style={{ color: MUTED, letterSpacing: ".05em" }}>
+            Cobertura por nível — por que o número acima é o de Negociação
+          </div>
+          <div className="space-y-1.5">
+            {porte.porNivel.map((nv, i) => (
+              <div key={nv.nivel} className="flex items-center gap-3">
+                <span className="w-40 truncate text-[12px]" style={{ color: MUTED }}>{nv.nome}</span>
+                <BarraDado
+                  pct={nv.pessoas ? (nv.comFaixa / nv.pessoas) * 100 : 0}
+                  /* ⚠️ `dadoNeutro`, não `barraNeutra`: o token do trilho diz "nunca a
+                     barra em si". E neutro porque cobrir mais não é "bom" — é só mais. */
+                  cor={TEMA.dadoNeutro}
+                  /* ⚠️ SEM TRILHO por MEDIÇÃO, não por estilo: `dadoNeutro` dá 2,27:1
+                     contra `barraNeutra` e 3,31:1 contra o card. Ver a prop. */
+                  semTrilho
+                  entrou={entrou}
+                  indice={i}
+                  titulo={`${n(nv.comFaixa)} de ${n(nv.pessoas)} com porte informado`}
+                />
+                <span className="w-24 text-right text-[12.5px] tabular-nums font-mono" style={{ color: TEMA.texto }}>
+                  {n(nv.comFaixa)} de {n(nv.pessoas)}
+                </span>
+              </div>
+            ))}
+          </div>
+          {/* ⚠️ O NÍVEL 5 SEM CAUSA INVENTADA. Dizer O QUE acontece sem afirmar o PORQUÊ
+              é melhor que uma causa plausível: causa plausível ENCERRA a investigação. */}
+          <div className="mt-2 text-[12px]" style={{ color: MUTED }}>
+            O Fechamento aparece com cobertura quase zero e isso <b>não está explicado</b>:
+            quase todo mundo que está lá entrou antes de {porte.corte.split("-").reverse().join("/")},
+            e os poucos que entraram depois são gente demais de menos para concluir. Fica como
+            pergunta em aberto — a medição do ciclo derrubou a explicação de calendário.
+          </div>
+        </div>
+
+        {/* ---------- A RAMPA E O CORTE, declarados ---------- */}
+        <Aviso>
+          <b>A cobertura ainda está subindo</b>, então nenhum número fora de
+          {" "}{doNivel?.nome ?? "Negociação"} é patamar: quem entrou a partir de junho/2026
+          está em 31%, julho em 38% e agosto em 71%.
+          {" "}<b>E a data de corte é uma escolha, não um fato</b> — o CRM não registra
+          quando uma etiqueta foi aplicada, então {porte.corte.split("-").reverse().join("/")}
+          {" "}é onde a série vira, não onde o processo mudou.
+        </Aviso>
+
+        {/* ---------- CONTEXTO: distribuição na carteira inteira ---------- */}
+        <div>
+          <div className="mb-1 text-[12px] uppercase" style={{ color: MUTED, letterSpacing: ".05em" }}>
+            Distribuição na carteira inteira
+          </div>
+          {/* ⚠️⚠️ ESTE RÓTULO É CONDIÇÃO DE A SEÇÃO EXISTIR. Sem ele, os números abaixo
+              seriam lidos como "a distribuição de Negociação" — que é justamente o que
+              eles NÃO são. Se um dia não couber aqui, a seção sai; o rótulo não. */}
+          <div className="mb-2 text-[12px]" style={{ color: MUTED }}>
+            Média de duas eras, não o número de {doNivel?.nome ?? "Negociação"} —
+            {" "}{n(porte.carteira.comAlgumaFaixa)} de {n(porte.carteira.pessoas)} pessoas com porte informado.
+          </div>
+          <div className="space-y-1.5">
+            {/* ⚠️ ORDEM, NÃO COR. As faixas são ORDINAIS (menos de 1k < ... < mais de
+                10k): três cores sobre cinco itens ordenados inventariam um agrupamento
+                que não existe, e a rampa categórica tem três séries de propósito. */}
+            {porte.carteira.faixas.map((f, i) => (
+              <div key={f.id} className="flex items-center gap-3">
+                <span className="w-32 text-[12px]" style={{ color: MUTED }}>{f.nome}</span>
+                <BarraDado
+                  pct={(f.pessoas / maxFaixa) * 100}
+                  cor={TEMA.dadoNeutro}
+                  /* ⚠️ SEM TRILHO por MEDIÇÃO, não por estilo: `dadoNeutro` dá 2,27:1
+                     contra `barraNeutra` e 3,31:1 contra o card. Ver a prop. */
+                  semTrilho
+                  entrou={entrou}
+                  indice={i}
+                  titulo={`${n(f.pessoas)} pessoas — ${f.nome}`}
+                />
+                {/* ⚠️ ABSOLUTO, nunca só percentual: faixa com 20 pessoas precisa
+                    aparecer como 20 para quem lê poder descartá-la. */}
+                <span className="w-10 text-right text-[12.5px] tabular-nums font-mono" style={{ color: TEMA.texto }}>
+                  {n(f.pessoas)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ---------- [38] Sem Perfil, SEMPRE à parte ---------- */}
+        {/* ⚠️ DESQUALIFICAÇÃO NÃO É TAMANHO. Somar as duas responderia outra pergunta,
+            e elas não são exclusivas — por isso a interseção sai escrita. */}
+        <div className="text-[12px]" style={{ color: MUTED }}>
+          <b style={{ color: TEMA.texto }}>{n(porte.desqualificacao.pessoas)}</b> pessoas estão marcadas
+          {" "}como <i>Sem Perfil</i>, que é <b>desqualificação, não tamanho</b> — não entram nas
+          {" "}faixas acima.
+          {porte.desqualificacao.ambos > 0 && (
+            <> Delas, <b style={{ color: TEMA.texto }}>{n(porte.desqualificacao.ambos)}</b> também têm faixa:
+            {" "}as duas marcações convivem, então os números não somam o total.</>
+          )}
+        </div>
+      </div>
+    </Bloco>
   );
 }

@@ -1,6 +1,7 @@
 # Pares desencontrados — declarado ≠ pintado
 
-> **FECHADA em 18/08/2026**, no commit 10 da migração de marca 2026. 19 entradas
+> **REABERTA em 20/08/2026** — pendência 4, a barra neutra sobre o trilho.
+> ~~**FECHADA em 18/08/2026**~~, no commit 10 da migração de marca 2026. 19 entradas
 > revisadas: **6 reprovavam e foram corrigidas**, 13 passavam (algumas por sorte) e viraram
 > par declarado ou condição escrita.
 
@@ -57,6 +58,52 @@ o que falta é a marca de verdade.
 **E três perguntas sem resposta:** área de respiro e tamanho mínimo; se a logo pode ir
 **sobre o amarelo** (o manual cobre fundo escuro e claro, não o amarelo, e nós usamos
 amarelo como preenchimento); e se já existe favicon desenhado.
+
+### 4. A paleta não tem NEUTRO legível como BARRA sobre o trilho padrão
+
+**Descoberto em 20/08/2026**, construindo a primeira barra sem semântica do painel
+(Demanda 2, qualificação por porte).
+
+**O que é:** o comprimento de uma barra É o dado, então ela precisa de 3:1 contra o que
+está atrás — e o que está atrás é o TRILHO (`barraNeutra`), não o card. Os três tokens
+neutros reprovam:
+
+| token | × `barraNeutra` | × `card` |
+|---|---|---|
+| `dadoNeutro` | **2,27** 🛑 | 3,31 ✅ |
+| `bordaForte` | **2,27** 🛑 | 3,31 ✅ |
+| `bordaForteElevada` | **2,66** 🛑 | 3,89 ✅ |
+
+Dos **36 tokens da paleta, só 12 passam contra o trilho E contra o card** — e todos são
+semânticos (`positivo`/`negativo`/`atencao`), de série (`serie1`/`serie2`) ou de texto
+(`muted`/`texto`/`placeholder`). Nenhum é neutro.
+
+🔑 **POR QUE SÓ APARECEU AGORA:** todas as barras anteriores usam cor semântica ou
+`destaque`, e todas passam (≥3,40 contra o trilho). O caso neutro nunca tinha existido.
+
+**O contorno que está no ar:** a prop `semTrilho` do `BarraDado` — a barra pousa direto no
+card, onde `dadoNeutro` dá 3,31 e passa. Padrão DESLIGADO; nenhuma barra existente mudou.
+
+🛑 **O que custa se ninguém mexer:** o contorno resolve UMA tela. A segunda barra neutra
+que aparecer vai bater no mesmo muro, e aí `semTrilho` não serve — porque tirar o sulco de
+toda barra neutra apaga a referência de "quanto falta" onde ela é informação.
+
+**Por que NÃO foi consertado com token novo agora, e a decisão é do Igor:** mexer numa
+paleta que fechou hoje de manhã para atender uma tela é a ordem invertida. **Token de
+paleta se cria quando o buraco é a CLASSE, não quando é o primeiro caso.** Quando a segunda
+barra neutra aparecer, o token se justifica com dois casos reais — e aí ele nasce medido
+contra o trilho E contra o card, que é a conferência que faltava.
+
+**A conferência já existe:** `audita-tema.js` seção 6 mede todo token usado como `cor={}`
+de barra contra `barraNeutra`, resolvendo apelidos locais (`const RED = TEMA.negativo`) e
+os dois lados de um ternário. Hoje: 19 medidas, 2 isentas por `semTrilho`, 3 não resolvidas
+(variáveis genuinamente dinâmicas, que ela DIZ que não cobre).
+
+⚠️ **E o registro que mais vale desta entrada:** o `audita-tema` saiu **VERDE** antes disso.
+A seção 2 media `dadoNeutro` contra `card` — o par DECLARADO — e a tela pintava sobre o
+trilho. É a família 1 (superfície errada) outra vez, e foi achada LENDO, não pela
+ferramenta. A seção 6 nasceu dessa reprovação, que é o padrão desta casa: **conferência
+nova se escreve DEPOIS do defeito, para o próximo não depender de alguém olhar.**
 
 ### ⚠️ E uma divergência ainda sem resposta da agência
 

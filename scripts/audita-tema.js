@@ -433,6 +433,102 @@ L("=".repeat(74));
   }
 }
 
+/**
+ * 6) BARRA CONTRA O TRILHO — a conferência que nasceu de uma reprovação real.
+ *
+ * ⚠️⚠️ EXISTE PORQUE O VERDE DESTA FERRAMENTA NÃO PEGOU. Em 20/08/2026 a seção 2
+ * mediu `dadoNeutro` contra `card` (3,31:1, passa) e imprimiu verde — enquanto a tela
+ * pintava a barra sobre o TRILHO, onde o mesmo token dá 2,27:1 e REPROVA. Foi achado
+ * lendo o componente, não aqui. É a família 1 (superfície errada) no lugar mais fácil
+ * de errar: a barra não pousa no card, pousa no sulco.
+ *
+ * O comprimento da barra É o dado, então o piso é 3:1 da WCAG 1.4.11 contra o que
+ * está atrás dela — e o que está atrás é `barraNeutra`, não o card.
+ *
+ * ⚠️ E o que ela NÃO alcança: `cor={}` que recebe variável ou ternário. A varredura
+ * resolve `TEMA.x` literal; o resto ela DIZ que não resolveu, em vez de passar calada.
+ * ⚠️ `semTrilho` isenta — ali a barra pousa no card de propósito, e o par correto
+ * passa a ser o da seção 2.
+ */
+L("");
+L("=".repeat(74));
+L("6) BARRA CONTRA O TRILHO — o comprimento é o dado (piso 3:1)");
+L("=".repeat(74));
+{
+  const TRILHO = T.get("barraNeutra");
+  const razaoDe = (a, b) => {
+    const r = (lum(a) + 0.05) / (lum(b) + 0.05);
+    return r < 1 ? 1 / r : r;
+  };
+  let medidas = 0, isentas = 0, naoResolvidas = 0;
+  /**
+   * ⚠️ RESOLVER O APELIDO LOCAL NÃO É REFINAMENTO, É O QUE SEPARA CONFERÊNCIA DE
+   * RUÍDO. Quase todo componente desta base faz `const RED = TEMA.negativo` no topo e
+   * passa `cor={RED}`. Sem resolver, 11 das 13 barras saíam como "MEÇA À MÃO" — e um
+   * aviso que aparece em toda execução deixa de ser lido, que é o alarme diário do
+   * CLAUDE.md. Com a resolução, sobra só o que é genuinamente dinâmico.
+   */
+  const apelidos = (texto) => {
+    const mapa = new Map();
+    for (const m of texto.matchAll(/^\s*const\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*TEMA\.([A-Za-z0-9]+)\s*;/gm)) {
+      mapa.set(m[1], m[2]);
+    }
+    return mapa;
+  };
+  for (const arq of arquivos) {
+    const bruto = fs.readFileSync(arq, "utf8");
+    const alias = apelidos(bruto);
+    const linhas = bruto.split(/\r?\n/);
+    linhas.forEach((linha, i) => {
+      const m = linha.match(/\bcor=\{([^}]+)\}/);
+      if (!m) return;
+      // A janela olha 6 linhas abaixo: `semTrilho` costuma vir logo depois, às vezes
+      // separado por comentário. Se aparecer, a barra pousa no card e a seção 2 cobre.
+      const janela = linhas.slice(i, i + 7).join(" ");
+      if (/\bsemTrilho\b/.test(janela)) { isentas++; return; }
+      const cru = m[1].trim();
+      // `TEMA.x` direto, ou um apelido local que aponta para `TEMA.x`.
+      const direto = cru.match(/^TEMA\.([A-Za-z0-9]+)$/);
+      const nomeTok = direto ? direto[1] : (alias.get(cru) ?? null);
+      if (!nomeTok) {
+        /**
+         * ⚠️ TERNÁRIO: mede os DOIS lados. `velho ? AMBER : GOLD` pinta as duas cores
+         * em execuções diferentes, então as duas precisam passar — reprovar só quando
+         * a variável "estiver" numa delas seria conferência que depende do dado.
+         */
+        const ternario = [...cru.matchAll(/(?:TEMA\.)?([A-Za-z_][A-Za-z0-9_]*)/g)]
+          .map((x) => (alias.has(x[1]) ? alias.get(x[1]) : x[1]))
+          .filter((n) => T.get(n) !== undefined);
+        if (ternario.length >= 2) {
+          for (const n of new Set(ternario)) {
+            const rr = razaoDe(T.get(n), TRILHO);
+            medidas++;
+            if (rr < 3) erro(`${arq}:${i + 1} — barra ${n} (num ternário) sobre barraNeutra: ${rr.toFixed(2)}:1 (piso 3)`);
+          }
+          return;
+        }
+        naoResolvidas++;
+        L(`   ? ${arq}:${i + 1} — cor={${cru.slice(0, 40)}} não resolve para token, MEÇA À MÃO`);
+        return;
+      }
+      // ⚠️ `T.get` é um Map: devolve `undefined`, não lança. Um try/catch aqui daria a
+      // impressão de estar tratando o caso e deixaria passar.
+      const cor = T.get(nomeTok);
+      if (cor === undefined) {
+        naoResolvidas++;
+        L(`   ? ${arq}:${i + 1} — "${nomeTok}" não é token do brand, MEÇA À MÃO`);
+        return;
+      }
+      const r = razaoDe(cor, TRILHO);
+      medidas++;
+      if (r < 3) erro(`${arq}:${i + 1} — barra ${nomeTok} sobre barraNeutra: ${r.toFixed(2)}:1 (piso 3)`);
+    });
+  }
+  if (!medidas && !naoResolvidas) L("   nenhuma barra com cor de token literal");
+  else L(`   ${medidas} barra(s) medida(s) · ${isentas} sem trilho (isenta, pousa no card) · ${naoResolvidas} não resolvida(s)`);
+  if (naoResolvidas) L("   ⚠ as NÃO RESOLVIDAS precisam de medição humana — a conferência não as cobre");
+}
+
 // ---------------------------------------------------------------- veredito
 L("");
 L("=".repeat(74));

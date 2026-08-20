@@ -1,7 +1,7 @@
 import { MARCA } from "./brand";
 import {
   NIVEIS_FUNIL, ETAPAS_RECUPERACAO, ETAPAS_NEGOCIACAO, ETAPAS_CONVERSA_AVANCADA,
-  ETAPAS_FORA_DO_FUNIL, ehEncerrada,
+  ETAPAS_FORA_DO_FUNIL, ehEncerrada, TAG_SEM_PERFIL,
   OportunidadeGravada, PessoaGravada,
 } from "./comercial";
 
@@ -34,6 +34,50 @@ export const FAIXAS_IDADE = [
 /** Acima disto, a razão oportunidades÷pessoas do mês denuncia clonagem da
  *  automação — ver o contraexemplo de 05/02/2026 em data/xmax-integracao.md:
  *  o que separa carga real de clone NÃO é o volume, é esta razão. */
+// ===========================================================================
+// PORTE — as cinco faixas de tamanho de cliente (Demanda 2)
+// ===========================================================================
+/**
+ * Ids e nomes lidos de `getTags` em 20/08/2026.
+ *
+ * ⚠️⚠️ `[38] Sem Perfil` NÃO ENTRA AQUI, e não é esquecimento: ela marca
+ * DESQUALIFICAÇÃO, não tamanho. Somar as duas responderia outra pergunta, e as
+ * duas NÃO são exclusivas — 11 pessoas têm as duas. Ela sai contada à parte,
+ * junto da interseção, em `porte.desqualificacao`.
+ *
+ * ⚠️ A ORDEM DESTE ARRAY É A ORDEM DA TELA. As faixas são ORDINAIS (menos de 1k <
+ * ... < mais de 10k), e é a ordem que carrega o significado — a cor não, porque
+ * 1k não é pior que 10k. Ver o comentário do componente.
+ */
+export const FAIXAS_PORTE = [
+  { id: 39, nome: "menos de 1k" },
+  { id: 40, nome: "1k a 3k" },
+  { id: 41, nome: "3k a 5k" },
+  { id: 42, nome: "5k a 10k" },
+  { id: 43, nome: "Mais de 10k" },
+] as const;
+
+/**
+ * O nível cuja cobertura de porte é PATAMAR — o único sobre o qual dá para afirmar
+ * algo hoje. Medido em 20/08/2026: 77,3% / 78,9% / 80,0% nos três cortes de era,
+ * contra rampas em todos os outros níveis.
+ *
+ * ⚠️⚠️ ESTÁVEL NÃO É SUFICIENTE — são 22, 19 e 10 pessoas. A taxa se sustenta, o `n`
+ * não. É por isso que a tela mostra COBERTURA (uma fila de trabalho) e não
+ * DISTRIBUIÇÃO: dividir 19 pessoas em cinco faixas dá ~4 por faixa.
+ */
+export const NIVEL_PORTE_CONFIAVEL = 4;
+
+/**
+ * Fronteira entre a era SEM etiqueta e a era COM etiqueta.
+ *
+ * 🛑 É ESCOLHA, NÃO FATO, e isto vai NA TELA junto do número. O CRM não guarda
+ * quando uma etiqueta foi aplicada: esta data é onde a SÉRIE vira (24 meses entre
+ * 0% e 9,5%, depois 31,1% / 37,9% / 70,8%), não onde o processo mudou. Sem a frase
+ * na tela, daqui a três meses ela vira um fato que ninguém questiona.
+ */
+export const CORTE_ERA_PORTE = "2026-06-01";
+
 const RAZAO_CLONAGEM = 5;
 
 /** Sessão de marcação retroativa: mês com volume real em que a maioria das vendas
@@ -142,6 +186,17 @@ export interface PessoaNaEtapa {
    * é zero. É a mesma regra do `reach` ausente no sync de tráfego.
    */
   mrrCent: number | null;
+  /**
+   * A faixa de porte da pessoa (`39`..`43`), ou `null` quando ela não tem nenhuma.
+   *
+   * ⚠️ UNIÃO das etiquetas de TODAS as oportunidades dela, não as da última: a faixa é
+   * atributo do CONTATO no CRM e pousa em UMA oportunidade por pessoa (medido: 254
+   * pessoas, 255 oportunidades). Olhar só a atual subestimaria a cobertura.
+   *
+   * ⚠️ `null` = SEM FAIXA INFORMADA, nunca "pequeno". É o que a fila de trabalho da tela
+   * procura, e confundir os dois inventaria classificação que ninguém fez.
+   */
+  faixaPorte: number | null;
   /**
    * O MÊS EM QUE A PESSOA ENTROU NO COMERCIAL ("YYYY-MM"), para a safra da /comercial.
    *
@@ -387,6 +442,64 @@ export interface AgregadoComercial {
   vendasConfirmadasPorMes: {
     mes: string; vendas: number; mrrCent: number; mesmoDia: boolean; maiorDia: number;
   }[];
+  /**
+   * QUALIFICAÇÃO POR PORTE (Demanda 2, 20/08/2026).
+   *
+   * ⚠️⚠️ A TELA RECEBE A DECISÃO, NÃO A RECALCULA. `nivelConfiavel`, `corte` e
+   * `ehPatamar` saem prontos daqui. A régua de "qual nível é defensável" não pode
+   * morar nos dois lados — e aqui é mais grave que de costume: este arquivo puxa
+   * `lib/comercial.ts`, que importa `node:crypto`, então a tela NÃO PODE importá-lo.
+   * Um import de valor mataria o `next build`.
+   *
+   * ⚠️⚠️ OPCIONAL NO TIPO, E ISSO É PROPOSITAL. O documento gravado ANTES desta
+   * versão não tem o bloco, e vai continuar sem até um sync com `aplicar=1` rodar.
+   * Marcar como obrigatório faria o TypeScript afirmar que ele existe — e a tela
+   * renderizaria "0 de 79 (0,0%)" com a autoridade de um número medido. O tipo
+   * opcional é o que OBRIGA cada consumidor a distinguir "ainda não sincronizado"
+   * de "zero", que são coisas diferentes.
+   */
+  porte?: PorteAgregado;
+}
+
+export interface PorteAgregado {
+  /** A data usada, para a tela poder ESCREVER qual foi. Ver `CORTE_ERA_PORTE`. */
+  corte: string;
+  /** O nível cuja cobertura é patamar — a tela obedece, não escolhe. */
+  nivelConfiavel: number;
+  /**
+   * A COBERTURA POR NÍVEL — é ela que EXPLICA por que o denominador é Negociação.
+   * Não é enfeite: sem esta linha, "19 de 79" parece um número escolhido a esmo.
+   */
+  porNivel: {
+    nivel: number; nome: string; pessoas: number; comFaixa: number;
+    /**
+     * A cobertura deste nível se sustenta entre os cortes de era?
+     *
+     * ⚠️ `true` valida a RÉGUA (o recorte é consistente), NUNCA a conclusão — o `n`
+     * é que valida a conclusão, e são coisas diferentes. Ver `NIVEL_PORTE_CONFIAVEL`.
+     */
+    ehPatamar: boolean;
+  }[];
+  /**
+   * A distribuição das cinco faixas na CARTEIRA INTEIRA.
+   *
+   * ⚠️ MÉDIA DE DUAS ERAS, e o rótulo é condição de ela existir na tela. Nunca é o
+   * número de Negociação: a cobertura ainda está subindo (31,1% / 37,9% / 70,8% nos
+   * três cortes), então nada fora do nível confiável é patamar.
+   */
+  carteira: {
+    pessoas: number;
+    comAlgumaFaixa: number;
+    faixas: { id: number; nome: string; pessoas: number }[];
+  };
+  /**
+   * `[38] Sem Perfil`, SEMPRE à parte das faixas.
+   *
+   * ⚠️ `ambos` existe porque as duas NÃO são exclusivas: a mesma pessoa pode estar
+   * marcada como sem perfil E ter faixa. Sem este campo, alguém somaria os dois e
+   * concluiria que a conta não fecha.
+   */
+  desqualificacao: { pessoas: number; ambos: number };
 }
 
 export function montarAgregado(
@@ -400,6 +513,36 @@ export function montarAgregado(
   const opPorId = new Map(abertas.map((o) => [o.id, o]));
   const idsAbertos = new Set(abertas.map((o) => o.id));
   const comAberta = pessoas.filter((p) => p.oportunidadeIds.some((id) => idsAbertos.has(id)));
+
+  // ===========================================================================
+  // PORTE — a faixa de cada pessoa (Demanda 2)
+  // ===========================================================================
+  /**
+   * ⚠️ UNIÃO sobre TODAS as oportunidades da pessoa (`ops`, não `abertas`): a faixa é
+   * atributo do CONTATO e pousa em UMA oportunidade — medido, 254 pessoas contra 255
+   * oportunidades. Olhar só as abertas perderia quem foi etiquetado numa que fechou.
+   *
+   * ⚠️ E percorre `ops` cru, sem filtro de funil: a etiqueta é do contato, então uma
+   * marcação feita no funil 23 vale para a mesma pessoa no funil 4.
+   */
+  const tagsPorPessoa = new Map<string, Set<number>>();
+  for (const o of ops) {
+    if (!o.pessoaId || !o.tags?.length) continue;
+    let conj = tagsPorPessoa.get(o.pessoaId);
+    if (!conj) { conj = new Set(); tagsPorPessoa.set(o.pessoaId, conj); }
+    for (const t of o.tags) conj.add(Number(t));
+  }
+  const IDS_FAIXA = FAIXAS_PORTE.map((f) => f.id) as readonly number[];
+  /** A faixa da pessoa, ou `null`. ⚠️ `null` é SEM INFORMAÇÃO, nunca "pequeno". */
+  const faixaDe = (pessoaId: string): number | null => {
+    const conj = tagsPorPessoa.get(pessoaId);
+    if (!conj) return null;
+    // A MAIOR faixa, se houver mais de uma: duas marcações são erro de cadastro, e
+    // arredondar para baixo subestimaria o cliente. Raro, mas precisa ser determinístico.
+    for (let i = IDS_FAIXA.length - 1; i >= 0; i--) if (conj.has(IDS_FAIXA[i])) return IDS_FAIXA[i];
+    return null;
+  };
+  const temSemPerfil = (pessoaId: string) => tagsPorPessoa.get(pessoaId)?.has(TAG_SEM_PERFIL) === true;
 
   /**
    * ⚠️ A POPULAÇÃO DAS SÉRIES É QUEM TEM OPORTUNIDADE NO FUNIL 4 — 2.334 de 2.657.
@@ -464,6 +607,7 @@ export function montarAgregado(
           mesEntrada: mesLocal(p.primeiroContato),
           // ⚠️ null e não 0 quando não há valor informado — ver PessoaNaEtapa.
           mrrCent: valor > 0 ? valor : null,
+          faixaPorte: faixaDe(p.id),
         };
       })
       /**
@@ -752,6 +896,42 @@ export function montarAgregado(
     };
   })();
 
+  // ===========================================================================
+  // PORTE — o agregado da Demanda 2
+  // ===========================================================================
+  /**
+   * ⚠️ POPULAÇÃO = `pessoasFunil4`, a mesma das séries. Usar `pessoas` cru incluiria
+   * as 323 que só existem no funil 23 e o denominador deixaria de bater com o resto
+   * da tela.
+   */
+  const carteiraPorte = pessoasFunil4.filter((pes) => pes.temTelefone);
+  const porte: PorteAgregado = {
+    corte: CORTE_ERA_PORTE,
+    nivelConfiavel: NIVEL_PORTE_CONFIAVEL,
+    porNivel: niveis.map((n) => ({
+      nivel: n.nivel,
+      nome: n.nome,
+      pessoas: n.pessoasNaEtapa.length,
+      comFaixa: n.pessoasNaEtapa.filter((x) => x.faixaPorte !== null).length,
+      // ⚠️ Vem do MEDIDO em 20/08/2026, não de um cálculo em cima do dado de hoje: a
+      // estabilidade entre cortes de era só se enxerga comparando eras, e o agregado
+      // não guarda a série por era. Reavaliar quando a medição for repetida.
+      ehPatamar: n.nivel === NIVEL_PORTE_CONFIAVEL,
+    })),
+    carteira: {
+      pessoas: carteiraPorte.length,
+      comAlgumaFaixa: carteiraPorte.filter((pes) => faixaDe(pes.id) !== null).length,
+      faixas: FAIXAS_PORTE.map((f) => ({
+        id: f.id, nome: f.nome,
+        pessoas: carteiraPorte.filter((pes) => faixaDe(pes.id) === f.id).length,
+      })),
+    },
+    desqualificacao: {
+      pessoas: carteiraPorte.filter((pes) => temSemPerfil(pes.id)).length,
+      ambos: carteiraPorte.filter((pes) => temSemPerfil(pes.id) && faixaDe(pes.id) !== null).length,
+    },
+  };
+
   return {
     geradoEm: agora.toISOString(),
     fuso: MARCA.fuso,
@@ -800,5 +980,6 @@ export function montarAgregado(
     // ⚠️ maio/2025 vale 11 pessoas e 1.456 oportunidades — a razão marca clonagem.
     perdas: serie(perdidas.map((o) => ({ mes: mesLocal(o.fechadaEm), pessoaId: o.pessoaId }))),
     vendasConfirmadasPorMes,
+    porte,
   };
 }
