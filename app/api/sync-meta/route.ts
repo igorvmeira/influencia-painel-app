@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/firebaseAdmin";
+import { COL_LIMITES, COL_SISTEMA, DOC_SYNC_META } from "@/lib/colecoes";
 import { buscarDiario, buscarLimiteConta, buscarDiarioPorConjunto, somarPorGrupoDia, somarPorDia } from "@/lib/meta";
 import { ContaMap, GrupoDia, MetricaDiaria } from "@/lib/types";
 import { COL_AGREGADAS, COL_CONJUNTOS, RETENCAO_DIAS, cutoffRetencao, mesclarDias, mesclarGrupos } from "@/lib/agregadas";
@@ -209,7 +210,7 @@ export async function GET(req: Request) {
   }
 
   const col = db.collection("metricasDiarias");
-  const colLimites = db.collection("limitesConta");
+  const colLimites = db.collection(COL_LIMITES);
   const colConjuntos = db.collection(COL_CONJUNTOS);
 
   // ---- Pré-passo: quem do bloco é conta NOVA (sem doc agregado)? ----
@@ -422,7 +423,7 @@ export async function GET(req: Request) {
   // Grava a cada chamada (inclusive nas incrementais), então o valor exibido
   // reflete a atividade de sync mais recente.
   const atualizadoEm = new Date().toISOString();
-  await db.collection("sistema").doc("sync").set({ atualizadoEm }, { merge: true });
+  await db.collection(COL_SISTEMA).doc(DOC_SYNC_META).set({ atualizadoEm }, { merge: true });
 
   // Contas novas que receberam janela cheia nesta chamada — visível no retorno,
   // para não passar despercebido que uma conta entrou com histórico completo.

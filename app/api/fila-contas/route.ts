@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { getDb, getAuthAdmin } from "@/lib/firebaseAdmin";
 import { ehGestorValido } from "@/lib/gestores";
 import { podeCadastrar, CandidataFila, FilaContas, Ignorada, MOEDA_ACEITA, MSG_RESTRITO } from "@/lib/filaContas";
-import { descobrirContas, DOC_FILA, DOC_IGNORADAS } from "@/lib/descobrirContas";
+import { descobrirContas } from "@/lib/descobrirContas";
+// ⚠️ Este arquivo já importava DOC_FILA e DOC_IGNORADAS e escrevia collection("sistema")
+// à mão OITO vezes — na mesma linha em que usava a constante do documento. Participava
+// da decisão para o nome do doc e não para o da coleção.
+import { COL_SISTEMA, DOC_FILA, DOC_IGNORADAS } from "@/lib/colecoes";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -81,8 +85,8 @@ export async function GET(req: Request) {
 
   try {
     const [snapFila, snapIgn] = await Promise.all([
-      db.collection("sistema").doc(DOC_FILA).get(),
-      db.collection("sistema").doc(DOC_IGNORADAS).get(),
+      db.collection(COL_SISTEMA).doc(DOC_FILA).get(),
+      db.collection(COL_SISTEMA).doc(DOC_IGNORADAS).get(),
     ]);
 
     // ⚠️ Doc que ainda não existe devolve fila VAZIA, nunca 500 — a descoberta pode
@@ -120,7 +124,7 @@ export async function POST(req: Request) {
   // requisições no Meta e reescreve `sistema/filaContas` — não é leitura.
   if (acao === "procurar") {
     const fila = await descobrirContas(db, { orcamentoMs: DESCOBERTA_MS });
-    const snapIgn = await db.collection("sistema").doc(DOC_IGNORADAS).get();
+    const snapIgn = await db.collection(COL_SISTEMA).doc(DOC_IGNORADAS).get();
     const ignoradas = (snapIgn.data()?.contas ?? {}) as Record<string, Ignorada>;
     return NextResponse.json({
       ok: !fila.erro,
@@ -136,7 +140,7 @@ export async function POST(req: Request) {
     // ⚠️ MARCA, NÃO APAGA. Nada é destruído: some da fila e continua auditável,
     // com quem decidiu e quando. Desfazer é remover a marca. A descoberta continua
     // sondando a conta ignorada — por isso desfazer vale na hora.
-    await db.collection("sistema").doc(DOC_IGNORADAS).set({
+    await db.collection(COL_SISTEMA).doc(DOC_IGNORADAS).set({
       contas: {
         [accountId]: {
           por: sessao.email,
@@ -150,10 +154,10 @@ export async function POST(req: Request) {
 
   // ------------------------------------------------------------------ DESFAZER
   if (acao === "desfazerIgnorar") {
-    const snap = await db.collection("sistema").doc(DOC_IGNORADAS).get();
+    const snap = await db.collection(COL_SISTEMA).doc(DOC_IGNORADAS).get();
     const contas = { ...(snap.data()?.contas ?? {}) } as Record<string, Ignorada>;
     delete contas[accountId];
-    await db.collection("sistema").doc(DOC_IGNORADAS).set({ contas }, { merge: false });
+    await db.collection(COL_SISTEMA).doc(DOC_IGNORADAS).set({ contas }, { merge: false });
     return NextResponse.json({ ok: true, acao: "desfazerIgnorar", accountId });
   }
 
@@ -177,7 +181,7 @@ export async function POST(req: Request) {
   // desabilita o botão em moeda estrangeira, mas confiar nisso deixaria a regra do
   // lado de quem pode ser contornado — e o custo de errar aqui é uma conta em outra
   // moeda somando no total em reais.
-  const snapFila = await db.collection("sistema").doc(DOC_FILA).get();
+  const snapFila = await db.collection(COL_SISTEMA).doc(DOC_FILA).get();
   const fila = snapFila.data() as FilaContas | undefined;
   const cand = (fila?.candidatas ?? []).find((c: CandidataFila) => c.accountId === accountId);
   if (!cand) {
@@ -230,7 +234,7 @@ export async function POST(req: Request) {
    * Nada é gravado duas vezes: o docId é o accountId.
    */
   if (fila) {
-    await db.collection("sistema").doc(DOC_FILA).set(
+    await db.collection(COL_SISTEMA).doc(DOC_FILA).set(
       { ...fila, candidatas: fila.candidatas.filter((c) => c.accountId !== accountId) }
     );
   }

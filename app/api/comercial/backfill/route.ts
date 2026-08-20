@@ -20,6 +20,9 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/firebaseAdmin";
 import { checarCronSecret } from "@/lib/cronAuth";
+// ⚠️ DOC_SYNC_COMERCIAL era `const DOC_SYNC` PRIVADO aqui e literal "sync_comercial"
+// na rota de sync. As duas escrevem o MESMO documento e nada ligava as duas.
+import { COL_SISTEMA, DOC_SYNC_COMERCIAL } from "@/lib/colecoes";
 import {
   lerConfigXmax, chamarXmax, ConfigXmax, OportunidadeXmax, centavosParaReais,
 } from "@/lib/xmax";
@@ -32,7 +35,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const COL_OP = "comercial_oportunidades";
-const DOC_SYNC = "sync_comercial";
+// DOC_SYNC_COMERCIAL vem de @/lib/colecoes.
 const LOTE_FIRESTORE = 450;
 
 /** IDs por chamada. 400 × ~60ms efetivos ≈ 25s, dentro do maxDuration de 60. */
@@ -92,7 +95,7 @@ export async function GET(req: Request) {
   const amostraN = Number(url.searchParams.get("amostra"));
   const bloco = Math.min(BLOCO_MAX, Math.max(1, Number(url.searchParams.get("bloco")) || BLOCO_PADRAO));
 
-  const refSync = db.collection("sistema").doc(DOC_SYNC);
+  const refSync = db.collection(COL_SISTEMA).doc(DOC_SYNC_COMERCIAL);
 
   // -------------------------------------------------------------------------
   // MODO PRÉVIA — amostra espalhada por TODA a faixa

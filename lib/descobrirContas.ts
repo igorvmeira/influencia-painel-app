@@ -16,17 +16,15 @@
 
 import type { Firestore } from "firebase-admin/firestore";
 import { CandidataFila, FilaContas, Ignorada, LOTE_SONDA, STATUS_ROTULO, bare } from "./filaContas";
-// ⚠️ `"limitesConta"` ao lado continua LITERAL de propósito: ela não tem constante
-// nenhuma para coincidir — é o caso 2 da régua (constante AUSENTE), e criar é
-// conserto de outra natureza que não cabe numa troca mecânica.
 import { COL_AGREGADAS } from "./agregadas";
+import { COL_LIMITES, COL_SISTEMA, DOC_FILA, DOC_IGNORADAS } from "./colecoes";
 
 const API = process.env.META_API_VERSION || "v21.0";
 const TOKEN = process.env.META_ACCESS_TOKEN || "";
 
-export const COL_SISTEMA = "sistema";
-export const DOC_FILA = "filaContas";
-export const DOC_IGNORADAS = "contasIgnoradas";
+// COL_SISTEMA, DOC_FILA e DOC_IGNORADAS mudaram para ./colecoes em 20/08/2026: nome
+// de coleção não deve morar ao lado de uma função que faz I/O, senão quem só quer a
+// string herda a cadeia inteira.
 
 /**
  * Janela do gasto sondado. 120 dias responde "rodou em algum momento?", que é a
@@ -58,7 +56,7 @@ const MAX_SONDAS = 25;
  * depender de sobra de sincronização, a data vira exata em vez de piso, e os
  * órfãos podem ser limpos sem perder nada.
  */
-const COLECOES_RASTRO = ["limitesConta", COL_AGREGADAS] as const;
+const COLECOES_RASTRO = [COL_LIMITES, COL_AGREGADAS] as const;
 // LOTE_SONDA, STATUS_ROTULO e bare() vêm de ./filaContas — antes eram cópias locais
 // que concordavam por COMENTÁRIO, não por import. Ver a nota lá.
 const ymd = (d: Date) => d.toISOString().slice(0, 10);

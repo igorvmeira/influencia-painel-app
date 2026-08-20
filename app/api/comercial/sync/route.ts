@@ -22,6 +22,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/firebaseAdmin";
 import { checarCronSecret } from "@/lib/cronAuth";
+import { COL_SISTEMA, DOC_SYNC_COMERCIAL } from "@/lib/colecoes";
 import {
   lerConfigXmax, chamarXmax, ConfigXmax, OportunidadeXmax,
   nomeOrigem, semOrigem, centavosParaReais,
@@ -557,7 +558,7 @@ export async function GET(req: Request) {
         listasLidas.length === pessoasDosNiveis.length
         && comMesNoBanco === pessoasDosNiveis.length - semMes,
     };
-    await db.collection("sistema").doc("sync_comercial").set({
+    await db.collection(COL_SISTEMA).doc(DOC_SYNC_COMERCIAL).set({
       ultimaExecucao: new Date().toISOString(),
       oportunidadesAbertas: frescas.length,
       pessoas: pessoas.length,

@@ -1,6 +1,10 @@
 import { getDb } from "./firebaseAdmin";
 import { mockDiario, mockLimites, mockContas } from "./mock";
 import { COL_AGREGADAS } from "./agregadas";
+// ⚠️ Este arquivo LÊ o doc que app/api/sync-meta ESCREVE. Os dois diziam "sync" à mão:
+// um erro de digitação em qualquer um dos lados não daria erro — criaria um documento
+// novo, o outro leria vazio, e o painel passaria a dizer que nunca sincronizou.
+import { COL_LIMITES, COL_SISTEMA, DOC_SYNC_META } from "./colecoes";
 import { ContaMap, LimiteConta, MetricaDiaria } from "./types";
 
 // Cache no servidor: os dados só mudam 1x/dia (após o sync). Segura leituras do
@@ -48,8 +52,8 @@ export async function getDadosDiarios(): Promise<DadosDiarios> {
   const [contasSnap, aggSnap, syncSnap, limitesSnap] = await Promise.all([
     db.collection("contas").get(),
     db.collection(COL_AGREGADAS).get(),
-    db.collection("sistema").doc("sync").get(),
-    db.collection("limitesConta").get(),
+    db.collection(COL_SISTEMA).doc(DOC_SYNC_META).get(),
+    db.collection(COL_LIMITES).get(),
   ]);
 
   const contas = dedupContas(contasSnap.docs);
