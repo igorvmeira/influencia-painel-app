@@ -151,6 +151,18 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
 - Primeiro passo de toda integração: criar um **endpoint de diagnóstico** temporário que
   consulta a fonte (a API do cliente) e mostra os campos disponíveis. Só depois construa a
   feature em cima do que realmente vem. Remova o diagnóstico ao final.
+  🔑 **E o melhor argumento a favor disso não é o que ele evita, é o que ele responde
+  depois: a sondagem que mais valeu respondeu uma pergunta que não existia quando foi
+  escrita.** No `/api/diag-xmax`, a pergunta 3 era "`getOpportunity` devolve oportunidade
+  já encerrada?", feita para decidir se haveria backfill de fechamentos. Três semanas
+  depois, o veredito dela — SIM — foi o que respondeu se o histórico do `fk_campaign`
+  poderia ser coberto, uma feature que ninguém tinha imaginado ali.
+  **Sondar é barato e o resultado não expira**; a decisão que ele destrava pode ser outra,
+  mais tarde. Por isso a pergunta certa nunca é "vale a pena sondar para ISTO", é "o que a
+  fonte responde de graça enquanto eu estou aqui".
+  ⚠️ **Mas o diagnóstico sai mesmo assim, e o critério de urgência não é a regra da casa:**
+  o `diag-xmax` devolvia `title`, `mainphone` e `mainmail` de leads reais atrás de um
+  segredo fraco. Sondagem que imprime dado pessoal é dívida com prazo, não com data.
 - Cada cliente/sistema tem sua própria API (algumas boas, outras ruins ou inexistentes).
 - **Nunca transcreva IDs (accountId, etc.) a partir de imagem ou print** — um dígito errado
   cria registro fantasma que nunca sincroniza. Peça sempre o retorno em **texto**.
@@ -224,6 +236,22 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   informação sobre o mundo; a segunda é informação sobre a nossa via de acesso.
   É a mesma família do vazio ambíguo e do `situacaoDoAnuncio`, no eixo em que ela mais
   engana — aqui a frase falsa é a que parece modesta.
+- ⚠️⚠️ **VALOR IGUAL NÃO É PARTICIPAÇÃO NA DECISÃO — a quinta da família, e a única que
+  some da BUSCA.** Literal que coincide com uma constante exportada está FORA do alcance
+  do `grep` — e a busca é como se descobre quem precisa mudar quando a decisão muda.
+  **Cópia divergente aparece na comparação; literal coincidente não aparece nunca.**
+  Caso real: `MOEDA_ACEITA = "BRL"` mora em `lib/filaContas.ts` com o motivo escrito, e a
+  rota `/api/diagnostico-contas` tinha o literal `"BRL"` em três lugares. **Os valores
+  concordavam** — a extração das três constantes duplicadas (`LOTE_SONDA`,
+  `STATUS_ROTULO`, `bare`) não achou uma única divergência. O defeito era o literal, que
+  nenhuma delas era.
+  🔑 **E repare na inversão:** a duplicação que a gente foi procurar (cópias que podem
+  divergir) é a menos perigosa, porque comparar as duas revela. A perigosa é a que não se
+  parece com cópia. No dia em que a agência aceitar uma segunda moeda, quem alterar a
+  constante vai achar que cobriu tudo — e terá coberto, menos os três lugares que a busca
+  não mostrou.
+  **A régua: antes de confiar numa constante compartilhada, procure o VALOR dela, não o
+  NOME.** Nome acha quem já participa; valor acha quem devia participar e não participa.
 - ⚠️ **AUSÊNCIA DE REGISTRO NÃO É AUSÊNCIA DE HISTÓRIA — a quarta da mesma família.**
   Uma listagem "do que não está cadastrado" mistura duas populações que exigem decisões
   opostas: o que **nunca existiu** e o que foi **removido de propósito**. Sem separar, quem
@@ -365,6 +393,19 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   ⚠️ E isto NÃO é código de uma migração: fica. Toda vez que um campo novo entrar numa
   estrutura gravada, é a leitura de volta que responde se ele chegou — o que muda é só a
   contagem comparada.
+  ⚠️⚠️ **E VALE PARA A FERRAMENTA DE QUEM ESCREVE, NÃO SÓ PARA O CÓDIGO ESCRITO:**
+  *script de edição que não confere o resultado depois de escrever não é conferência.*
+  Ele imprime "ok" porque a âncora casou — e âncora casada prova que ACHOU o lugar, nunca
+  que escreveu o certo nele. Dois defeitos numa sessão, os dois com "ok" no console:
+  um array passado onde ia string (o `replace` coagiu e juntou 12 linhas com vírgula,
+  destruindo dois blocos de documentação) e cinco argumentos numa função de quatro (a
+  segunda linha do comentário virou o rótulo do log e sumiu do arquivo).
+  **Nenhum dos dois falhou.** O primeiro só apareceu porque fui reler o arquivo por outro
+  motivo, dias depois de já estar empurrado.
+  **A régua: depois de escrever, leia o trecho de volta — `sed -n` na faixa alterada — e
+  varra a ASSINATURA do defeito no resto do lote** (aqui, `grep -c ",   "`). É a mesma
+  frase de sempre, no lugar mais fácil de esquecer: quem confia no próprio script está
+  descrevendo a intenção, não o resultado.
 - ⚠️ **ATUALIZAR A CONFERÊNCIA É PARTE DA MUDANÇA, NÃO ETAPA POSTERIOR.** Conferência que
   não acompanha a regra vira ruído (acusa o que está certo) ou falso negativo (aprova o que
   está errado) — e nos dois casos ela para de valer justamente quando mais precisaria.
