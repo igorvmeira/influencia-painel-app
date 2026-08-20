@@ -16,6 +16,10 @@
 
 import type { Firestore } from "firebase-admin/firestore";
 import { CandidataFila, FilaContas, Ignorada, LOTE_SONDA, STATUS_ROTULO, bare } from "./filaContas";
+// ⚠️ `"limitesConta"` ao lado continua LITERAL de propósito: ela não tem constante
+// nenhuma para coincidir — é o caso 2 da régua (constante AUSENTE), e criar é
+// conserto de outra natureza que não cabe numa troca mecânica.
+import { COL_AGREGADAS } from "./agregadas";
 
 const API = process.env.META_API_VERSION || "v21.0";
 const TOKEN = process.env.META_ACCESS_TOKEN || "";
@@ -54,7 +58,7 @@ const MAX_SONDAS = 25;
  * depender de sobra de sincronização, a data vira exata em vez de piso, e os
  * órfãos podem ser limpos sem perder nada.
  */
-const COLECOES_RASTRO = ["limitesConta", "metricasAgregadas"] as const;
+const COLECOES_RASTRO = ["limitesConta", COL_AGREGADAS] as const;
 // LOTE_SONDA, STATUS_ROTULO e bare() vêm de ./filaContas — antes eram cópias locais
 // que concordavam por COMENTÁRIO, não por import. Ver a nota lá.
 const ymd = (d: Date) => d.toISOString().slice(0, 10);

@@ -1,3 +1,12 @@
+// ⚠️ `import type`, NÃO import de valor. `./semaforo` importa `TEMA` de `./brand`, e
+// este arquivo é importado por praticamente toda tela — import de valor arrastaria a
+// cadeia inteira. `import type` é apagado na compilação; o vínculo fica só no tipo.
+import type { Semaforo } from "./semaforo";
+
+// A união estava reescrita à mão aqui. `SEMAFOROS` já é a fonte
+// (`type Semaforo = (typeof SEMAFOROS)[number]`), e a cópia literal significava que
+// acrescentar uma cor lá deixaria este campo para trás — sem erro de compilação,
+// porque as duas uniões eram independentes.
 export type Tipo = "B2B" | "B2C";
 
 // Orientação gerencial de uma conta (feature de escrita). "em" em ISO no cliente.
@@ -10,7 +19,7 @@ export interface EntradaOrientacao {
    * AUSENTE/null = não classificado (cinza) — é o caso de toda orientação
    * escrita antes deste campo. Não há migração: ausente já resolve.
    */
-  semaforo?: "verde" | "amarelo" | "vermelho" | null;
+  semaforo?: Semaforo | null;
 }
 export interface Orientacao {
   accountId: string;
