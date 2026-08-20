@@ -209,7 +209,22 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   ⚠️ E esse aviso é **estado permanente, não alerta**: vai em cor de ênfase (dourado), nunca
   em vermelho. Não é uma falha que alguém vá consertar — é o limite da ferramenta, e ele
   estará lá em toda visita.
-- ⚠️ **AUSÊNCIA DE REGISTRO NÃO É AUSÊNCIA DE HISTÓRIA — a terceira da mesma família.**
+- ⚠️⚠️ **CAMPO QUE NÃO VOLTA NÃO AUTORIZA AFIRMAÇÃO NENHUMA — nem "está preenchido",
+  nem "não está".** A mesma ausência que impede a leitura impede as duas conclusões, e a
+  tentação é sempre a segunda, porque ela SOA como cautela: dizer "o CRM não registra o
+  motivo" parece humildade e é, na verdade, uma afirmação sobre um dado que ninguém viu.
+  E ela é cara: falta da FONTE e falta da NOSSA LEITURA levam a ações **opostas** — a
+  primeira manda desistir, a segunda manda pedir acesso.
+  Caso real: escrevi no aviso da `/comercial` que os 6 motivos de perda "são preenchidos
+  lá" e apaguei antes de subir. Não dava para saber: `getOpportunity` devolve 53 campos e
+  nenhum é o motivo — exatamente o campo que provaria a frase. O que a tela pode afirmar é
+  o que foi medido (o funil TEM 6 motivos cadastrados; a API não os devolve) mais a
+  ignorância explícita: *"se estão sendo preenchidos, daqui não dá para saber"*.
+  **A régua: separe o que a fonte NEGA do que ela apenas NÃO MOSTRA.** Só a primeira é
+  informação sobre o mundo; a segunda é informação sobre a nossa via de acesso.
+  É a mesma família do vazio ambíguo e do `situacaoDoAnuncio`, no eixo em que ela mais
+  engana — aqui a frase falsa é a que parece modesta.
+- ⚠️ **AUSÊNCIA DE REGISTRO NÃO É AUSÊNCIA DE HISTÓRIA — a quarta da mesma família.**
   Uma listagem "do que não está cadastrado" mistura duas populações que exigem decisões
   opostas: o que **nunca existiu** e o que foi **removido de propósito**. Sem separar, quem
   recadastra desfaz a decisão de outra pessoa sem nunca saber que houve decisão.

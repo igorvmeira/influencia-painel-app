@@ -814,7 +814,7 @@ de **257 pessoas** para **291**, e os ~13% de diferença são o retorno de clien
 
 ## `fk_campaign` entrou no normalizador — 20/08/2026
 
-O campo existe na API (`OpportunityObject`, `docs/xmax-openapi.yaml.txt`) e **não existia
+O campo existe na API (`OpportunityObject`, `data/xmax-api.yaml`) e **não existia
 no nosso normalizador**. Quem varresse as 4.862 oportunidades gravadas hoje receberia
 zero — e o zero seria NOSSO, não do CRM. Agora ele é gravado como `campanhaId` em
 `comercial_oportunidades`.
@@ -866,6 +866,33 @@ o campo VEM na resposta e é legível; não serve para estimar cobertura.
 identifica *nasceu de um disparo*; a régua dos 30 dias mede *a mesma pessoa contada duas
 vezes*. Um clone pode não ter campanha vinculada, e um lead de campanha pode ser genuíno.
 **Não substitui a heurística** — no melhor caso vira uma segunda fonte para conferi-la.
+
+---
+
+## 🪦 A rota `/api/diag-etiquetas` foi REMOVIDA em 20/08/2026 — e o que ela sabia
+
+Lápide explícita, não silêncio: ela nunca chegou a rodar (faltava credencial do Firebase
+Admin no `.env.local`) e foi apagada por decisão do Igor. Motivo: ela media cobertura de
+porte varrendo o Firestore, e as 6 faixas passaram a vir nomeadas direto da API — manter
+rota bloqueada esperando credencial é dívida, não backup.
+
+**A pergunta que ela responderia volta com a Demanda 2, não antes.** Quando voltar, estes
+quatro achados de desenho evitam refazer a análise do zero:
+
+1. **O agregado NÃO responde.** `comercial_agregados/funil` não guarda etiqueta nenhuma —
+   só o booleano `desqualificada`, derivado da tag `[38]`. A distribuição por ID não
+   existe lá. É varredura de `comercial_oportunidades` ou nada.
+2. **NÃO ler `comercial_pessoas`.** A oportunidade já carrega `pessoaChave`, então a
+   contagem POR PESSOA sai da mesma varredura. Ler as ~2.657 pessoas seria pagar 2.657
+   leituras por um dado que já está na mão.
+3. **A régua conta PESSOA, não oportunidade.** A automação de recuperação cria
+   oportunidade nova a cada disparo; contar linha infla o mesmo contato várias vezes.
+4. **`[38] Sem Perfil` não entra na cobertura de porte.** Ela marca desqualificação, não
+   tamanho — somar as duas responderia outra pergunta.
+
+⚠️ **E a estimativa de 8% nunca foi medida por nós.** O número que circula (`~212 de 2.670
+pessoas`) veio da contagem de 17/08 sobre oportunidades, não da varredura por pessoa que a
+rota faria. Continua **não medido** — não usar em conversa como se fosse.
 
 ---
 

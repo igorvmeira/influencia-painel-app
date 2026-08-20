@@ -680,7 +680,13 @@ export default function Comercial() {
             aceita `closereason`; são 12 oportunidades perdidas lidas, união de 53 campos,
             e nenhum traz o motivo de volta. O dado pode existir lá dentro — é a nossa via
             de acesso que não alcança. Falta da FONTE e falta da NOSSA LEITURA levam a
-            ações opostas: a primeira manda desistir, a segunda manda perguntar. */}
+            ações opostas: a primeira manda desistir, a segunda manda perguntar.
+
+            ⚠️ E SE A LEITURA ABRIR UM DIA, NÃO SAI GRÁFICO DE GRAÇA: `closereason` é
+            `type: string` na spec — TEXTO LIVRE, não FK para os 6 motivos cadastrados.
+            Agrupar por motivo exigiria normalizar ("Sumiu" / "sumiu" / "sumiu sem dar
+            retorno" são a mesma coisa para uma pessoa e três para um `groupBy`). Isso se
+            descobre ANTES de prometer a tela, não depois de o suporte liberar o campo. */}
         <div className="mt-3">
           <Aviso>
             O CRM <b>não devolve o motivo da perda</b>, então o painel mostra quando e em que etapa

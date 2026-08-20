@@ -104,6 +104,20 @@ export const semOrigem = (id: unknown): boolean => Number(id ?? 0) === SEM_ORIGE
 // REGRA: NENHUM lugar do código chama `new Date()` nesses dois campos direto.
 // Passa por aqui. `createdAt` é o único que é ISO — e é justamente a mistura
 // dos dois formatos no mesmo objeto que torna o erro fácil de cometer.
+//
+// ⚠️⚠️ NÃO É DESCUIDO PONTUAL: A SPEC ERRA SISTEMATICAMENTE EM DATA.
+// Reconferido em 20/08/2026, lendo 12 oportunidades perdidas reais — `closedat`
+// continua vindo epoch (`1787139927`) com a spec dizendo ISO 8601. É a TERCEIRA
+// vez que ela erra sobre um campo de data, e nas três o valor errado não estoura:
+// vira Invalid Date, NaN ou some de um filtro, em silêncio.
+//
+// E ela também é INCOMPLETA: a resposta real traz 53 campos contra os 44
+// documentados (`allowviewparent`, `bsuid`, `fkCompany`, `freight`,
+// `parentopportunity`, `portfolioId`, `products`, `username`, `visibility`).
+//
+// 🔑 REGRA PARA CAMPO NOVO: mede antes de confiar. A spec serve para descobrir que
+// um campo EXISTE; o `typeof` de uma resposta real é que diz o que ele é. Ler o
+// yaml e implementar direto já custou um sync inteiro neste projeto.
 export function epochParaISO(v: unknown): string | null {
   const n = Number(v);
   // 0 é "nunca fechou", não 1970 — e é o valor que vem em oportunidade aberta.
