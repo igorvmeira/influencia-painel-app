@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Space_Grotesk, Inconsolata } from "next/font/google";
 import "./globals.css";
 import AuthProvider from "@/components/AuthProvider";
-import { TEMA } from "@/lib/brand";
+import { MARCA, TEMA } from "@/lib/brand";
 
 /**
  * MANUAL DE MARCA 2026 — as duas fontes oficiais da Influência, self-hospedadas pelo
@@ -95,7 +95,9 @@ const inconsolata = Inconsolata({
 });
 
 export const metadata: Metadata = {
-  title: "Painel · Influência",
+  // ⚠️ Vem de `MARCA.tituloAba`, não de literal: é a RAZÃO DE MARCA, e ela difere do
+  // nome curto que a sidebar mostra. Ver os dois campos em lib/brand.ts.
+  title: MARCA.tituloAba,
   description: "Acompanhamento de tráfego pago por gestor e cliente.",
 };
 

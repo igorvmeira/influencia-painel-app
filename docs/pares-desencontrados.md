@@ -46,6 +46,28 @@ acompanhou o flip sozinho — ele usa `TEMA.destaque`, e está em **15,32:1** so
 sidebar, que é a versão AMARELA que o manual manda em fundo escuro. A tela está correta;
 o que falta é a marca de verdade.
 
+### 📋 QUANDO O SVG OFICIAL CHEGAR — a lista do que trocar
+
+**Lista de substituição, NÃO abstração.** Um módulo único não se justifica aqui e o motivo
+é medido: `app/icon.png` é **convenção de arquivo do Next** — ele lê o ARQUIVO, não um
+módulo, então esse é irredutível de qualquer jeito. E o `NodeMark` **já é** um componente
+único (`components/NodeMark.tsx`), com três chamadas. Não há o que criar; criar seria o erro
+dos `chipRoxo`/`chipAzul`/`chipBege`, apagados no commit 6 por não terem consumidor.
+
+| arquivo | o que é | existe hoje? |
+|---|---|---|
+| `app/icon.png` | favicon (o Next gera o `<link rel="icon">`) | 🔶 provisório, gerado do PNG |
+| `app/apple-icon.png` | ícone iOS, 180×180 | 🔶 provisório, gerado do PNG |
+| `components/NodeMark.tsx` | o símbolo em SVG inline — **3 chamadas**: `Shell` (sidebar e cabeçalho móvel) e `login` | 🔶 placeholder desenhado à mão |
+
+⚠️ **O `NodeMark` recebe `cor` e `size` por prop e usa `TEMA.destaque` como padrão.** Quem
+trocar o desenho precisa manter as duas props — a sidebar chama sem argumento (26px) e o
+cabeçalho móvel chama com `size={22}`.
+
+🛑 **E NÃO existe `public/` neste projeto.** Não crie uma para isto: nada da marca aparece
+na tela como imagem hoje — o cabeçalho usa o `NodeMark` inline. `public/` só se justifica
+quando um componente for exibir a assinatura como arquivo, e aí a decisão é outra.
+
 **O que falta chegar da agência:**
 
 | arquivo | formato | onde entra |

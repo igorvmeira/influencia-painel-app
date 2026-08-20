@@ -2,8 +2,26 @@
 // e cores base do tema. Para reusar o painel em outro cliente, ajuste só este
 // arquivo (o nome do assistente de IA vem daqui — não fixe no código).
 export const MARCA = {
-  // Nome da agência/cliente exibido no painel.
+  /**
+   * NOME CURTO — o que aparece DENTRO da interface (sidebar, cabeçalho móvel, login) e
+   * no prompt da IA. É o nome pelo qual o time chama a agência.
+   *
+   * ⚠️⚠️ NÃO UNIFIQUE COM `tituloAba`. Parecem duplicata e não são: este é NOME, aquele
+   * é RAZÃO DE MARCA. Onde o espaço é estreito — 240px de sidebar — o nome curto é o
+   * certo, e forçar um a derivar do outro acopla duas decisões sem relação. É o caso do
+   * CLAUDE.md: *nem tudo que se parece é duplicata — antes de unificar, pergunte o
+   * PAPEL.*
+   */
   agencia: "Influência",
+  /**
+   * RAZÃO DE MARCA — o que aparece FORA da interface, onde o painel é identificado por
+   * quem não está dentro dele: título da aba, e futuramente Open Graph e PWA.
+   *
+   * ⚠️ Numa fileira de 15 abas o painel compete com o mundo inteiro, e ali o nome
+   * completo é o que identifica. Dentro do app, o contexto já está dado pela própria
+   * tela — o nome completo só gastaria espaço.
+   */
+  tituloAba: "Influência Marketing",
   // Nome do assistente de IA (usado na UI do chat e no prompt do sistema).
   assistente: "Influ",
   // Fuso horário do cliente (agrupamento/exibição de datas, ex.: agenda). Troque aqui.
