@@ -873,6 +873,56 @@ vezes*. Um clone pode não ter campanha vinculada, e um lead de campanha pode se
 
 ---
 
+## ⚠️ 254 contra 290 — os dois números medem COISAS DIFERENTES, e a comparação era minha
+
+O diagnóstico de 20/08/2026 às 15:05 mediu **254** pessoas com faixa. O agregado gravado
+às 16:27 diz **290**. Investigado LENDO o código, sem varredura nenhuma.
+
+### O que foi DESCARTADO (as três definições batem)
+
+| suspeita | veredito |
+|---|---|
+| o agregado inclui a `[38]` na cobertura? | **não** — `IDS_FAIXA` é `[39..43]`, a `[38]` nunca entra em `faixaDe()` |
+| a régua de pessoa é outra? | **não** — união das etiquetas sobre TODAS as oportunidades, e `temTelefone` é `lista.some(...)` nos dois |
+| conta oportunidade em vez de pessoa? | **não** — `carteiraPorte` é lista de `PessoaGravada`, e o filtro conta gente |
+
+⚠️ E a população do agregado é **subconjunto** da do diagnóstico (`pessoasFunil4` contra
+todas as pessoas com telefone). Subconjunto não pode ter MAIS elementos — o que sozinho
+já provava que a diferença não vinha do recorte.
+
+### 🔑 A CAUSA: as duas leituras têm FRESCORES DIFERENTES
+
+O `montarAgregado` recebe `universo`, e `universo` **não é a coleção**:
+
+```
+universo = comercial_oportunidades (gravado)  ∪  as abertas FRESCAS da API do Xmax
+```
+
+- o **diagnóstico** leu `comercial_oportunidades` — ou seja, o CRM **como estava no
+  último sync antes das 15:05**;
+- o **agregado** leu a API na hora, então as ~2.021 abertas carregam as etiquetas
+  **atuais** do CRM.
+
+**Toda etiqueta aplicada no CRM entre o sync anterior e as 16:27 aparece num e não no
+outro.** Não é anomalia de dado: os dois números nunca foram comparáveis, e comparar foi
+erro meu.
+
+🛑 **E o corolário desconfortável: o 254 já estava velho quando eu o reportei.** Ele
+descrevia a cópia no Firestore, não o CRM — e eu o apresentei como "a medição de hoje".
+**Número lido de cópia sincronizada tem a idade do último sync, não a do relógio.**
+
+### O que NÃO está fechado
+
+O mecanismo explica a DIREÇÃO e torna a magnitude plausível (a safra de agosto está em
+70,8%, então há gente etiquetando). **Não reconstrói os 36.** Para fechar seria comparar
+as duas medições contra a MESMA foto — e isso custa uma varredura que não se justifica
+só por isto. **Fica para a próxima varredura que houver por outro motivo**, por decisão
+do Igor em 20/08/2026.
+
+⚠️ Enquanto não fechar, os dois números **não vão lado a lado** em tela nem em reunião.
+
+---
+
 ## 🪦 `/api/diag-porte` — REMOVIDA em 20/08/2026, e o que ela mediu
 
 Rodou uma vez, em 20/08/2026 às 15:05Z. **4.905 leituras**, uma varredura de

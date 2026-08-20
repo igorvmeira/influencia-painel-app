@@ -493,6 +493,15 @@ export async function GET(req: Request) {
   // ---------------------------------------------------------------------
   let gravadas = 0;
   /** Preenchido pela leitura de volta do agregado — ver o bloco abaixo. */
+  /**
+   * ⚠️ O NOME DA VARIÁVEL NÃO É O CAMINHO NA RESPOSTA. Isto sai como
+   * **`gravacao.agregado`**, não como `conferenciaDoBanco` — ver o `return` no fim.
+   *
+   * Custou uma investigação em 20/08/2026: procurei `conferenciaDoBanco` na raiz do
+   * JSON, recebi `null`, e li como "a leitura de volta não rodou". Tinha rodado, e o
+   * veredito estava certo — **a régua do teste é que estava errada, não o código.**
+   * Quem for ler o retorno procura por `gravacao.agregado.porte`.
+   */
   let conferenciaDoBanco: Record<string, unknown> | null = null;
   const escrever = async <T extends { }>(col: string, itens: T[], idDe: (x: T) => string) => {
     for (let i = 0; i < itens.length; i += LOTE) {
