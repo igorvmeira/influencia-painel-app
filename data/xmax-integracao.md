@@ -995,7 +995,15 @@ captação e essas geralmente entram sem origem. Mantida a regra "Sem origem".
 
 **Baixa prioridade, não bloqueia:**
 
-1. ~~**Os nomes das 21 etiquetas sem nome**~~ — **a pergunta mudou em 20/08/2026.** Elas,   não estão sem nome: o endpoint que as nomeia é `getChatTags`, e ele **não responde**,   pelas filas `[15]` e `[20]` (desabilitadas, `QUEUE_008`) nem pelas `[18]` e `[22]` (a,   chave global não alcança, `AUTH_018`). Ver a seção 3 de `perguntas-agencia.md`.,   ⚠️ **A lista antiga já estava obsoleta e ninguém percebeu:** ela citava `[6]` com 77,   usos como sem nome, e `[6] GUILHERME` está em `getChatTags` desde 17/08. Contagem de,   "desconhecidos" envelhece em silêncio — ela só cresce quando alguém a recalcula.,   **Vira pedido ao suporte**, não espera pelo Marcos (que já disse não conseguir,   rastrear por ID na interface — esse caminho estava fechado desde o começo).
+1. ~~**Os nomes das 21 etiquetas sem nome**~~ — **a pergunta mudou em 20/08/2026.** Elas
+   não estão sem nome: o endpoint que as nomeia é `getChatTags`, e ele **não responde**
+   pelas filas `[15]` e `[20]` (desabilitadas, `QUEUE_008`) nem pelas `[18]` e `[22]` (a
+   chave global não alcança, `AUTH_018`). Ver a seção 3 de `perguntas-agencia.md`.
+   ⚠️ **A lista antiga já estava obsoleta e ninguém percebeu:** ela citava `[6]` com 77
+   usos como sem nome, e `[6] GUILHERME` está em `getChatTags` desde 17/08. Contagem de
+   "desconhecidos" envelhece em silêncio — ela só cresce quando alguém a recalcula.
+   **Vira pedido ao suporte**, não espera pelo Marcos (que já disse não conseguir
+   rastrear por ID na interface — esse caminho estava fechado desde o começo).
    **Tratamento:** balde explícito **"etiqueta não identificada"**, com o ID e a
    contagem VISÍVEIS na tela. Nunca somem em silêncio — `else` vazio já escondeu coisa
    demais em projeto deste estúdio.
@@ -1035,7 +1043,11 @@ perguntas antes de qualquer feature ser escrita:
    volta oportunidade encerrada? Isso decide se há backfill retroativo de fechados.
 4. **Quantas ganhas têm `closerecurrentvalue` preenchido?** É o risco nº 2 abaixo —
    precisa ser medido ANTES de prometer a tela de MRR.
-5. ~~**Os IDs de `tags` da oportunidade batem com `getTags`?**~~ ✅ **RESPONDIDA em,   20/08/2026: é UM espaço de IDs só.** As oportunidades carregam etiquetas dos dois,   endpoints — `[4]`, `[9]`, `[26]`, `[39]` vêm de `getTags` e `[6]`, `[12]`, `[13]` de,   `getChatTags`. Não são namespaces paralelos; são duas janelas parciais para a mesma,   lista. (pergunta original: `getTags` está sob a tag
+5. ~~**Os IDs de `tags` da oportunidade batem com `getTags`?**~~ ✅ **RESPONDIDA em
+   20/08/2026: é UM espaço de IDs só.** As oportunidades carregam etiquetas dos dois
+   endpoints — `[4]`, `[9]`, `[26]`, `[39]` vêm de `getTags` e `[6]`, `[12]`, `[13]` de
+   `getChatTags`. Não são namespaces paralelos; são duas janelas parciais para a mesma
+   lista. (pergunta original: `getTags` está sob a tag
    *Contatos* e diz "etiquetas de contatos" — pode ser outro namespace.)
 
 ## Coleções planejadas
