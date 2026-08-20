@@ -527,6 +527,28 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   varra a ASSINATURA do defeito no resto do lote** (aqui, `grep -c ",   "`). É a mesma
   frase de sempre, no lugar mais fácil de esquecer: quem confia no próprio script está
   descrevendo a intenção, não o resultado.
+
+  🛑🛑 **E O MELHOR EXEMPLO DISSO ACONTECEU COMIGO, NO MESMO DIA EM QUE ESCREVI A REGRA.**
+  Encadeei `ls docs/ && grep -c ",   " arquivo && git add -A && git commit …` e imprimi
+  `"push ok"`. **O arquivo nunca foi commitado.** Duas coisas se somaram, e cada uma
+  sozinha já é uma armadilha:
+
+  1. **O `&&` herda o código de saída de comandos que não medem o que se quer provar.**
+     `grep -c` sai com **1** quando encontra ZERO — e zero era o resultado DESEJADO. A
+     conferência de qualidade passando é o que interrompeu a gravação. **Todo comando
+     numa cadeia `&&` vira uma pré-condição, inclusive os que só queriam informar.**
+  2. **O `"ok"` impresso veio de um comando SEM RELAÇÃO com a afirmação.** O `echo`
+     estava depois de um `;`, num `git push` que rodou sozinho e teve sucesso — porque
+     não havia nada para empurrar. Sucesso genuíno de uma pergunta que ninguém fez.
+
+  **A única coisa que pegou foi conferir o ESTADO depois** — `git status` mostrou o
+  arquivo ainda como não rastreado. É literalmente a régua deste parágrafo, e ela só
+  funcionou porque foi aplicada, não porque estava escrita.
+  🔑 **A régua prática: numa cadeia que termina em escrita, use `;` para o que informa e
+  `&&` só para o que é pré-condição de verdade.** E depois de gravar, pergunte ao
+  ESTADO, nunca ao código de saída: `git status`, `git cat-file -e`, um `get` do
+  documento. **Código de saída descreve o último comando; estado descreve o mundo.**
+  É a mesma frase de sempre, no lugar mais fácil de esquecer.
 - ⚠️ **ATUALIZAR A CONFERÊNCIA É PARTE DA MUDANÇA, NÃO ETAPA POSTERIOR.** Conferência que
   não acompanha a regra vira ruído (acusa o que está certo) ou falso negativo (aprova o que
   está errado) — e nos dois casos ela para de valer justamente quando mais precisaria.
