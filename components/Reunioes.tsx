@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Reuniao } from "@/lib/types";
 import { useAgenda } from "@/lib/useAgenda";
 import { chaveDia, hhmm, rotuloDia, chavesHojeAmanha } from "@/lib/formatAgenda";
-import { TEMA } from "@/lib/brand";
+import { MARCA, TEMA } from "@/lib/brand";
 
 const CARD = TEMA.card;
 const LINE = TEMA.borda;
@@ -85,7 +85,10 @@ export default function Reunioes() {
     <div>
       <div className="mb-6">
         <h1 className="text-lg font-semibold text-brand-ink">Pautas e Reuniões</h1>
-        <p className="text-[13px]" style={{ color: MUTED }}>Próximos {DIAS} dias · agenda da Influência.</p>
+        {/* ⚠️ `MARCA.agencia` também aqui: é uma FRASE, não um rótulo de logo, mas o
+            PAPEL é o mesmo — identifica a agência dentro da interface. Se o starter
+            for para outro cliente, esta frase tem que mudar junto com a sidebar. */}
+        <p className="text-[13px]" style={{ color: MUTED }}>Próximos {DIAS} dias · agenda da {MARCA.agencia}.</p>
       </div>
 
       {erro ? (

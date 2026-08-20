@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebaseClient";
 import { useAuth } from "./AuthProvider";
-import { TEMA } from "@/lib/brand";
+import { MARCA, TEMA } from "@/lib/brand";
 import { MENU_PRINCIPAL, MENU_EM_BREVE } from "@/lib/menu";
 import NodeMark from "./NodeMark";
 
@@ -43,7 +43,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       {/* Slot da logo: dimensionado para receber o SVG/PNG definitivo. */}
       <div className="flex h-16 items-center gap-2.5 px-5">
         <NodeMark />
-        <span className="text-lg font-semibold">Influência</span>
+        <span className="text-lg font-semibold">{MARCA.agencia}</span>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3">
@@ -115,7 +115,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       >
         <button onClick={() => setAberto(true)} aria-label="Abrir menu" className="text-xl leading-none">☰</button>
         <NodeMark size={22} />
-        <span className="font-semibold">Influência</span>
+        <span className="font-semibold">{MARCA.agencia}</span>
       </div>
 
       <div className="flex">

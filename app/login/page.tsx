@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebaseClient";
 import { useAuth } from "@/components/AuthProvider";
-import { TEMA } from "@/lib/brand";
+import { MARCA, TEMA } from "@/lib/brand";
 import NodeMark from "@/components/NodeMark";
 
 // Tokens do tema (fonte única: lib/brand.ts). Antes esta tela redeclarava as
@@ -54,7 +54,7 @@ export default function LoginPage() {
         {/* Slot da logo: dimensionado para receber o SVG/PNG definitivo. */}
         <div className="mb-8 flex h-8 items-center gap-2.5">
           <NodeMark />
-          <span className="text-lg font-semibold" style={{ color: TEXTO }}>Influência</span>
+          <span className="text-lg font-semibold" style={{ color: TEXTO }}>{MARCA.agencia}</span>
         </div>
 
         <h1 className="mb-1 text-xl font-semibold" style={{ color: TEXTO }}>Entrar no painel</h1>

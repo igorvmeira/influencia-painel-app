@@ -174,6 +174,12 @@ export interface ConfigXmax {
  * passa no mesmo `queueId=7`. Isolamos a causa — o `queueId` está certo (é a fila
  * "Influência Marketing", ativa), o valor da chave é que está errado.
  *
+ * ⚠️ ESSE "Influência Marketing" É O NOME DA FILA NO XMAX, NÃO A NOSSA MARCA — e por
+ * acaso ele coincide, letra por letra, com `MARCA.tituloAba`. É o caso 3 da régua do
+ * CLAUDE.md: valor igual, conceito diferente. Se a agência renomear a fila no CRM, este
+ * texto muda e `MARCA.tituloAba` não; se o starter for para outro cliente, acontece o
+ * inverso. Uma varredura por VALOR vai achar os dois — **este não se troca.**
+ *
  * E há um motivo melhor do que "a outra não funciona": **os dados do CRM são
  * GLOBAIS À INSTÂNCIA, não por fila.** Medido: o funil 1 devolve as mesmas 52
  * oportunidades com queueId 7, 17 ou 19. O `queueId` autentica, não recorta. Ou
