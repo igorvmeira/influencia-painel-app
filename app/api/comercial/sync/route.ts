@@ -556,7 +556,7 @@ export async function GET(req: Request) {
      */
     const lido = await db.collection(COL_AGREGADO).doc("funil").get();
     const dadosLidos = lido.data() as {
-      funil?: { niveis?: { pessoasNaEtapa?: { mesEntrada?: string | null; faixaPorte?: number | null }[] }[] };
+      funil?: { niveis?: { pessoasNaEtapa?: { mesEntrada?: string | null; faixaPorte?: number | null; semPerfil?: boolean }[] }[] };
       porte?: { corte?: string; nivelConfiavel?: number; carteira?: { comAlgumaFaixa?: number } };
     } | undefined;
     const listasLidas = (dadosLidos?.funil?.niveis ?? []).flatMap((x) => x.pessoasNaEtapa ?? []);
@@ -564,6 +564,10 @@ export async function GET(req: Request) {
     // ⚠️ CAMPO NOVO DESTA LEVA: `faixaPorte` e o bloco `porte`. Mesma pergunta de sempre
     // — não "o objeto estava certo", e sim "o que existe no banco".
     const comFaixaNoBanco = listasLidas.filter((x) => typeof x.faixaPorte === "number").length;
+    // ⚠️ `semPerfil` é BOOLEANO: o que se confere é o CAMPO EXISTIR, não ser `true`.
+    // Contar só os `true` confundiria "não chegou" com "chegou e é false" — e a maioria
+    // É false, então o número pareceria zero justamente quando estivesse tudo certo.
+    const comCampoSemPerfil = listasLidas.filter((x) => typeof x.semPerfil === "boolean").length;
     const porteNoBanco = dadosLidos?.porte;
     agregadoNoBanco = {
       docExiste: lido.exists,
@@ -580,13 +584,15 @@ export async function GET(req: Request) {
         nivelConfiavel: porteNoBanco?.nivelConfiavel ?? null,
         carteiraComFaixa: porteNoBanco?.carteira?.comAlgumaFaixa ?? null,
         pessoasComFaixaNasListas: comFaixaNoBanco,
+        comCampoSemPerfil,
+        marcadasSemPerfilNasListas: listasLidas.filter((x) => x.semPerfil === true).length,
         /**
          * ⚠️ NÃO se compara `pessoasComFaixaNasListas` com `carteiraComFaixa`: as listas
          * cobrem só quem está NO FUNIL com oportunidade aberta, e a carteira cobre todo o
          * funil 4. Populações diferentes — a igualdade seria coincidência, não conferência.
          * O que se afirma aqui é só que o bloco CHEGOU e o campo existe em alguém.
          */
-        chegou: !!porteNoBanco && comFaixaNoBanco > 0,
+        chegou: !!porteNoBanco && comFaixaNoBanco > 0 && comCampoSemPerfil === listasLidas.length,
       },
     };
     await db.collection(COL_SISTEMA).doc(DOC_SYNC_COMERCIAL).set({
