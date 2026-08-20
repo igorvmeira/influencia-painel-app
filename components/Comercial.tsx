@@ -1168,6 +1168,14 @@ function ehRedundante(nome: string, titulo: string | null): boolean {
   return normal(nome) === normal(titulo);
 }
 
+/**
+ * O id da `[38] Sem Perfil` quando ela aparece como LINHA DA TELA na distribuição.
+ *
+ * ⚠️ Não vem de `FAIXAS_PORTE` de propósito: lá ela não entra, porque marca
+ * DESQUALIFICAÇÃO e não tamanho. Aqui é só a chave de uma linha clicável.
+ */
+const TAG_SEM_PERFIL_TELA = 38;
+
 function SecaoPorte({
   porte, niveis,
 }: {
@@ -1266,6 +1274,44 @@ function SecaoPorte({
    * corte um dia cair no meio de um mês, esta comparação passa a arredondar para trás e
    * precisa mudar junto.
    */
+  /**
+   * A FAIXA ABERTA — `38` é a `[38] Sem Perfil`, que entra como sexta linha clicável.
+   *
+   * ⚠️ ELA NÃO VIRA UMA SEXTA FAIXA no modelo: continua contada à parte e fora de
+   * `FAIXAS_PORTE`. Aqui ela é só mais uma linha da TELA, e o id serve de chave.
+   */
+  const [faixaAberta, setFaixaAberta] = useState<number | null>(null);
+
+  /**
+   * QUEM DÁ PARA LISTAR — e por que não são todos.
+   *
+   * ⚠️⚠️ A BARRA CONTA A CARTEIRA; O CLIQUE LISTA O FUNIL. Das pessoas com faixa, só as
+   * que têm oportunidade ABERTA aparecem em `pessoasNaEtapa` — e são só elas que têm
+   * "etapa atual" e "há quanto tempo". Para quem não tem oportunidade viva esses dois
+   * campos NÃO EXISTEM: listá-la produziria uma linha com as colunas vazias, e linha
+   * vazia parece dado FALTANDO quando é dado INEXISTENTE.
+   *
+   * 🔑 Por isso o modal abre com "N de M" — o denominador é o da barra, e a diferença
+   * é explicada. Sem isso, a lista contradiz o gráfico logo acima dela.
+   */
+  const doFunil = niveis.flatMap((nv) =>
+    nv.pessoasNaEtapa.map((x) => ({ ...x, nivelNome: nv.nome })));
+  const listaDaFaixa = faixaAberta === null ? [] : doFunil
+    .filter((x) => (faixaAberta === TAG_SEM_PERFIL_TELA ? x.semPerfil : x.faixaPorte === faixaAberta))
+    // Mesma ordem da pendência, pelo mesmo motivo: mais parado primeiro, sem data no fim.
+    .sort((a, b) => {
+      if ((a.diasParado === null) !== (b.diasParado === null)) return a.diasParado === null ? 1 : -1;
+      return (b.diasParado ?? 0) - (a.diasParado ?? 0);
+    });
+
+  /** O total da CARTEIRA para a faixa aberta — o denominador do modal. */
+  const totalDaFaixa = faixaAberta === null ? 0
+    : faixaAberta === TAG_SEM_PERFIL_TELA ? porte.desqualificacao.pessoas
+      : porte.carteira.faixas.find((f) => f.id === faixaAberta)?.pessoas ?? 0;
+  const nomeDaFaixa = faixaAberta === null ? ""
+    : faixaAberta === TAG_SEM_PERFIL_TELA ? "Sem Perfil"
+      : porte.carteira.faixas.find((f) => f.id === faixaAberta)?.nome ?? "";
+
   const mesDoCorte = porte.corte.slice(0, 7);
   const daEraNova = (x: { mesEntrada: string | null }) =>
     x.mesEntrada !== null && x.mesEntrada >= mesDoCorte;
@@ -1450,9 +1496,23 @@ function SecaoPorte({
             {/* ⚠️ ORDEM, NÃO COR. As faixas são ORDINAIS (menos de 1k < ... < mais de
                 10k): três cores sobre cinco itens ordenados inventariam um agrupamento
                 que não existe, e a rampa categórica tem três séries de propósito. */}
-            {porte.carteira.faixas.map((f, i) => (
-              <div key={f.id} className="flex items-center gap-3">
-                <span className="w-32 text-[12px]" style={{ color: MUTED }}>{f.nome}</span>
+            {/* ⚠️ A LINHA INTEIRA É O ALVO, não o número — mesma mecânica do nível. Um
+                alvo de 2 dígitos seria difícil de acertar e não anuncia que é clicável. */}
+            {[...porte.carteira.faixas,
+              /* A [38] entra como SEXTA LINHA DA TELA, não como sexta faixa do modelo. */
+              { id: TAG_SEM_PERFIL_TELA, nome: "Sem Perfil", pessoas: porte.desqualificacao.pessoas }]
+              .map((f, i) => (
+              <button
+                key={f.id}
+                type="button"
+                disabled={f.pessoas === 0}
+                onClick={() => f.pessoas > 0 && setFaixaAberta(f.id)}
+                /* ⚠️ Hover em CLASSE, nunca em `style` inline: inline vence stylesheet e
+                   o hover não pintaria — sem erro e sem aviso. */
+                className="flex w-full items-center gap-3 rounded-lg px-2 py-1 text-left transition-colors hover:bg-brand-hover disabled:cursor-default disabled:hover:bg-transparent"
+                title={f.pessoas > 0 ? `Ver quem está em ${f.nome}` : undefined}
+              >
+                <span className="w-32 shrink-0 text-[12px]" style={{ color: MUTED }}>{f.nome}</span>
                 <BarraDado
                   pct={(f.pessoas / maxFaixa) * 100}
                   cor={TEMA.dadoNeutro}
@@ -1465,10 +1525,10 @@ function SecaoPorte({
                 />
                 {/* ⚠️ ABSOLUTO, nunca só percentual: faixa com 20 pessoas precisa
                     aparecer como 20 para quem lê poder descartá-la. */}
-                <span className="w-10 text-right text-[12.5px] tabular-nums font-mono" style={{ color: TEMA.texto }}>
+                <span className="w-10 shrink-0 text-right text-[12.5px] tabular-nums font-mono" style={{ color: TEMA.texto }}>
                   {n(f.pessoas)}
                 </span>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -1486,6 +1546,48 @@ function SecaoPorte({
           )}
         </div>
       </div>
+
+      {/* ---------- QUEM ESTÁ NESTA FAIXA ---------- */}
+      <Modal
+        aberto={faixaAberta !== null}
+        aoFechar={() => setFaixaAberta(null)}
+        titulo={`${nomeDaFaixa} — quem está nesta faixa`}
+        /**
+         * ⚠️⚠️ O DENOMINADOR É A PRIMEIRA COISA, e ele NÃO é o tamanho da lista. A barra
+         * conta a CARTEIRA; a lista mostra quem está no FUNIL agora. Sem esta frase o
+         * modal contradiz o gráfico que o abriu — e a pessoa conclui que sumiu gente.
+         */
+        subtitulo={
+          listaDaFaixa.length === totalDaFaixa
+            ? `${n(totalDaFaixa)} ${totalDaFaixa === 1 ? "pessoa" : "pessoas"}`
+            : `Mostrando ${n(listaDaFaixa.length)} de ${n(totalDaFaixa)}. As outras não têm oportunidade aberta — sem ela não existe etapa atual nem tempo parado.`
+        }
+      >
+        {listaDaFaixa.length === 0 ? (
+          /* ⚠️ VAZIO AMBÍGUO: aqui "nenhuma" nunca significa que a faixa está vazia — a
+             barra acabou de dizer que não está. Significa que ninguém dela está no funil. */
+          <div className="text-[13px]" style={{ color: MUTED }}>
+            Nenhuma das {n(totalDaFaixa)} está no funil agora. Elas existem na carteira, mas sem
+            {" "}oportunidade aberta não há etapa nem tempo para mostrar.
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {listaDaFaixa.map((pes, i) => (
+              <div key={`${pes.nome}-${i}`} className="flex items-baseline gap-3 text-[13px]">
+                <span className="min-w-0 flex-1 truncate" style={{ color: TEMA.texto }}>{pes.nome}</span>
+                {/* Mesma regra da pendência: o título só quando acrescenta. */}
+                <span className="min-w-0 flex-1 truncate" style={{ color: MUTED }}>
+                  {ehRedundante(pes.nome, pes.tituloCrm) ? "" : pes.tituloCrm ?? ""}
+                </span>
+                <span className="w-36 shrink-0 truncate text-right" style={{ color: MUTED }}>{pes.nivelNome}</span>
+                <span className="w-40 shrink-0 text-right tabular-nums font-mono" style={{ color: MUTED }}>
+                  {pes.diasParado === null ? "sem data no CRM" : `nesta etapa há ${n(pes.diasParado)}d`}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Modal>
     </Bloco>
   );
 }

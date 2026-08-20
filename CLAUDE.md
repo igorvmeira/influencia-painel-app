@@ -559,6 +559,20 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   **Corolário:** enquanto não fecha, os dois números **não vão lado a lado** em tela nem em
   reunião, nem para dizer que batem nem para dizer que divergem. Número divergente com
   régua desconhecida faz a conversa discutir quem está certo em vez de o que cada um mede.
+- ⚠️⚠️ **E A MESMA RÉGUA VALE PARA QUEM PEDE, NÃO SÓ PARA QUEM INVESTIGA: feature pedida
+  sobre campo que não existe para TODA a população vira linha vazia — e linha vazia
+  parece dado FALTANDO quando é dado INEXISTENTE.** As duas leituras levam a ações
+  opostas: a primeira manda consertar o sync, a segunda manda mudar a pergunta.
+  Caso real: o pedido foi "clicar na faixa e ver quem está nela, com a etapa atual e há
+  quanto tempo", para uma população de **290 pessoas**. Os dois campos vêm de
+  `stagebegintime`, que só existe em oportunidade ABERTA — e só **150** das 290 têm uma.
+  As outras 140 sairiam com as duas colunas vazias.
+  🔑 **E repare no que o número evitou:** a saída óbvia era gravar as 290 no agregado
+  (~30 kB). Isso teria pago o custo cheio para entregar 140 linhas incompletas. A
+  resposta certa custou ZERO bytes — listar as 150 que têm os campos, com o denominador
+  à vista ("mostrando 150 de 290, as outras não têm oportunidade aberta").
+  **A pergunta que faltava: este campo existe para todo mundo que a tela vai mostrar?**
+  Ela se responde antes de escrever, e muda o desenho em vez de virar bug depois.
 - ⚠️ **ANTES DE PAGAR O CUSTO DE UM MÉTODO, CONFIRME QUE A FONTE TEM O QUE VOCÊ FOI
   BUSCAR.** O método caro tende a ser planejado em detalhe — condições, salvaguardas,
   ordem dos passos — e essa preparação toda esconde que ninguém verificou o pressuposto
@@ -711,6 +725,20 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   continua perguntando, só não começa do zero); a constante importada num componente
   (motivo: **o bundle** → não foi mover o arquivo, foi **a tela deixar de conhecer a**
   **regra**, e aí não havia mais import).
+- 🛑 **ORDEM HERDADA DE OUTRA LISTA É ARBITRÁRIA COM APARÊNCIA DE INTENCIONAL — e isso
+  é PIOR que lista sem ordem.** Sem ordem alguém percebe e pergunta; herdada, ninguém
+  questiona, porque a lista *parece* ordenada por algum critério.
+  Caso real: a pendência de classificação reusava `pessoasNaEtapa`, que o servidor já
+  ordena por *sem valor primeiro, depois MRR decrescente* — a régua da pendência de
+  VALOR. Para a pergunta nova aquilo não significava nada, e a lista abria com uma
+  ordem que ninguém tinha escolhido.
+  **A régua: ao reusar uma lista já ordenada, a primeira pergunta é "ordenada por quê,
+  e para responder a qual pergunta?".** Se a pergunta é outra, a ordem é ruído — e
+  ruído na segunda tela de rolagem é onde ele custa mais, porque quem rola já perdeu a
+  referência do topo.
+  ⚠️ E reordenar não viola *"a tela recebe a decisão"* quando a lista é OUTRA: a ordem
+  do servidor continua valendo para a lista dele. O que não pode é a MESMA lista ter
+  duas ordens em dois lugares.
 - ⚠️ **Regra que mora no PONTO DE CHAMADA se perde na terceira tela.** Um card fazia
   `delta={semComparacao ? null : delta}` no render: funcionava, e dependia de todo uso
   futuro lembrar. Regra que define o comportamento do componente mora **dentro** dele.

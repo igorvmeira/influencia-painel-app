@@ -198,6 +198,18 @@ export interface PessoaNaEtapa {
    */
   faixaPorte: number | null;
   /**
+   * A pessoa tem a etiqueta `[38] Sem Perfil`?
+   *
+   * ⚠️ NÃO É UMA FAIXA, e por isso é campo SEPARADO em vez de mais um valor de
+   * `faixaPorte`. Ela marca DESQUALIFICAÇÃO, não tamanho — e as duas convivem: a mesma
+   * pessoa pode ter faixa E estar marcada como sem perfil. Enfiá-la em `faixaPorte`
+   * apagaria essa convivência e faria a soma das faixas fechar errado.
+   *
+   * Custa ~10 bytes por pessoa (~4,5 kB no documento) e existe para a tela poder listar
+   * QUEM está nesse balde, não só quantos.
+   */
+  semPerfil: boolean;
+  /**
    * O MÊS EM QUE A PESSOA ENTROU NO COMERCIAL ("YYYY-MM"), para a safra da /comercial.
    *
    * ⚠️ MESMA RÉGUA DO `leadsNovos`: sai de `primeiroContato`, que é o `createdAt` mais
@@ -608,6 +620,7 @@ export function montarAgregado(
           // ⚠️ null e não 0 quando não há valor informado — ver PessoaNaEtapa.
           mrrCent: valor > 0 ? valor : null,
           faixaPorte: faixaDe(p.id),
+          semPerfil: temSemPerfil(p.id),
         };
       })
       /**
