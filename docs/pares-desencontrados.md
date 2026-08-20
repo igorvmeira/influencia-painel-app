@@ -67,10 +67,6 @@ desde o commit 1b.
 
 ---
 
-
-Lista viva, aberta em **18/08/2026** durante a migração de marca 2026.
-Cada commit de tela (4 a 8) acrescenta o que achar; o **commit 10 fecha**.
-
 ## O que é um par desencontrado
 
 O `scripts/audita-tema.js` mede pares que **alguém declarou**: `["muted", "card", 4.5]`
