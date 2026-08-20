@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useComercial } from "@/lib/useComercial";
 import { useEntrada, atrasoDe } from "@/lib/useEntrada";
 import { TEMA, MOVIMENTO } from "@/lib/brand";
+// ⚠️ O mapa local saiu. Ele dizia "LEAD RECUPERADO — automação" e o CRM diz
+// "LEAD RECUPERADO- AUTOMAÇÃO": tinha DIVERGIDO da fonte sem ninguém notar.
+import { ETAPA_RECUPERADO_AUTOMACAO, nomeEtapa } from "@/lib/etapas";
 import SecaoHeader from "./SecaoHeader";
 import KpiCard from "./KpiCard";
 import BarraDado from "./BarraDado";
@@ -15,10 +18,6 @@ const AMBER = TEMA.atencao;
 const RED = TEMA.negativo;
 
 const n = (v: number) => v.toLocaleString("pt-BR");
-const NOME_ETAPA: Record<number, string> = {
-  113: "Recuperação de LEAD",
-  49: "LEAD RECUPERADO — automação",
-};
 
 /**
  * A VISÃO DE RECUPERAÇÃO — Variante B, decidida pelo Igor em 15/08/2026.
@@ -100,10 +99,10 @@ export default function Recuperacao() {
         {r.porEtapa.map((e) => (
           <KpiCard
             key={e.etapaId}
-            rotulo={NOME_ETAPA[e.etapaId] ?? `etapa ${e.etapaId}`}
+            rotulo={nomeEtapa(e.etapaId)}
             valor={e.pessoas}
             formatar={(v) => n(Math.round(v))}
-            base={e.etapaId === 49
+            base={e.etapaId === ETAPA_RECUPERADO_AUTOMACAO
               ? "A automação moveu para cá dizendo que recuperou. Estar aqui é reivindicação do sistema, não evidência de que o lead avançou."
               : "Aguardando reprocessamento. É de onde a automação puxa."}
           />

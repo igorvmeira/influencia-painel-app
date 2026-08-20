@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto";
 import { epochParaISO, criadaEm, OportunidadeXmax } from "./xmax";
+// ⚠️ Ids de etapa vêm de ./etapas — módulo NEUTRO (zero import), porque as telas
+// também precisam deles e ESTE arquivo importa `node:crypto` na linha 1.
+import { ETAPA_FECHAMENTO, ETAPA_RECUPERACAO_LEAD, ETAPA_RECUPERADO_AUTOMACAO } from "./etapas";
 
 /**
  * REGRAS DO FUNIL COMERCIAL — puras, sem I/O.
@@ -71,7 +74,9 @@ export function nivelMaisAvancado(etapas: Iterable<unknown>): number | null {
 }
 
 /** Etapa 20 (Fechamento) — o nível 5, isolado porque a Etapa E depende dele. */
-export const ETAPA_FECHAMENTO = 20;
+// ⚠️ REEXPORTADO de ./etapas, não redeclarado: dois `= 20` com o mesmo nome em
+// arquivos diferentes é exatamente a duplicação que a régua do CLAUDE.md caça.
+export { ETAPA_FECHAMENTO };
 
 /**
  * ⚠️ AS DUAS ETAPAS QUE SAEM DO FUNIL PRINCIPAL.
@@ -90,7 +95,7 @@ export const ETAPA_FECHAMENTO = 20;
  * tentaria tirá-lo das duas visões — e 35 pessoas estão SÓ nele. Sumiriam.
  * Recuperação = 838 pessoas com ele, 803 sem.
  */
-export const ETAPAS_RECUPERACAO = [113, 49] as const;
+export const ETAPAS_RECUPERACAO = [ETAPA_RECUPERACAO_LEAD, ETAPA_RECUPERADO_AUTOMACAO] as const;
 
 /**
  * ⚠️ NEGOCIAÇÃO É SÓ [27] E [20] — mudou em 15/08/2026, era [17,27,61,20] = 225.

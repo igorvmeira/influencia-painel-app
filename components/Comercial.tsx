@@ -11,6 +11,9 @@ import { useComercial } from "@/lib/useComercial";
  * agregado (ex.: `cobraValor`), nunca como constante importada.
  */
 import type { AgregadoComercial, SerieMes } from "@/lib/comercialAgregado";
+// ⚠️ Import de VALOR, e pode: @/lib/etapas não importa nada. Os ids e nomes NÃO
+// podiam vir de @/lib/comercial, que puxa `node:crypto` e mataria o build.
+import { nomeEtapa } from "@/lib/etapas";
 import { TEMA, MOVIMENTO } from "@/lib/brand";
 import { useEntrada, atrasoDe } from "@/lib/useEntrada";
 import SecaoHeader from "./SecaoHeader";
@@ -147,14 +150,6 @@ export default function Comercial() {
   const { ref: refFunil, entrou: entrouFunil } = useEntrada<HTMLDivElement>();
   const { ref: refIdade, entrou: entrouIdade } = useEntrada<HTMLDivElement>();
 
-  const nomeEtapa = useMemo(
-    () => new Map<number, string>([
-      [15, "Novo Lead — TRÁFEGO"], [114, "LEADS OUTBOUND"],
-      [118, "LEADS FUTUROS"], [138, "PROSPECÇÃO M&A"],
-      [134, "COMPRA E VENDA"], [61, "Nutrição Negociação"],
-    ]),
-    []
-  );
 
   // ⚠️ O ERRO MANTÉM O TÍTULO DA TELA e oferece saída. Sem o título, a pessoa não
   // sabe se errou de página; sem o botão, a única saída é recarregar o navegador
@@ -451,7 +446,6 @@ export default function Comercial() {
           refBloco={refFunil}
           entrou={entrouFunil}
           niveis={niveisVisiveis}
-          nomeEtapa={nomeEtapa}
           aoAbrir={setEtapaAberta}
           mostrarOportunidades={!safra}
         />
@@ -648,7 +642,7 @@ export default function Comercial() {
               {foraDoFunil.porEtapa.map((e) => (
                 <span key={e.etapaId} className="text-[12px]" style={{ color: MUTED }}>
                   <b className="tabular-nums" style={{ color: TEMA.texto }}>{n(e.pessoas)}</b>{" "}
-                  {nomeEtapa.get(e.etapaId) ?? `etapa ${e.etapaId}`}
+                  {nomeEtapa(e.etapaId)}
                 </span>
               ))}
             </div>
@@ -776,12 +770,11 @@ export default function Comercial() {
  * do trapézio em miniatura. A menor razão hoje é 23/248 = 9,3%, perfeitamente visível.
  */
 function FunilCentrado({
-  refBloco, entrou, niveis, nomeEtapa, aoAbrir, mostrarOportunidades = true,
+  refBloco, entrou, niveis, aoAbrir, mostrarOportunidades = true,
 }: {
   refBloco: React.RefObject<HTMLDivElement>;
   entrou: boolean;
   niveis: NivelDoFunil[];
-  nomeEtapa: Map<number, string>;
   aoAbrir: (nv: NivelDoFunil) => void;
   /**
    * ⚠️ FALSO SOB SAFRA, e não é economia de espaço: o nível conta OPORTUNIDADE pelas
@@ -862,7 +855,7 @@ function FunilCentrado({
                 {nv.porEtapa.map((e) => (
                   <span key={e.etapaId} className="text-[11.5px]" style={{ color: MUTED }}>
                     <b className="tabular-nums" style={{ color: TEMA.texto }}>{n(e.oportunidades)}</b>{" "}
-                    {nomeEtapa.get(e.etapaId) ?? `etapa ${e.etapaId}`}
+                    {nomeEtapa(e.etapaId)}
                   </span>
                 ))}
                 <span className="text-[11.5px]" style={{ color: MUTED }}>— mesmo degrau, duas portas de entrada</span>
