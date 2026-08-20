@@ -523,6 +523,29 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
     checando a regra antiga, reprovando dois níveis que estavam certos.
   **Antes de confiar num verde ou investigar um vermelho, releia o que o teste assume.** O
   primeiro suspeito de uma divergência é a régua, não o código medido.
+- 🛑🛑 **ANTES DE LISTAR CAUSAS, VEJA SE A RELAÇÃO ENTRE AS POPULAÇÕES JÁ TORNA O NÚMERO
+  IMPOSSÍVEL.** Subconjunto não pode ter mais elementos que o conjunto; soma de partes
+  não passa do total; interseção não é maior que o menor dos dois. **Uma identidade
+  dessas descarta hipóteses aos montes, de graça, e ANTES de qualquer investigação.**
+  Caso real: um agregado disse 290 pessoas com etiqueta onde a medição de uma hora antes
+  dizia 254. Foram levantadas três hipóteses de definição (a etiqueta errada entrou? a
+  régua de pessoa é outra? conta linha em vez de gente?) e as três foram conferidas lendo
+  o código. **Nenhuma precisava ter sido levantada:** a população do agregado era
+  SUBCONJUNTO da outra, e subconjunto maior é impossível. A causa real era um quarto
+  eixo — as duas leituras tinham FRESCORES diferentes.
+  🔑 **A régua: primeiro pergunte se o número pode existir; só depois por que ele existe.**
+  Investigar definição quando a aritmética já proibiu o valor é gastar leitura no eixo
+  errado — e o eixo certo (tempo, frescor, versão da fonte) fica intocado.
+  ⚠️ **Isto pega os DOIS lados da mesa.** Aqui foram duas pessoas olhando o mesmo par de
+  números, e nenhuma fez a conta de continência antes de discutir causas.
+- ⚠️ **NÚMERO LIDO DE CÓPIA SINCRONIZADA TEM A IDADE DO ÚLTIMO SYNC, NÃO A DO RELÓGIO.**
+  Medir a coleção do Firestore e dizer "medido hoje às 15:05" descreve o carimbo da
+  MEDIÇÃO, não o do DADO — a cópia reflete a fonte como ela estava no último sync, que
+  pode ser de ontem. E a rotina que grava costuma ler a fonte VIVA, então ela e o
+  diagnóstico enxergam mundos diferentes sem que nada esteja quebrado.
+  Caso real: o mesmo 254 acima foi apresentado como "a medição de hoje" quando descrevia
+  o CRM como estava no sync anterior. **Todo número tirado de cópia carrega DUAS datas —
+  a da leitura e a do sync — e só a segunda diz do que ele fala.**
 - ⚠️⚠️ **EXPLICAÇÃO QUE ACERTA A DIREÇÃO E NÃO FECHA O VALOR NÃO É EXPLICAÇÃO — é hipótese
   com aparência de conclusão.** E é **pior que não ter explicação nenhuma**, porque encerra
   a investigação: ninguém procura a causa de uma diferença que já foi "entendida".

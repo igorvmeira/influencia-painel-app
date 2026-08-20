@@ -494,15 +494,16 @@ export async function GET(req: Request) {
   let gravadas = 0;
   /** Preenchido pela leitura de volta do agregado — ver o bloco abaixo. */
   /**
-   * ⚠️ O NOME DA VARIÁVEL NÃO É O CAMINHO NA RESPOSTA. Isto sai como
-   * **`gravacao.agregado`**, não como `conferenciaDoBanco` — ver o `return` no fim.
+   * A leitura de volta do agregado. Sai na resposta em **`gravacao.agregado`**.
    *
-   * Custou uma investigação em 20/08/2026: procurei `conferenciaDoBanco` na raiz do
-   * JSON, recebi `null`, e li como "a leitura de volta não rodou". Tinha rodado, e o
-   * veredito estava certo — **a régua do teste é que estava errada, não o código.**
-   * Quem for ler o retorno procura por `gravacao.agregado.porte`.
+   * ⚠️ O NOME SEGUE O CAMINHO DE PROPÓSITO. Antes esta variável tinha outro nome e
+   * saía como `gravacao.agregado` — dois nomes para a mesma coisa. Em 20/08/2026 isso
+   * custou uma investigação: procurei o nome da VARIÁVEL na raiz do JSON, recebi
+   * `null` e li como "a leitura de volta não rodou". Tinha rodado, e o veredito estava
+   * certo — **a régua do teste é que estava errada, não o código.**
+   * Se o caminho na resposta mudar, este nome muda junto.
    */
-  let conferenciaDoBanco: Record<string, unknown> | null = null;
+  let agregadoNoBanco: Record<string, unknown> | null = null;
   const escrever = async <T extends { }>(col: string, itens: T[], idDe: (x: T) => string) => {
     for (let i = 0; i < itens.length; i += LOTE) {
       const batch = db.batch();
@@ -564,7 +565,7 @@ export async function GET(req: Request) {
     // — não "o objeto estava certo", e sim "o que existe no banco".
     const comFaixaNoBanco = listasLidas.filter((x) => typeof x.faixaPorte === "number").length;
     const porteNoBanco = dadosLidos?.porte;
-    conferenciaDoBanco = {
+    agregadoNoBanco = {
       docExiste: lido.exists,
       pessoasNoDocLido: listasLidas.length,
       comMesEntrada: comMesNoBanco,
@@ -602,6 +603,6 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     ...resposta,
-    gravacao: { ...(resposta.gravacao as object), gravadas, agregado: conferenciaDoBanco },
+    gravacao: { ...(resposta.gravacao as object), gravadas, agregado: agregadoNoBanco },
   });
 }

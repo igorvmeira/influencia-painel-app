@@ -1183,11 +1183,56 @@ function SecaoPorte({
   const nivelObj = niveis.find((x) => x.nivel === porte.nivelConfiavel);
   const faltam = doNivel ? doNivel.pessoas - doNivel.comFaixa : 0;
 
-  /** ⚠️ A FILA são as pessoas SEM faixa do nível confiável, na ordem que o servidor
-   *  já definiu. `faixaPorte === null` é SEM INFORMAÇÃO, nunca "pequeno". */
-  const semFaixa = (nivelObj?.pessoasNaEtapa ?? []).filter((x) => x.faixaPorte === null);
+  /**
+   * A PENDÊNCIA — quem está sem faixa a partir do nível 2.
+   *
+   * ⚠️⚠️ NÃO É SUGESTÃO, É PENDÊNCIA. O Thiago confirmou em 20/08/2026 que a marcação
+   * de porte é OBRIGATÓRIA no processo: o cliente declara a faixa no formulário e o
+   * vendedor aplica a etiqueta depois de conversar — porque na conversa o valor real
+   * costuma ser outro (declara 3k, apura-se 5k ou 10k). Quem está sem faixa está fora
+   * do processo, não "ainda não classificado".
+   *
+   * 🛑 E O NÍVEL 1 FICA DE FORA, com motivo: a etiqueta depende de a CONVERSA ter
+   * acontecido, e no Novo Lead ninguém conversou ainda. Os ~1% de cobertura ali são o
+   * ESPERADO, não falha. Cobrar etiqueta de quem ninguém falou seria o alarme que
+   * dispara todo dia — e ruído em pendência faz o resto ser ignorado.
+   *
+   * ⚠️ `faixaPorte === null` é SEM INFORMAÇÃO, nunca "pequeno".
+   */
+  const PRIMEIRO_NIVEL_COBRAVEL = 2;
+  const pendencia = niveis
+    .filter((nv) => nv.nivel >= PRIMEIRO_NIVEL_COBRAVEL)
+    // Mais avançado primeiro: quem está perto de fechar sem classificação é o que
+    // custa mais caro deixar passar.
+    .sort((a, b) => b.nivel - a.nivel)
+    .flatMap((nv) => nv.pessoasNaEtapa
+      .filter((x) => x.faixaPorte === null)
+      .map((x) => ({ ...x, nivelNome: nv.nome, nivel: nv.nivel })));
 
   const maxFaixa = Math.max(1, ...porte.carteira.faixas.map((f) => f.pessoas));
+
+  /**
+   * A CAUSA DA CURVA — 🔑 CALCULADA, NUNCA ESCRITA.
+   *
+   * O Thiago explicou em 20/08/2026 por que a cobertura sobe de ~1% no Novo Lead para
+   * ~24% na Negociação: a etiqueta depende de a CONVERSA ter acontecido, e o vendedor
+   * só aplica depois de apurar o valor real (o cliente declara 3k, apura-se 5k).
+   *
+   * ⚠️ MAS A FRASE É DERIVADA DO DADO, e é isso que a torna segura: ela só aparece
+   * enquanto o nível 1 estiver ABAIXO do nível 2. Se um dia o Novo Lead subir — porque
+   * o processo mudou, ou porque a etiqueta passou a vir do formulário — a explicação
+   * some sozinha, em vez de continuar na tela afirmando o contrário do gráfico ao lado.
+   * Mesma mecânica da frase do alargamento do funil.
+   *
+   * ⚠️ Sem denominador não há taxa: nível vazio devolve `null` e não entra na conta —
+   * `0 de 0` não é "cobertura zero".
+   */
+  const taxa = (nv?: { pessoas: number; comFaixa: number }) =>
+    nv && nv.pessoas > 0 ? nv.comFaixa / nv.pessoas : null;
+  const t1 = taxa(porte.porNivel.find((x) => x.nivel === 1));
+  const t2 = taxa(porte.porNivel.find((x) => x.nivel === PRIMEIRO_NIVEL_COBRAVEL));
+  const curvaTemCausa = t1 !== null && t2 !== null && t1 < t2;
+  const pct = (v: number) => `${(v * 100).toFixed(1).replace(".", ",")}%`;
 
   return (
     <Bloco
@@ -1216,13 +1261,21 @@ function SecaoPorte({
         </div>
 
         {/* ---------- A FILA: quem falta etiquetar ---------- */}
-        {semFaixa.length > 0 && (
+        {pendencia.length > 0 && (
           <div>
-            <div className="mb-2 text-[12px] uppercase" style={{ color: MUTED, letterSpacing: ".05em" }}>
-              Quem falta etiquetar
+            {/* ⚠️ O RÓTULO DIZ O QUE É. "Quem falta etiquetar" soava observação; a
+                marcação é obrigatória, então isto é pendência de processo. */}
+            <div className="mb-1 text-[12px] uppercase" style={{ color: MUTED, letterSpacing: ".05em" }}>
+              Pendente de classificação — {n(pendencia.length)} {pendencia.length === 1 ? "pessoa" : "pessoas"}
+            </div>
+            {/* ⚠️ O MOTIVO DO RECORTE VAI JUNTO DO RECORTE. Sem esta linha, alguém
+                soma a pendência com o nível 1 e conclui que falta gente na lista. */}
+            <div className="mb-2 text-[12px]" style={{ color: MUTED }}>
+              A partir de {porte.porNivel.find((x) => x.nivel === PRIMEIRO_NIVEL_COBRAVEL)?.nome ?? "Follow-up"}.
+              {" "}O Novo Lead não entra: a etiqueta depende de a conversa ter acontecido.
             </div>
             <div className="space-y-1">
-              {semFaixa.map((pes, i) => (
+              {pendencia.map((pes, i) => (
                 /* ⚠️ `key` é o índice porque nome se repete e o agregado não publica id
                    de pessoa nesta lista — é a mesma escolha do QuemEstaParado. */
                 <div key={`${pes.nome}-${i}`} className="flex items-baseline gap-3 text-[13px]">
@@ -1230,6 +1283,9 @@ function SecaoPorte({
                   {/* ⚠️ "título no CRM", NUNCA "empresa" — o Xmax mistura nome e empresa
                       no mesmo campo e partir a string afirmaria o que não se sabe. */}
                   <span className="min-w-0 flex-1 truncate" style={{ color: MUTED }}>{pes.tituloCrm ?? "—"}</span>
+                  {/* ⚠️ A ETAPA na linha porque a lista atravessa níveis: sem ela, duas
+                      pessoas em situações diferentes viram a mesma linha. */}
+                  <span className="w-36 truncate text-right" style={{ color: MUTED }}>{pes.nivelNome}</span>
                   {/* ⚠️ "nesta etapa", não "no funil": o `stagebegintime` zera quando a
                       pessoa volta atrás e avança de novo. O CRM não guarda o caminho. */}
                   <span className="w-40 text-right tabular-nums font-mono" style={{ color: MUTED }}>
@@ -1270,8 +1326,19 @@ function SecaoPorte({
               </div>
             ))}
           </div>
+          {/* A CAUSA CONHECIDA da subida — só enquanto o dado a sustentar. */}
+          {curvaTemCausa && (
+            <div className="mt-2 text-[12px]" style={{ color: MUTED }}>
+              A cobertura sobe ao longo do funil ({pct(t1!)} no Novo Lead contra {pct(t2!)} no
+              {" "}{porte.porNivel.find((x) => x.nivel === PRIMEIRO_NIVEL_COBRAVEL)?.nome ?? "Follow-up"})
+              {" "}porque <b>a etiqueta depende da conversa</b>: o cliente declara a faixa no
+              {" "}formulário e o vendedor aplica depois de apurar o valor real.
+            </div>
+          )}
           {/* ⚠️ O NÍVEL 5 SEM CAUSA INVENTADA. Dizer O QUE acontece sem afirmar o PORQUÊ
-              é melhor que uma causa plausível: causa plausível ENCERRA a investigação. */}
+              é melhor que uma causa plausível: causa plausível ENCERRA a investigação.
+              ⚠️ E repare no contraste com a frase acima: aquela tem causa MEDIDA e dita
+              pelo dono do processo; esta não tem, e por isso fica sem. */}
           <div className="mt-2 text-[12px]" style={{ color: MUTED }}>
             O Fechamento aparece com cobertura quase zero e isso <b>não está explicado</b>:
             quase todo mundo que está lá entrou antes de {porte.corte.split("-").reverse().join("/")},

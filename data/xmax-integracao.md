@@ -873,6 +873,50 @@ vezes*. Um clone pode não ter campanha vinculada, e um lead de campanha pode se
 
 ---
 
+## 📋 MEDIÇÃO ADIADA: o valor DECLARADO está em campo estruturado? — 20/08/2026
+
+**Contexto (Thiago, 20/08/2026):** a marcação de porte é obrigatória mas manual — o cliente
+declara a faixa no formulário do perfil e o **vendedor aplica a etiqueta depois de
+conversar**, porque na conversa o valor real costuma ser outro (declara 3k, apura-se 5k ou
+10k).
+
+**Se o declarado estiver em campo estruturado**, dá para mostrar *declarado × apurado* — e a
+diferença entre os dois é informação sobre a QUALIDADE DO LEAD que chega, não sobre o
+cliente. É a única coisa nesta seção que mediria o funil de entrada em vez do cadastro.
+
+### O que a spec já responde, de graça
+
+✅ **`formsdata` EXISTE** no `OpportunityObject` — `type: object`, e a descrição diz:
+*"A chave da propriedade é o ID do campo no formulário personalizado, e o valor é o valor
+do campo."* Então é estruturado, não texto solto.
+
+🛑 **MAS NÃO HÁ ENDPOINT QUE NOMEIE OS CAMPOS.** Varridos os operationIds: nenhum
+`getForms`, `getFormFields` ou equivalente. O retorno seria `{ "17": "3k a 5k" }` **sem
+nenhuma forma de saber o que é o campo 17** pela API.
+
+⚠️ **É a mesma família do `getChatTags` que não responde por 4 das 7 filas:** o dado existe
+e a via de acesso não alcança o significado dele. E é o tipo de coisa que só aparece ANTES
+de pagar o método — a sondagem seria escrita, rodaria, devolveria chaves numéricas, e aí
+alguém descobriria que falta o mapa.
+
+### Como medir quando houver oportunidade
+
+**Custo: uma chamada de API, zero Firestore.** `getOpportunity` numa oportunidade que
+SABIDAMENTE tem faixa declarada, e imprimir as chaves de `formsdata`.
+
+Três resultados possíveis, e só o primeiro destrava:
+
+| resultado | o que fazer |
+|---|---|
+| `formsdata` traz a faixa, e o id do campo é estável | dá para cruzar — o mapa id→nome sai à mão, uma vez |
+| `formsdata` vem vazio nas oportunidades reais | o formulário não é usado; esquece |
+| a faixa só aparece no `title` | **esquece** — partir string afirmaria o que não se sabe |
+
+⚠️ **Não medir agora foi decisão do Igor**, e a razão é a mesma de sempre: sondagem tem
+valor quando destrava decisão, e a Demanda 2 já está no ar sem isto.
+
+---
+
 ## ⚠️ 254 contra 290 — os dois números medem COISAS DIFERENTES, e a comparação era minha
 
 O diagnóstico de 20/08/2026 às 15:05 mediu **254** pessoas com faixa. O agregado gravado
