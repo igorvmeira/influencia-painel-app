@@ -18,6 +18,18 @@ import { montarPainel } from "./painel";
 // significado. Ela continua no total (o gasto é real), mas não vira "destaque".
 export const PISO_CONVERSOES_DESTAQUE = 5;
 
+/**
+ * Percentual do movimento que a medida de concentração persegue: "quantas contas
+ * explicam X% da variação".
+ *
+ * ⚠️ Era literal em DOIS lugares — o `>= 80` do laço e o "80% do movimento" escrito em
+ * prosa na /gestores. Limiar vivo descrito em texto fixo é a frase que ninguém revisa
+ * quando o número muda.
+ *
+ * 🛑 E o nome do campo `contasPara80Pct` crava o valor. Ver o aviso na declaração dele.
+ */
+export const CONCENTRACAO_PCT = 80;
+
 /** Piso de conversões para um GESTOR concorrer ao selo de melhor evolução. */
 // Calibrado com a distribuição real de julho/2026: o menor gestor tinha 5
 // conversões no mês inteiro e o penúltimo tinha 919 — qualquer corte entre 10 e
@@ -57,7 +69,14 @@ export interface Destaques {
   aFavor: ContribuicaoConta[];
   /** As que empurraram na direção CONTRÁRIA (seguraram o resultado). */
   contrarias: ContribuicaoConta[];
-  /** Quantas contas explicam 80% do movimento — medida de concentração. */
+  /**
+   * Quantas contas explicam `CONCENTRACAO_PCT`% do movimento — medida de concentração.
+   *
+   * 🛑 O NOME DO CAMPO CRAVA O 80 e a constante não. Se `CONCENTRACAO_PCT` mudar, este
+   * nome passa a MENTIR — e mentira em nome de campo não quebra nada, só desinforma
+   * quem lê. Renomear ripple no agregado, então fica declarado em vez de silencioso:
+   * **trocar a constante obriga a renomear este campo junto.**
+   */
   contasPara80Pct: number;
   entradas: ContribuicaoConta[];
   saidas: ContribuicaoConta[];
@@ -330,10 +349,10 @@ export function calcularDestaques(
   const melhorou = deltaCpl < 0;
   const naDirecao = (c: ContribuicaoConta) => (melhorou ? c.contribuicao < 0 : c.contribuicao > 0);
 
-  // Quantas contas explicam 80% do movimento (concentração).
+  // Quantas contas explicam CONCENTRACAO_PCT% do movimento (concentração).
   let acumulado = 0, contasPara80Pct = 0;
   for (const c of contribuicoes) {
-    if (acumulado >= 80) break;
+    if (acumulado >= CONCENTRACAO_PCT) break;
     acumulado += c.pesoPct;
     contasPara80Pct++;
   }

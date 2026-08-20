@@ -10,6 +10,11 @@ import { usePeriodoGlobal, MES_NENHUM } from "./PeriodoGlobalProvider";
 import { brl, brlDec, num } from "@/lib/format";
 import { TEMA } from "@/lib/brand";
 import { ContaMap, LinhaCliente } from "@/lib/types";
+// ⚠️ LIMIAR VIVO NÃO SE ESCREVE EM PROSA. Os dois textos abaixo diziam "~95 dias"
+// à mão; se a retenção mudar, a frase continua afirmando o número velho com a
+// autoridade de texto escrito. Só o VALOR viaja — nenhuma regra vem junto.
+import { RETENCAO_DIAS } from "@/lib/agregadas";
+import { CONCENTRACAO_PCT } from "@/lib/destaques";
 import {
   calcularDestaques, ContribuicaoConta, Destaques,
   serieCplDiaria, elegibilidadeDestaque, PISO_CONVERSOES_DESTAQUE, PISO_CONVERSOES_GESTOR,
@@ -107,7 +112,7 @@ function motivoDoAparo(
   if (!meses.length) return "não há mês fechado na janela de dados de tráfego";
   const p = chave(pedido);
   if (p > chave(meses[0])) return "ele ainda não fechou";
-  if (p < chave(meses[meses.length - 1])) return "ele está fora da janela de dados de tráfego (~95 dias)";
+  if (p < chave(meses[meses.length - 1])) return `ele está fora da janela de dados de tráfego (~${RETENCAO_DIAS} dias)`;
   return "ele não tem o mês anterior inteiro na janela, então não haveria comparação";
 }
 
@@ -389,7 +394,7 @@ export default function Gestores() {
         </div>
       ) : !comparaveis.length || !janela || !painel ? (
         <div className="rounded-xl px-4 py-3 text-[13px]" style={{ background: TEMA.limiteFundo, color: AMBAR }}>
-          Ainda não há dois meses fechados completos na janela de dados (~95 dias).
+          Ainda não há dois meses fechados completos na janela de dados (~{RETENCAO_DIAS} dias).
           A comparação fica disponível quando o histórico alcançar o mês anterior inteiro.
         </div>
       ) : (
@@ -882,7 +887,7 @@ function BlocoDestaques({ d }: { d: NonNullable<ReturnType<typeof calcularDestaq
         </span>
         <span style={{ color: MUTED }}>
           · <strong style={{ color: TEMA.texto }}>{d.contasPara80Pct}</strong>
-          {d.contasPara80Pct === 1 ? " conta explica" : " contas explicam"} 80% do movimento
+          {d.contasPara80Pct === 1 ? " conta explica" : " contas explicam"} {CONCENTRACAO_PCT}% do movimento
         </span>
       </div>
 

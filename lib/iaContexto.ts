@@ -1,4 +1,9 @@
 import { getDadosDiarios } from "./data";
+// ⚠️ O LIMIAR VEM DE lib/alertas.ts, NÃO É LITERAL AQUI.
+// Antes este arquivo tinha `>= 0.8` no filtro e "80%" na frase logo abaixo — duas
+// cópias do mesmo limiar, nenhuma ligada à régua dos alertas. Calibrar LIMITE_ATENCAO
+// mudaria a TELA e não mudaria o que a IA DESCREVE, e frase de IA ninguém confere.
+import { LIMITE_ATENCAO } from "./alertas";
 import { montarPainel, montarNichos } from "./painel";
 import { brl, brlDec, num } from "./format";
 
@@ -43,10 +48,10 @@ export async function montarContextoIA(periodoDias: number): Promise<string> {
   l.push("", "== CONTAS PERTO DO LIMITE DE GASTO (spend_cap > 0) ==");
   const mapaConta = new Map(contas.map((c) => [c.accountId, c]));
   const perto = limites
-    .filter((x) => x.spendCap > 0 && x.amountSpent / x.spendCap >= 0.8)
+    .filter((x) => x.spendCap > 0 && x.amountSpent / x.spendCap >= LIMITE_ATENCAO)
     .sort((a, b) => b.amountSpent / b.spendCap - a.amountSpent / a.spendCap);
   if (!perto.length) {
-    l.push("Nenhuma conta com teto acima de 80% de uso.");
+    l.push(`Nenhuma conta com teto acima de ${Math.round(LIMITE_ATENCAO * 100)}% de uso.`);
   } else {
     for (const x of perto) {
       const c = mapaConta.get(x.accountId);
