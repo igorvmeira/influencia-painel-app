@@ -35,13 +35,25 @@ import { nomeEtapa } from "@/lib/etapas";
 // ⚠️ `mesLocal` e NÃO `slice(0, 7)` do ISO: um primeiro contato às 22h de 31/07 em
 // Brasília cai em 01/08 no UTC e muda de mês. Reusar a MESMA função da /comercial é
 // o que faz os meses daqui baterem com os de lá — outra regra daria outro número.
-import { mesLocal } from "@/lib/comercialAgregado";
+import { mesLocal, diaLocal } from "@/lib/comercialAgregado";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const COL_OP = "comercial_oportunidades";
+
+/**
+ * Fronteira entre a ERA SEM ETIQUETA e a ERA COM ETIQUETA, medida em 20/08/2026:
+ * 24 meses entre 0% e 9,5%, depois 18,5% em jun/26, 13,1% em jul/26 e 70,8% em ago/26.
+ * A [38] Sem Perfil aparece pela primeira vez em jun/26, coerente com a etiqueta ter
+ * sido criada em 29/06/2026.
+ *
+ * ⚠️ É UMA ESCOLHA, NÃO UM FATO. O CRM não guarda quando uma etiqueta foi aplicada;
+ * esta data é onde a SÉRIE vira, não onde o processo mudou. Ajustável por `?corte=`
+ * exatamente para a conclusão não depender de um número escrito à mão.
+ */
+const CORTE_ERA_PADRAO = "2026-06-01";
 
 /**
  * As CINCO faixas de tamanho. `[38] Sem Perfil` fica de fora de propósito —
@@ -79,6 +91,9 @@ export async function GET(req: Request) {
   const barrado = checarCronSecret(req);
   if (barrado) return barrado;
 
+  const corte = (new URL(req.url).searchParams.get("corte") ?? "").match(/^\d{4}-\d{2}-\d{2}$/)?.[0]
+    ?? CORTE_ERA_PADRAO;
+
   const db = getDb();
   if (!db) return NextResponse.json({ ok: false, erro: "Firebase não configurado" }, { status: 500 });
 
@@ -97,6 +112,11 @@ export async function GET(req: Request) {
   const porEtapaOp = new Map<number, { total: number; comFaixa: number }>();
   // 3) quem marca — no nível da OPORTUNIDADE, que é onde a etiqueta pousa.
   const porResponsavel = new Map<number, { total: number; comFaixa: number }>();
+  // etapa -> era. "antes" = oportunidade CRIADA antes do corte. ⚠️ Aqui a data é a da
+  // OPORTUNIDADE, não a da pessoa: a pergunta sobre a etapa 28 é sobre aquelas linhas.
+  const porEtapaEra = new Map<number, {
+    antes: number; antesComFaixa: number; depois: number; depoisComFaixa: number;
+  }>();
 
   for (const d of snap.docs) {
     const o = d.data() as {
@@ -127,6 +147,16 @@ export async function GET(req: Request) {
       e.total++;
       if (temFaixa) e.comFaixa++;
       porEtapaOp.set(etapa, e);
+
+      const dia = diaLocal(typeof o.criadaEm === "string" ? o.criadaEm : null);
+      const era = porEtapaEra.get(etapa)
+        ?? { antes: 0, antesComFaixa: 0, depois: 0, depoisComFaixa: 0 };
+      // ⚠️ Sem data NÃO vira "antes". Cai fora dos dois lados, e a soma denuncia.
+      if (dia) {
+        if (dia < corte) { era.antes++; if (temFaixa) era.antesComFaixa++; }
+        else { era.depois++; if (temFaixa) era.depoisComFaixa++; }
+      }
+      porEtapaEra.set(etapa, era);
     }
 
     if (!chave) continue;
@@ -252,6 +282,37 @@ export async function GET(req: Request) {
       parteDoTotal: frac(v.total, totalOps),
     }));
 
+  // ---- o corte de era -------------------------------------------------------
+  const antesDoCorte = (pes: Pessoa) => {
+    const dia = diaLocal(pes.primeiroContato);
+    return dia === null ? null : dia < corte;
+  };
+  const nivelPorEra = [...NIVEIS_FUNIL.map((n) => ({ nivel: n.nivel as number | null, nome: n.nome as string })),
+                       { nivel: null, nome: "fora do funil de captação" }]
+    .map((n) => {
+      const lista = comTel.filter((pes) => pes.nivelMax === n.nivel);
+      const antes = lista.filter((pes) => antesDoCorte(pes) === true);
+      const depois = lista.filter((pes) => antesDoCorte(pes) === false);
+      return {
+        nivel: n.nivel, nome: n.nome, pessoas: lista.length,
+        antesDoCorte: { pessoas: antes.length, comFaixa: frac(antes.filter(temFaixa).length, antes.length) },
+        deCorteEmDiante: { pessoas: depois.length, comFaixa: frac(depois.filter(temFaixa).length, depois.length) },
+        // 🛑 A LINHA QUE RESPONDE: quantos entraram DEPOIS do corte e mesmo assim
+        // não têm faixa. Zero = resíduo histórico. Diferente de zero = buraco.
+        depoisSemFaixa: depois.filter((pes) => !temFaixa(pes)).length,
+        semData: lista.length - antes.length - depois.length,
+      };
+    });
+
+  const etapaPorEra = [...porEtapaEra.entries()]
+    .sort((a, b) => (b[1].antes + b[1].depois) - (a[1].antes + a[1].depois))
+    .map(([id, v]) => ({
+      etapaId: id, nome: nomeEtapa(id),
+      antesDoCorte: { oportunidades: v.antes, comFaixa: frac(v.antesComFaixa, v.antes) },
+      deCorteEmDiante: { oportunidades: v.depois, comFaixa: frac(v.depoisComFaixa, v.depois) },
+      depoisSemFaixa: v.depois - v.depoisComFaixa,
+    }));
+
   return NextResponse.json({
     ok: true,
     aviso:
@@ -323,6 +384,22 @@ export async function GET(req: Request) {
           oportunidades: v.total,
           comAlgumaFaixa: frac(v.comFaixa, v.total),
         })),
+    },
+
+    // A ERA — o 0,8% do Fechamento é buraco de processo ou resíduo histórico?
+    corteDeEra: {
+      corte,
+      pergunta:
+        "se os sem-faixa das pontas do funil entraram TODOS antes do corte, não há "
+        + "buraco de processo: é resíduo da era sem etiqueta, e a data resolve sozinha. "
+        + "Se houver gente DEPOIS do corte sem faixa, aí é buraco de verdade.",
+      nota:
+        "⚠️ `corte` é ESCOLHA, não fato — o CRM não guarda quando uma etiqueta foi "
+        + "aplicada. Ajustável por ?corte=AAAA-MM-DD. Em `porNivel` a data é a de "
+        + "ENTRADA DA PESSOA; em `porEtapa` é a da OPORTUNIDADE, porque a pergunta "
+        + "sobre a etapa 28 é sobre aquelas linhas, não sobre as pessoas delas.",
+      porNivel: nivelPorEra,
+      porEtapa: etapaPorEra,
     },
 
     // 1) A DATA — a cobertura mudou ao longo do tempo?
