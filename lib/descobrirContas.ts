@@ -15,7 +15,7 @@
  */
 
 import type { Firestore } from "firebase-admin/firestore";
-import { CandidataFila, FilaContas, Ignorada } from "./filaContas";
+import { CandidataFila, FilaContas, Ignorada, LOTE_SONDA, STATUS_ROTULO, bare } from "./filaContas";
 
 const API = process.env.META_API_VERSION || "v21.0";
 const TOKEN = process.env.META_ACCESS_TOKEN || "";
@@ -55,17 +55,8 @@ const MAX_SONDAS = 25;
  * órfãos podem ser limpos sem perder nada.
  */
 const COLECOES_RASTRO = ["limitesConta", "metricasAgregadas"] as const;
-/** Sondas simultâneas — mesmo valor do /api/diagnostico-contas. */
-const LOTE_SONDA = 8;
-
-/** Rótulos de `account_status` (mesma tabela do /api/diagnostico-contas). */
-const STATUS_ROTULO: Record<number, string> = {
-  1: "ACTIVE", 2: "DISABLED", 3: "UNSETTLED", 7: "PENDING_RISK_REVIEW",
-  8: "PENDING_SETTLEMENT", 9: "IN_GRACE_PERIOD", 100: "PENDING_CLOSURE",
-  101: "CLOSED", 201: "ANY_ACTIVE", 202: "ANY_CLOSED",
-};
-
-const bare = (s: string) => String(s || "").replace(/^act_/, "");
+// LOTE_SONDA, STATUS_ROTULO e bare() vêm de ./filaContas — antes eram cópias locais
+// que concordavam por COMENTÁRIO, não por import. Ver a nota lá.
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
 
 interface AdAccount {

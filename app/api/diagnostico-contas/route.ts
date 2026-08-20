@@ -1,14 +1,30 @@
-// Rota de DIAGNÓSTICO da carteira (somente leitura). Não escreve, não apaga, não
-// cadastra nada. Nasceu temporária, mas virou ferramenta operacional recorrente —
-// é usada em toda conciliação com a planilha de monitoramento da agência.
+// ===========================================================================
+// 🛑 ISTO NÃO É UMA ROTA DE DIAGNÓSTICO. NÃO REMOVA "SEGUINDO A REGRA DA CASA".
+// ===========================================================================
+// A regra do estúdio é apagar o endpoint de diagnóstico ao fim da integração. Esta
+// rota NASCEU assim e deixou de ser: é FERRAMENTA OPERACIONAL RECORRENTE, usada em
+// toda conciliação com a planilha de monitoramento da agência, e no modo sondagem
+// antes de cadastrar qualquer conta que a agência mandar.
+//
+// Promovida formalmente em 20/08/2026. O nome ficou como está de propósito — ele
+// está no `data/README.md` em dois lugares e nos atalhos do Igor; renomear trocaria
+// custo real por ganho estético.
+//
+// Somente leitura: não escreve, não apaga, não cadastra nada.
 //
 // ===========================================================================
-// O TESTE DE ACESSO É A CONSULTA DIRETA, NÃO `me/adaccounts`
+// ⚠️⚠️ O TESTE DE ACESSO É A CONSULTA DIRETA, NÃO `me/adaccounts`
+//      ESTE PARÁGRAFO É O MOTIVO DE A ROTA EXISTIR. NÃO ENCURTE.
 // ===========================================================================
 // Esta rota já classificou contas por presença em `me/adaccounts`, e isso produziu
 // um diagnóstico ERRADO em 12/08/2026: 7 contas foram reportadas como "o token não
 // enxerga → precisa de parceria de BM" quando na verdade respondiam à consulta
-// direta e tinham gasto real (R$ 45,9 mil em 120 dias, que o painel não via).
+// direta e tinham gasto real — R$ 45,9 mil em 120 dias que o painel NÃO VIA.
+//
+// 🔑 Esse erro é a origem do rodapé permanente da /fila-contas ("fila vazia não
+// significa que não há contas novas"). O conhecimento não está em mais lugar
+// nenhum do código: é aqui e no lib/filaContas.ts. Apagar isto reabre um buraco
+// de R$ 45,9 mil que já custou uma conciliação inteira para ser encontrado.
 //
 // O motivo é simples: o sync chama `buscarDiario()`, que consulta
 // `/{accountId}/insights` DIRETO (lib/meta.ts). Ele nunca olha `me/adaccounts`.
@@ -33,6 +49,10 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/firebaseAdmin";
 import { checarCronSecret } from "@/lib/cronAuth";
 import { ContaMap } from "@/lib/types";
+// ⚠️ Constantes COMPARTILHADAS, não cópias locais. Antes esta rota tinha as suas,
+// com um comentário dizendo "mesmo valor do /api/diagnostico-contas" nos outros
+// arquivos — promessa, não vínculo. Extraídas em 20/08/2026.
+import { LOTE_SONDA, MOEDA_ACEITA, STATUS_ROTULO, bare } from "@/lib/filaContas";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -45,8 +65,7 @@ const TOKEN = process.env.META_ACCESS_TOKEN || "";
 // Teto de sondagens no modo padrão. Cada conta custa 1 requisição; sem teto, uma
 // carteira grande viraria uma varredura lenta e silenciosa. O corte é REPORTADO.
 const MAX_SONDAS = 40;
-// Sondas simultâneas — mantém a rota dentro do tempo da função sem serializar tudo.
-const LOTE_SONDA = 8;
+// LOTE_SONDA vem de @/lib/filaContas.
 // Janela PADRÃO de gasto do modo ?accountId (veiculação só se afere por gasto > 0).
 // Ajustável por chamada com ?dias=N — 30 responde "está rodando AGORA?", 120 responde
 // "rodou em algum momento?". As duas perguntas aparecem em toda conciliação.
@@ -60,21 +79,7 @@ interface AdAccount {
   account_status: number;
 }
 
-const STATUS_ROTULO: Record<number, string> = {
-  1: "ACTIVE",
-  2: "DISABLED",
-  3: "UNSETTLED",
-  7: "PENDING_RISK_REVIEW",
-  8: "PENDING_SETTLEMENT",
-  9: "IN_GRACE_PERIOD",
-  100: "PENDING_CLOSURE",
-  101: "CLOSED",
-  201: "ANY_ACTIVE",
-  202: "ANY_CLOSED",
-};
-
-// Normaliza "act_123"/"123" para o id numérico puro (o de-para usa "act_...").
-const bare = (s: string) => String(s || "").replace(/^act_/, "");
+// STATUS_ROTULO e bare() vêm de @/lib/filaContas.
 const idDe = (m: AdAccount) => m.id || `act_${m.account_id}`;
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -187,9 +192,10 @@ export async function GET(req: Request) {
   const pediuSondagem = url.searchParams.has("accountId");
   const alvoParam = url.searchParams.get("accountId") ?? "";
 
-  const snap = await db.collection("contas").get();
-  const dePara: ContaMap[] = snap.docs.map((d) => d.data() as ContaMap);
-  const deParaPorId = new Map(dePara.map((c) => [bare(c.accountId), c]));
+  // ⚠️ A VARREDURA DE `contas` SÓ ACONTECE NO MODO COMPARAÇÃO, e é ele quem precisa
+  // dela (compara o de-para INTEIRO contra o que o token lista). O modo sondagem
+  // pagava as ~117 leituras para olhar 1 a 40 contas — varrer coleção a cada chamada
+  // é justamente o padrão que o CLAUDE.md manda evitar. Corrigido em 20/08/2026.
 
   // =========================================================================
   // MODO SONDAGEM: ?accountId=act_1,act_2 — testa ids avulsos (ex.: os que a
@@ -219,10 +225,33 @@ export async function GET(req: Request) {
       ? Math.min(Math.floor(diasParam), DIAS_GASTO_MAX)
       : DIAS_GASTO;
 
+    // ---------------------------------------------------------------------
+    // BUSCA DIRIGIDA no de-para: só os ids pedidos, não a coleção inteira.
+    // ---------------------------------------------------------------------
+    // ⚠️⚠️ O FALLBACK NÃO É ZELO EXCESSIVO — SEM ELE A ROTA MENTE NA DIREÇÃO CARA.
+    // O docId COSTUMA ser o accountId (docs novos), mas docs antigos têm outro docId
+    // e o accountId só no campo — é por isso que `app/api/contas/route.ts` faz o mesmo
+    // fallback. Se a busca por docId falhasse sozinha, a conta cadastrada apareceria
+    // como `jaCadastrada: null` e `passaNasConferencias: true` — ou seja, a ferramenta
+    // usada para decidir cadastro convidaria a cadastrar de novo o que já existe.
+    // Errar para "já cadastrada" custa uma conferência; errar para "pode cadastrar"
+    // custa uma conta duplicada no painel.
+    const refs = ids.map((id) => db.collection("contas").doc(id));
+    const porDocId = await db.getAll(...refs);
+    const achadas = new Map<string, ContaMap>();
+    porDocId.forEach((d, i) => { if (d.exists) achadas.set(bare(ids[i]), d.data() as ContaMap); });
+
+    // Só os que o docId não resolveu pagam a consulta por campo.
+    const faltantes = ids.filter((id) => !achadas.has(bare(id)));
+    await Promise.all(faltantes.map(async (id) => {
+      const q = await db.collection("contas").where("accountId", "==", id).limit(1).get();
+      if (!q.empty) achadas.set(bare(id), q.docs[0].data() as ContaMap);
+    }));
+
     const sondados = await emLotes(ids, LOTE_SONDA, async (id) => {
       const s = await sondar(id);
       const gasto = s.acessivelDireto ? await sondarGasto(id, dias) : null;
-      const conta = deParaPorId.get(bare(id));
+      const conta = achadas.get(bare(id));
       return {
         accountId: id,
         ...s,
@@ -236,10 +265,10 @@ export async function GET(req: Request) {
         // conta pertence a um cliente da carteira é decisão humana, contra a
         // planilha de monitoramento. A conta fantasma act_191616327202757 passava
         // nas duas conferências e mesmo assim não era cliente de ninguém.
-        passaNasConferencias: s.acessivelDireto && s.moeda === "BRL" && !conta,
+        passaNasConferencias: s.acessivelDireto && s.moeda === MOEDA_ACEITA && !conta,
         motivo: !s.acessivelDireto ? "sem acesso — precisa de parceria de Business Manager"
           : conta ? "já está no de-para"
-          : s.moeda !== "BRL" ? `moeda ${s.moeda} — o painel não converte moeda (ver data/README.md)`
+          : s.moeda !== MOEDA_ACEITA ? `moeda ${s.moeda} — o painel não converte moeda (ver data/README.md)`
           : null,
       };
     });
@@ -251,6 +280,8 @@ export async function GET(req: Request) {
       criterio: "consulta direta a /{accountId} e /{accountId}/insights — o mesmo caminho do sync",
       // Ecoa a janela USADA (não a pedida): quem lê o número sabe de que recorte ele é.
       janelaGastoDias: dias,
+      // Custo declarado: quem lê sabe que esta chamada NÃO varreu a coleção.
+      leiturasFirestore: `${ids.length} por docId + ${ids.length - achadas.size} por campo`,
       total: sondados.length,
       passamNasConferencias: sondados.filter((s) => s.passaNasConferencias).length,
       contas: sondados,
@@ -262,6 +293,11 @@ export async function GET(req: Request) {
   // MODO PADRÃO: compara o de-para com o que o token LISTA, e sonda os dois lados
   // divergentes pela consulta direta.
   // =========================================================================
+  // Aqui a varredura É a pergunta: comparar o de-para INTEIRO com o que o token lista.
+  const snap = await db.collection("contas").get();
+  const dePara: ContaMap[] = snap.docs.map((d) => d.data() as ContaMap);
+  const deParaPorId = new Map(dePara.map((c) => [bare(c.accountId), c]));
+
   let metaContas: AdAccount[];
   try {
     metaContas = await buscarContasMeta();
@@ -285,7 +321,7 @@ export async function GET(req: Request) {
       moeda: s.moeda,
       acessivelDireto: s.acessivelDireto,
       // Conferências TÉCNICAS apenas — ver a nota no modo sondagem.
-      passaNasConferencias: s.acessivelDireto && s.moeda === "BRL",
+      passaNasConferencias: s.acessivelDireto && s.moeda === MOEDA_ACEITA,
     };
   });
 

@@ -21,8 +21,58 @@
  * manual, nunca o julgamento.
  */
 
+// =========================================================================
+// VOCABULÁRIO COMPARTILHADO DE CONTA META
+// =========================================================================
+// ⚠️ ESTAS CONSTANTES MORAM AQUI PORQUE ANTES ELAS CONCORDAVAM POR COMENTÁRIO.
+// `lib/descobrirContas.ts` e `app/api/diagnostico-contas/route.ts` tinham cópias
+// próprias, cada uma com um `// mesmo valor do /api/diagnostico-contas` em cima —
+// que é uma promessa, não um vínculo. Extraídas em 20/08/2026.
+//
+// 🔑 E o achado da extração não foi divergência de VALOR: as cópias concordavam.
+// Foi a `MOEDA_ACEITA`, que existia aqui como constante exportada COM MOTIVO
+// escrito e, na rota, como o literal `"BRL"` em três lugares. Valor igual, e a
+// rota estava fora da decisão compartilhada: um `grep MOEDA_ACEITA` nunca a
+// encontraria. **Cópia que a busca não acha é pior que cópia divergente** — a
+// divergente pelo menos aparece quando alguém compara.
+
 /** Moeda aceita. Conta em outra moeda APARECE na fila, marcada — nunca escondida. */
 export const MOEDA_ACEITA = "BRL";
+
+/**
+ * Sondas simultâneas contra a Meta. Mantém as rotas dentro do tempo da função sem
+ * serializar tudo, e sem disparar centenas em paralelo.
+ */
+export const LOTE_SONDA = 8;
+
+/**
+ * Rótulos de `account_status` da Meta.
+ *
+ * ⚠️⚠️ STATUS ≠ ATIVIDADE. `1 ACTIVE` diz que a conta está REGULAR (não desabilitada,
+ * não encerrada) — **não** que há campanha rodando. Veiculação só se afere por gasto
+ * > 0 no período. Confundir os dois já custou a classificação errada de 3 contas.
+ */
+export const STATUS_ROTULO: Record<number, string> = {
+  1: "ACTIVE",
+  2: "DISABLED",
+  3: "UNSETTLED",
+  7: "PENDING_RISK_REVIEW",
+  8: "PENDING_SETTLEMENT",
+  9: "IN_GRACE_PERIOD",
+  100: "PENDING_CLOSURE",
+  101: "CLOSED",
+  201: "ANY_ACTIVE",
+  202: "ANY_CLOSED",
+};
+
+/**
+ * Normaliza "act_123" e "123" para o id numérico puro.
+ *
+ * ⚠️ Existe porque o de-para grava com o prefixo e a Meta devolve os dois formatos.
+ * Comparar sem normalizar é join que falha em silêncio — a conta parece não
+ * cadastrada e alguém a cadastra de novo.
+ */
+export const bare = (s: string) => String(s || "").replace(/^act_/, "");
 
 /**
  * Mensagem do 403, compartilhada entre a rota e a tela.
