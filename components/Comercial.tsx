@@ -1149,6 +1149,25 @@ function SerieMensal({ itens }: { itens: SerieMes[] }) {
    DISTRIBUIÇÃO vira manchete sozinha e a fila desce. Não é dívida técnica — é a
    tela seguindo o dado.
    ========================================================================= */
+/**
+ * O título do CRM repete o nome?
+ *
+ * ⚠️ REGRA ESTRUTURAL, NÃO LISTA. Compara as duas strings normalizadas — minúsculas, sem
+ * acento, espaços colapsados. Não conhece nenhum nome específico e não precisa conhecer:
+ * "Marivaldo Provedor" == "marivaldo provedor" some, e "MAERCIO | MIO TELECOM" contra
+ * "Maercio Jose Diniz | Mio Telecom" fica, porque são mesmo campos diferentes.
+ *
+ * ⚠️ NÃO tenta ser esperto além disso. Um título que CONTÉM o nome mais outra coisa
+ * ("ALINNE | TEK TELECOM") acrescenta a empresa e precisa aparecer — recortar a parte
+ * repetida exigiria partir a string, que é exatamente o que o CRM não permite afirmar.
+ */
+function ehRedundante(nome: string, titulo: string | null): boolean {
+  if (!titulo) return true;
+  const normal = (x: string) =>
+    x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+  return normal(nome) === normal(titulo);
+}
+
 function SecaoPorte({
   porte, niveis,
 }: {
@@ -1230,6 +1249,29 @@ function SecaoPorte({
         return (b.diasParado ?? 0) - (a.diasParado ?? 0);
       }));
 
+  /**
+   * 🛑 SÓ A ERA EM QUE A MARCAÇÃO É EXIGIDA — sem isto a pendência abria com a era morta.
+   *
+   * Medido em 20/08/2026: as 20 primeiras linhas eram todas Fechamento, com 561d, 370d,
+   * 153d parados. E 126 das 130 pessoas do Fechamento entraram ANTES de junho/2026,
+   * quando ninguém etiquetava. **Ninguém vai etiquetar retroativamente um lead parado há
+   * 561 dias** — aquilo não era lista de trabalho, era arqueologia no topo de um alerta.
+   *
+   * ⚠️ O EXCLUÍDO É CONTADO, NUNCA SUMIDO. A linha abaixo da lista diz quantas ficaram
+   * de fora e por quê. Filtro silencioso num alerta é a mesma coisa que dobra escondendo
+   * alerta: some da tela, continua no código, e passa em todo teste.
+   *
+   * ⚠️ GRANULARIDADE: `mesEntrada` é "YYYY-MM" e o corte é um DIA. Comparar mês com mês
+   * inclui junho inteiro — que é o que se quer, já que o corte É o começo de junho. Se o
+   * corte um dia cair no meio de um mês, esta comparação passa a arredondar para trás e
+   * precisa mudar junto.
+   */
+  const mesDoCorte = porte.corte.slice(0, 7);
+  const daEraNova = (x: { mesEntrada: string | null }) =>
+    x.mesEntrada !== null && x.mesEntrada >= mesDoCorte;
+  const pendenciaAtual = pendencia.filter(daEraNova);
+  const forasDoCorte = pendencia.length - pendenciaAtual.length;
+
   const maxFaixa = Math.max(1, ...porte.carteira.faixas.map((f) => f.pessoas));
 
   /**
@@ -1282,12 +1324,12 @@ function SecaoPorte({
         </div>
 
         {/* ---------- A FILA: quem falta etiquetar ---------- */}
-        {pendencia.length > 0 && (
+        {pendenciaAtual.length > 0 && (
           <div>
             {/* ⚠️ O RÓTULO DIZ O QUE É. "Quem falta etiquetar" soava observação; a
                 marcação é obrigatória, então isto é pendência de processo. */}
             <div className="mb-1 text-[12px] uppercase" style={{ color: MUTED, letterSpacing: ".05em" }}>
-              Pendente de classificação — {n(pendencia.length)} {pendencia.length === 1 ? "pessoa" : "pessoas"}
+              Pendente de classificação — {n(pendenciaAtual.length)} {pendenciaAtual.length === 1 ? "pessoa" : "pessoas"}
             </div>
             {/* ⚠️ O MOTIVO DO RECORTE VAI JUNTO DO RECORTE. Sem esta linha, alguém
                 soma a pendência com o nível 1 e conclui que falta gente na lista. */}
@@ -1296,14 +1338,20 @@ function SecaoPorte({
               {" "}O Novo Lead não entra: a etiqueta depende de a conversa ter acontecido.
             </div>
             <div className="space-y-1">
-              {pendencia.map((pes, i) => (
+              {pendenciaAtual.map((pes, i) => (
                 /* ⚠️ `key` é o índice porque nome se repete e o agregado não publica id
                    de pessoa nesta lista — é a mesma escolha do QuemEstaParado. */
                 <div key={`${pes.nome}-${i}`} className="flex items-baseline gap-3 text-[13px]">
                   <span className="min-w-0 flex-1 truncate" style={{ color: TEMA.texto }}>{pes.nome}</span>
                   {/* ⚠️ "título no CRM", NUNCA "empresa" — o Xmax mistura nome e empresa
-                      no mesmo campo e partir a string afirmaria o que não se sabe. */}
-                  <span className="min-w-0 flex-1 truncate" style={{ color: MUTED }}>{pes.tituloCrm ?? "—"}</span>
+                      no mesmo campo e partir a string afirmaria o que não se sabe.
+                      🛑 E SÓ APARECE QUANDO ACRESCENTA: medido em 20/08/2026, o título
+                      repetia o nome em boa parte das linhas ("Marivaldo Provedor" nas duas
+                      colunas), gastando metade da largura para não informar nada. Quando
+                      DIFEREM eles são campos distintos e valem os dois. */}
+                  <span className="min-w-0 flex-1 truncate" style={{ color: MUTED }}>
+                    {ehRedundante(pes.nome, pes.tituloCrm) ? "" : pes.tituloCrm ?? ""}
+                  </span>
                   {/* ⚠️ A ETAPA na linha porque a lista atravessa níveis: sem ela, duas
                       pessoas em situações diferentes viram a mesma linha. */}
                   <span className="w-36 truncate text-right" style={{ color: MUTED }}>{pes.nivelNome}</span>
@@ -1315,6 +1363,14 @@ function SecaoPorte({
                 </div>
               ))}
             </div>
+            {/* ⚠️ O QUE FICOU DE FORA, CONTADO. Ver o aviso no cálculo de `pendenciaAtual`. */}
+            {forasDoCorte > 0 && (
+              <div className="mt-2 text-[12px]" style={{ color: MUTED }}>
+                Mais <b style={{ color: TEMA.texto }}>{n(forasDoCorte)}</b> de antes do corte, não listadas:
+                {" "}a marcação passou a ser exigida em {porte.corte.slice(5, 7)}/{porte.corte.slice(0, 4)},
+                {" "}e quem entrou antes disso não seria etiquetado retroativamente.
+              </div>
+            )}
           </div>
         )}
 
