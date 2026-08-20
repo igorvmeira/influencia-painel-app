@@ -459,6 +459,20 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
 - **E diga na estrutura até onde o número vale** (um campo como `porGrupoAte`), porque a
   parte conferida costuma cobrir menos que o resto do documento — e quem consome precisa
   rotular a janela em vez de assumir que é a mesma.
+- 🛑🛑 **BALDE SILENCIOSO QUE CAI PARA O LADO QUE CONFIRMA A HIPÓTESE É O PIOR TIPO DE
+  ERRO — ele passa despercebido JUSTAMENTE quando dá a resposta que se queria ouvir.**
+  Todo recorte tem um resto: registro sem data, sem chave, sem categoria. A pergunta
+  não é "onde ele cabe", é **"em que direção ele empurra a conclusão"**.
+  Caso real: medir se o 0,8% de cobertura no Fechamento era buraco de processo ou
+  resíduo de uma era sem etiqueta. O corte era `criadaEm < 2026-06-01`, e
+  oportunidade **sem data** cairia naturalmente em "antes" — o lado que CONFIRMA
+  "é resíduo histórico". Ela foi para fora dos dois lados, contada em `semData`.
+  ⚠️ **A régua não é "trate ausência com cuidado" — é ANTES DE ESCOLHER o destino do
+  resto, pergunte qual hipótese ele favorece.** Se favorecer a que você espera
+  confirmar, ele não pode entrar em lado nenhum: sai contado à parte, e quem lê
+  decide. É a mesma família da conferência que trata ausência como aprovação, no eixo
+  em que ela é mais difícil de ver — porque ali o erro dá errado, e aqui ele dá
+  **certo**, que é o que ninguém investiga.
 - ⚠️ **CONFERÊNCIA QUE TRATA AUSÊNCIA COMO APROVAÇÃO É CONFERÊNCIA QUE NÃO CONFERE.** Ao
   comparar duas fontes, é tentador pular o que existe num lado e não no outro — "não há o
   que comparar". Isso abre um buraco do tamanho de um registro inteiro: se a segunda fonte
@@ -697,6 +711,20 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   depois de já ter corrigido uma linha à mão, casa o prefixo da linha corrigida e produz
   `textoSobreDestaqueSobreDestaque`. Aqui o TypeScript pegou; num nome de classe CSS ou
   numa string, passaria.
+- ⚠️⚠️ **DATA DE CORTE É ESCOLHA, NÃO FATO — e sem o motivo escrito ela vira, três
+  meses depois, um fato que ninguém questiona.** Quando uma série muda de patamar, a
+  tentação é fixar a data da virada e seguir. Mas o que se observa é **onde a SÉRIE
+  vira**, não onde o PROCESSO mudou — e as duas só coincidem por sorte.
+  Caso real: a cobertura de etiqueta de porte salta de ~2% para 70,8% e a fronteira
+  natural parece ser junho/2026. Só que o CRM **não guarda quando uma etiqueta foi
+  aplicada**: a data é inferida da ENTRADA das pessoas, não da marcação. Pessoa antiga
+  etiquetada ontem aparece no mês antigo.
+  🔑 **A defesa é medir VÁRIOS cortes numa passada só.** Se o veredito for o mesmo em
+  todos, a virada é um DEGRAU e a conclusão não depende da data escolhida; se mudar,
+  é RAMPA e o número sozinho não vale. **Um corte só não tem como se defender** — e o
+  custo de três é zero quando eles cabem na mesma varredura.
+  ⚠️ E o motivo vai **na tela junto do número**, não só no doc: quem lê a tela não lê
+  o código, e "desde junho/2026" sem o porquê é indistinguível de um fato medido.
 - ⚠️⚠️ **ANTES DE COMPARAR UM PERCENTUAL CONTRA UM LIMIAR, DIGA SOBRE O QUE ELE É
   PERCENTUAL.** Um número correto sobre o denominador errado **passa na revisão, porque a
   conta fecha** — e sai plausível, que é o pior tipo de errado: ninguém investiga um número

@@ -880,6 +880,13 @@ Admin no `.env.local`) e foi apagada por decisão do Igor. Motivo: ela media cob
 porte varrendo o Firestore, e as 6 faixas passaram a vir nomeadas direto da API — manter
 rota bloqueada esperando credencial é dívida, não backup.
 
+🛑 **E UMA OBRIGAÇÃO QUE A DEMANDA 2 HERDA, decidida em 20/08/2026:** se a tela usar
+uma data de corte para separar a era com etiqueta da era sem, **o motivo da data vai
+NA TELA, junto do número**. `2026-06-01` é onde a SÉRIE vira, não onde o processo
+mudou — o CRM não guarda quando uma etiqueta foi aplicada, e a data é inferida da
+ENTRADA das pessoas. Sem essa frase, três meses depois ela vira um fato que ninguém
+questiona. Ver a régua no CLAUDE.md.
+
 **A pergunta que ela responderia volta com a Demanda 2, não antes.** Quando voltar, estes
 quatro achados de desenho evitam refazer a análise do zero:
 

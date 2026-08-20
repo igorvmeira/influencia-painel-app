@@ -49,11 +49,19 @@ const COL_OP = "comercial_oportunidades";
  * A [38] Sem Perfil aparece pela primeira vez em jun/26, coerente com a etiqueta ter
  * sido criada em 29/06/2026.
  *
- * ⚠️ É UMA ESCOLHA, NÃO UM FATO. O CRM não guarda quando uma etiqueta foi aplicada;
- * esta data é onde a SÉRIE vira, não onde o processo mudou. Ajustável por `?corte=`
- * exatamente para a conclusão não depender de um número escrito à mão.
+ * ⚠️⚠️ SÃO ESCOLHAS, NÃO FATOS. O CRM não guarda quando uma etiqueta foi aplicada;
+ * estas datas são onde a SÉRIE vira, não onde o processo mudou.
+ *
+ * 🔑 POR ISSO SÃO TRÊS, E NUMA PASSADA SÓ. Um corte sozinho não tem como se
+ * defender: se o veredito mudasse entre junho e agosto, a conclusão dependeria da
+ * data que EU escolhi, e ninguém saberia. Vendo os três lado a lado dá para ver se a
+ * virada é um DEGRAU (o veredito é o mesmo nos três) ou uma RAMPA (ele muda).
+ * Julho entra porque é o mês estranho da série — 13,1%, ABAIXO de junho.
+ *
+ * ⚠️ E o custo é o argumento: três cortes numa varredura contra três varreduras.
+ * O laço é o mesmo; o que multiplica são contadores em memória.
  */
-const CORTE_ERA_PADRAO = "2026-06-01";
+const CORTES_PADRAO = ["2026-06-01", "2026-07-01", "2026-08-01"];
 
 /**
  * As CINCO faixas de tamanho. `[38] Sem Perfil` fica de fora de propósito —
@@ -91,8 +99,11 @@ export async function GET(req: Request) {
   const barrado = checarCronSecret(req);
   if (barrado) return barrado;
 
-  const corte = (new URL(req.url).searchParams.get("corte") ?? "").match(/^\d{4}-\d{2}-\d{2}$/)?.[0]
-    ?? CORTE_ERA_PADRAO;
+  // ?cortes=AAAA-MM-DD,AAAA-MM-DD — o que não casar o formato é DESCARTADO, e se
+  // sobrar nada volta o padrão. Nunca aceita data malformada em silêncio.
+  const pedidos = (new URL(req.url).searchParams.get("cortes") ?? "")
+    .split(",").map((x) => x.trim()).filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x));
+  const cortes = pedidos.length ? pedidos.sort() : CORTES_PADRAO;
 
   const db = getDb();
   if (!db) return NextResponse.json({ ok: false, erro: "Firebase não configurado" }, { status: 500 });
@@ -112,11 +123,13 @@ export async function GET(req: Request) {
   const porEtapaOp = new Map<number, { total: number; comFaixa: number }>();
   // 3) quem marca — no nível da OPORTUNIDADE, que é onde a etiqueta pousa.
   const porResponsavel = new Map<number, { total: number; comFaixa: number }>();
-  // etapa -> era. "antes" = oportunidade CRIADA antes do corte. ⚠️ Aqui a data é a da
-  // OPORTUNIDADE, não a da pessoa: a pergunta sobre a etapa 28 é sobre aquelas linhas.
-  const porEtapaEra = new Map<number, {
-    antes: number; antesComFaixa: number; depois: number; depoisComFaixa: number;
-  }>();
+  // etapa -> um contador POR CORTE. ⚠️ Aqui a data é a da OPORTUNIDADE, não a da
+  // pessoa: a pergunta sobre a etapa 28 é sobre aquelas 1.641 linhas.
+  interface Era { antes: number; antesComFaixa: number; depois: number; depoisComFaixa: number }
+  const eraVazia = (): Era[] => cortes.map(() => ({ antes: 0, antesComFaixa: 0, depois: 0, depoisComFaixa: 0 }));
+  const porEtapaEra = new Map<number, Era[]>();
+  // ⚠️ Sem data fica FORA dos dois lados e é contado à parte — nunca somado a "antes".
+  const porEtapaSemData = new Map<number, number>();
 
   for (const d of snap.docs) {
     const o = d.data() as {
@@ -149,14 +162,20 @@ export async function GET(req: Request) {
       porEtapaOp.set(etapa, e);
 
       const dia = diaLocal(typeof o.criadaEm === "string" ? o.criadaEm : null);
-      const era = porEtapaEra.get(etapa)
-        ?? { antes: 0, antesComFaixa: 0, depois: 0, depoisComFaixa: 0 };
-      // ⚠️ Sem data NÃO vira "antes". Cai fora dos dois lados, e a soma denuncia.
+      const eras = porEtapaEra.get(etapa) ?? eraVazia();
       if (dia) {
-        if (dia < corte) { era.antes++; if (temFaixa) era.antesComFaixa++; }
-        else { era.depois++; if (temFaixa) era.depoisComFaixa++; }
+        cortes.forEach((c, i) => {
+          if (dia < c) { eras[i].antes++; if (temFaixa) eras[i].antesComFaixa++; }
+          else { eras[i].depois++; if (temFaixa) eras[i].depoisComFaixa++; }
+        });
+      } else {
+        // 🛑 BALDE SILENCIOSO QUE CAI PARA O LADO QUE CONFIRMA A HIPÓTESE é o pior
+        // tipo de erro: passa despercebido justamente quando dá a resposta que se
+        // queria ouvir. "Sem data" cairia naturalmente em "antes" — que é o lado que
+        // CONFIRMA "é resíduo histórico". Fica fora dos dois e sai contado.
+        porEtapaSemData.set(etapa, (porEtapaSemData.get(etapa) ?? 0) + 1);
       }
-      porEtapaEra.set(etapa, era);
+      porEtapaEra.set(etapa, eras);
     }
 
     if (!chave) continue;
@@ -283,34 +302,44 @@ export async function GET(req: Request) {
     }));
 
   // ---- o corte de era -------------------------------------------------------
-  const antesDoCorte = (pes: Pessoa) => {
+  /** `null` = sem data. NUNCA `true` — ver o aviso do balde silencioso no laço. */
+  const antesDe = (pes: Pessoa, c: string) => {
     const dia = diaLocal(pes.primeiroContato);
-    return dia === null ? null : dia < corte;
+    return dia === null ? null : dia < c;
   };
   const nivelPorEra = [...NIVEIS_FUNIL.map((n) => ({ nivel: n.nivel as number | null, nome: n.nome as string })),
                        { nivel: null, nome: "fora do funil de captação" }]
     .map((n) => {
       const lista = comTel.filter((pes) => pes.nivelMax === n.nivel);
-      const antes = lista.filter((pes) => antesDoCorte(pes) === true);
-      const depois = lista.filter((pes) => antesDoCorte(pes) === false);
       return {
         nivel: n.nivel, nome: n.nome, pessoas: lista.length,
-        antesDoCorte: { pessoas: antes.length, comFaixa: frac(antes.filter(temFaixa).length, antes.length) },
-        deCorteEmDiante: { pessoas: depois.length, comFaixa: frac(depois.filter(temFaixa).length, depois.length) },
-        // 🛑 A LINHA QUE RESPONDE: quantos entraram DEPOIS do corte e mesmo assim
-        // não têm faixa. Zero = resíduo histórico. Diferente de zero = buraco.
-        depoisSemFaixa: depois.filter((pes) => !temFaixa(pes)).length,
-        semData: lista.length - antes.length - depois.length,
+        semData: lista.filter((pes) => antesDe(pes, cortes[0]) === null).length,
+        cortes: cortes.map((c) => {
+          const antes = lista.filter((pes) => antesDe(pes, c) === true);
+          const depois = lista.filter((pes) => antesDe(pes, c) === false);
+          return {
+            corte: c,
+            antes: { pessoas: antes.length, comFaixa: frac(antes.filter(temFaixa).length, antes.length) },
+            emDiante: { pessoas: depois.length, comFaixa: frac(depois.filter(temFaixa).length, depois.length) },
+            // 🛑 A LINHA QUE RESPONDE: entraram DEPOIS do corte e mesmo assim não têm
+            // faixa. Zero = resíduo histórico. Diferente de zero = buraco de processo.
+            depoisSemFaixa: depois.filter((pes) => !temFaixa(pes)).length,
+          };
+        }),
       };
     });
 
   const etapaPorEra = [...porEtapaEra.entries()]
-    .sort((a, b) => (b[1].antes + b[1].depois) - (a[1].antes + a[1].depois))
+    .sort((a, b) => (b[1][0].antes + b[1][0].depois) - (a[1][0].antes + a[1][0].depois))
     .map(([id, v]) => ({
       etapaId: id, nome: nomeEtapa(id),
-      antesDoCorte: { oportunidades: v.antes, comFaixa: frac(v.antesComFaixa, v.antes) },
-      deCorteEmDiante: { oportunidades: v.depois, comFaixa: frac(v.depoisComFaixa, v.depois) },
-      depoisSemFaixa: v.depois - v.depoisComFaixa,
+      semData: porEtapaSemData.get(id) ?? 0,
+      cortes: v.map((e, i) => ({
+        corte: cortes[i],
+        antes: { oportunidades: e.antes, comFaixa: frac(e.antesComFaixa, e.antes) },
+        emDiante: { oportunidades: e.depois, comFaixa: frac(e.depoisComFaixa, e.depois) },
+        depoisSemFaixa: e.depois - e.depoisComFaixa,
+      })),
     }));
 
   return NextResponse.json({
@@ -388,16 +417,26 @@ export async function GET(req: Request) {
 
     // A ERA — o 0,8% do Fechamento é buraco de processo ou resíduo histórico?
     corteDeEra: {
-      corte,
+      cortes,
       pergunta:
         "se os sem-faixa das pontas do funil entraram TODOS antes do corte, não há "
         + "buraco de processo: é resíduo da era sem etiqueta, e a data resolve sozinha. "
         + "Se houver gente DEPOIS do corte sem faixa, aí é buraco de verdade.",
       nota:
-        "⚠️ `corte` é ESCOLHA, não fato — o CRM não guarda quando uma etiqueta foi "
-        + "aplicada. Ajustável por ?corte=AAAA-MM-DD. Em `porNivel` a data é a de "
-        + "ENTRADA DA PESSOA; em `porEtapa` é a da OPORTUNIDADE, porque a pergunta "
-        + "sobre a etapa 28 é sobre aquelas linhas, não sobre as pessoas delas.",
+        "⚠️⚠️ CORTE É ESCOLHA, NÃO FATO — o CRM não guarda quando uma etiqueta foi "
+        + "aplicada, então estas datas são onde a SÉRIE vira, não onde o processo "
+        + "mudou. São TRÊS para a conclusão poder se defender: se o veredito for o "
+        + "mesmo nos três, a virada é um DEGRAU e não depende da data escolhida; se "
+        + "mudar, é RAMPA e o número sozinho não vale. Ajustável por ?cortes=a,b,c.",
+      duasDatas:
+        "Em `porNivel` a data é a de ENTRADA DA PESSOA; em `porEtapa` é a da "
+        + "OPORTUNIDADE, porque a pergunta sobre a etapa 28 é sobre aquelas 1.641 "
+        + "linhas, não sobre as pessoas delas. Não some as duas.",
+      semDataNaoEhAntes:
+        "⚠️ Registro sem data fica FORA dos dois lados e sai em `semData`. Ele cairia "
+        + "naturalmente em `antes`, que é o lado que CONFIRMA a hipótese do resíduo "
+        + "histórico — e balde que cai para o lado que confirma passa despercebido "
+        + "justamente quando dá a resposta que se queria ouvir.",
       porNivel: nivelPorEra,
       porEtapa: etapaPorEra,
     },
