@@ -46,6 +46,59 @@ acompanhou o flip sozinho — ele usa `TEMA.destaque`, e está em **15,32:1** so
 sidebar, que é a versão AMARELA que o manual manda em fundo escuro. A tela está correta;
 o que falta é a marca de verdade.
 
+### ⏳ A SIDEBAR FICA COM O PLACEHOLDER — decisão (c), COM DATA DE REVISÃO
+
+**Decidido em 20/08/2026 (quinta).** A sidebar continua com o `NodeMark` + o texto, e a
+assinatura em PNG **não** entra.
+
+🛑 **REVISAR NA SEGUNDA, 24/08/2026.** Não é decisão aberta: o commit 9 está bloqueado
+desde 18/08 e o SVG já foi cobrado. Se ele não chegar até **sexta, 21/08**, a opção (b) —
+símbolo recortado em branco no lugar do `NodeMark` — **volta como provisório**.
+
+⚠️ **A data existe porque "esperar o SVG" vira estado permanente sem ninguém decidir.**
+Placeholder na tela que oito pessoas usam todo dia tem custo, mesmo sendo honesto.
+
+#### Por que (c) e não (b), hoje
+
+O `NodeMark` é **vetorial**: escala perfeito, muda de cor por prop (`cor` e `size`) e serve
+três lugares com tamanhos diferentes (26px na sidebar, 22px no cabeçalho móvel, 26px no
+login). **Um PNG branco perde as duas coisas** — precisaria de um arquivo por cor e não
+escalaria. (b) trocaria *placeholder honesto e flexível* por *marca real e rígida*, criando
+dívida onde hoje não há.
+
+E o SVG oficial vem com versão **horizontal e empilhada**: escolher uma proporção de raster
+agora decidiria algo que o arquivo definitivo já traz resolvido.
+
+#### 🔑 O ACHADO QUE EXPLICA A TENSÃO — e vale além deste caso
+
+**Assinatura em RASTER TRAVA A RAZÃO entre símbolo e texto.** Hoje os dois são
+dimensionados de forma INDEPENDENTE — 26px e 18px, cada um no seu tamanho certo para uma
+sidebar de 240px. Um arquivo único força uma proporção que não foi desenhada para aquele
+espaço.
+
+Por isso a escolha era entre **dois males**, medidos:
+
+| assinatura a | símbolo fica | palavra fica |
+|---|---|---|
+| 200px (largura cheia) | **45,6px** — dobra em relação aos 26 de hoje | 22,3px (+24% vs o texto) |
+| 127px (símbolo nos 26px) | 25,9px ✅ | **14,1px** — 22% menor que o texto |
+
+**Não há largura que preserve os dois.** É consequência da proporção fixa do arquivo, não
+de má escolha de tamanho — e é o argumento geral: *raster de assinatura decide por você a
+relação entre as partes; SVG separado deixa a decisão em aberto.*
+
+⚠️ Resolução NÃO era o problema: 799px de fonte para 200px de destino dá **2,0× de folga
+em Retina**, e o símbolo sozinho dá 3,1×. Descartar (b) por "raster borra" teria sido o
+motivo errado.
+
+#### Medidas da sidebar, para não remedir
+
+`w-60` = **240px** · `px-5` = 40px de padding → **200px úteis** · bloco `h-16` = **64px** ·
+`gap-2.5` = 10px · texto `text-lg` (18px) semibold · `NodeMark` 26px.
+⚠️ O Tailwind deste projeto só estende CORES — espaçamento e tipografia são a escala padrão.
+
+---
+
 ### 🔶 O FAVICON PROVISÓRIO — como foi gerado, e o que é ESCOLHA nele
 
 Gerado em 20/08/2026 de `LOGO_INFLUENCIA_MARKETING.PNG` (1080×1920, RGBA), que **não está
@@ -146,6 +199,13 @@ dos `chipRoxo`/`chipAzul`/`chipBege`, apagados no commit 6 por não terem consum
 | `app/icon.png` | favicon (o Next gera o `<link rel="icon">`) | 🔶 provisório, gerado do PNG |
 | `app/apple-icon.png` | ícone iOS, 180×180 | 🔶 provisório, gerado do PNG |
 | `components/NodeMark.tsx` | o símbolo em SVG inline — **3 chamadas**: `Shell` (sidebar e cabeçalho móvel) e `login` | 🔶 placeholder desenhado à mão |
+
+🔑 **E a SIDEBAR é onde a decisão símbolo-vs-assinatura se resolve.** Hoje ela mostra
+`NodeMark` + texto separados; com o SVG na mão dá para usar a assinatura inteira e apagar
+o texto, ou manter os dois. **A versão HORIZONTAL é a candidata** — a proporção 4,9:1 do
+conteúdo cabe nos 200px úteis, e a empilhada não caberia no bloco de 64px.
+⚠️ Decidir isso exige o arquivo: em raster a razão símbolo/texto é fixa e obriga a escolher
+entre dois males (ver a seção da sidebar acima). Em SVG a razão continua ajustável.
 
 ⚠️ **O `NodeMark` recebe `cor` e `size` por prop e usa `TEMA.destaque` como padrão.** Quem
 trocar o desenho precisa manter as duas props — a sidebar chama sem argumento (26px) e o
