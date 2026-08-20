@@ -312,6 +312,25 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   isso só aparece lendo a cadeia de import.** Antes de chamar uma troca de mecânica,
   siga os imports do módulo de origem até o fim; o `tsc` passa nos cinco casos e só o
   `next build` acusa este.
+
+  🔑 **E A ESCOLHA QUE ATRAVESSA TUDO ISTO: REGRA ESTRUTURAL EM VEZ DE LISTA DE NOMES.**
+  Quando precisar tratar casos especiais, prefira a propriedade que os DEFINE à
+  enumeração dos que você conhece hoje. **A primeira escala; a segunda envelhece — e
+  lista mantida à mão é a segunda cópia com outro nome.**
+  Caso real: apresentar o nome de etapa que vem do CRM (`LEAD RECUPERADO- AUTOMAÇÃO` →
+  `Lead Recuperado - Automação`) sem guardar texto nosso. A regra *"token com SÍMBOLO
+  fica intacto"* salva `M&A`, `B2B` e `2ª` **sem conhecer nenhum deles**; uma lista de
+  siglas conheceria `SDR` e não conheceria o próximo. Nenhuma exceção precisou ser
+  cadastrada para os 12 nomes reais.
+  ⚠️ **E quando a regra estrutural não existir, isso se DECLARA em vez de virar lista
+  por precaução.** Sigla puramente alfabética (`SDR`) é indistinguível de palavra
+  gritada (`LEADS`): não há propriedade que as separe. A saída — uma lista mínima — fica
+  escrita junto da função como o que fazer **quando existir um caso REAL**, e não antes.
+  Lista criada por precaução nasce sem caso e é mantida para sempre.
+  🔑 **O que autoriza conviver com o furo é ele ser COSMÉTICO, não semântico:**
+  `Sdr - Qualificação` continua identificando a etapa. Se a falha mudasse o SIGNIFICADO,
+  a conta seria outra — feio é aceitável, errado não é, e essa é a pergunta que decide
+  se dá para adiar.
 - ⚠️ **AUSÊNCIA DE REGISTRO NÃO É AUSÊNCIA DE HISTÓRIA — a quarta da mesma família.**
   Uma listagem "do que não está cadastrado" mistura duas populações que exigem decisões
   opostas: o que **nunca existiu** e o que foi **removido de propósito**. Sem separar, quem

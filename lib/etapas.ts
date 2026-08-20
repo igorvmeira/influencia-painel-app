@@ -87,6 +87,65 @@ export const NOME_ETAPA: Readonly<Record<number, string>> = {
   [ETAPA_FECHAMENTO]: "Fechamento",
 };
 
-/** Nome do CRM, ou o id à vista. Nunca string vazia — ver o aviso acima. */
-export const nomeEtapa = (id: unknown): string =>
-  NOME_ETAPA[Number(id)] ?? `etapa ${id}`;
+// ---- apresentação --------------------------------------------------------
+
+/**
+ * Palavras que ficam minúsculas quando NÃO são a primeira. Convenção do
+ * português, não exceção deste CRM — por isso a lista pode existir sem virar
+ * dívida: ela não envelhece com o cadastro de etapas.
+ */
+const MENORES = new Set(["de", "da", "do", "das", "dos", "e", "em", "no", "na", "a", "o", "para", "com", "por"]);
+
+/** Token só de MAIÚSCULAS: tem letra maiúscula e nenhuma minúscula. */
+const gritado = (t: string) => /\p{Lu}/u.test(t) && !/\p{Ll}/u.test(t);
+
+/** Token com algo que não é letra/hífen/apóstrofo — `M&A`, `B2B`, `2ª`. */
+const temSimbolo = (t: string) => /[^\p{L}\-']/u.test(t);
+
+/**
+ * APRESENTA o nome do CRM sem GUARDAR outro texto.
+ *
+ * ⚠️⚠️ POR QUE NÃO É UM RÓTULO DE EXIBIÇÃO. `LEAD RECUPERADO- AUTOMAÇÃO` é feio na
+ * tela, e a saída óbvia — escrever "Lead Recuperado - Automação" num mapa nosso —
+ * criaria uma SEGUNDA CÓPIA, que diverge no dia em que a etapa for renomeada no
+ * CRM. É exatamente o defeito que este arquivo acabou de consertar. Transformação
+ * pura sobre o nome real acompanha a renomeação sozinha.
+ *
+ * AS TRÊS REGRAS, todas ESTRUTURAIS — nenhuma conhece um nome específico:
+ *   1. só mexe em token GRITADO; caixa mista é escolha de quem nomeou e fica;
+ *   2. token com SÍMBOLO fica intacto — é o que salva `M&A` sem conhecê-lo;
+ *   3. palavra menor minúscula fora da primeira posição.
+ * O hífen só ganha espaço quando JÁ tem espaço de um lado, senão `Follow-up`
+ * viraria `Follow - up`.
+ *
+ * 🕳️ O FURO CONHECIDO — `SDR - QUALIFICAÇÃO` sai como `Sdr - Qualificação`.
+ * Sigla puramente ALFABÉTICA é indistinguível de palavra gritada: `LEADS` deve
+ * virar `Leads` e `SDR` não deveria, e nenhuma regra estrutural separa as duas.
+ * A saída seria uma lista mínima de siglas — mas ela só se justifica quando
+ * existir um caso REAL. Nenhuma das 12 etapas de hoje tem sigla alfabética pura.
+ * ⚠️ E a falha é COSMÉTICA, não semântica: `Sdr - Qualificação` continua
+ * identificando a etapa. Feio é aceitável; errado não seria.
+ */
+export function apresentarEtapa(bruto: unknown): string {
+  const cru = String(bruto ?? "").trim();
+  if (!cru) return cru;
+  const comHifen = cru.replace(/\s+-\s*|\s*-\s+/g, " - ");
+  return comHifen.split(/\s+/).map((tok, i) => {
+    if (!gritado(tok) || temSimbolo(tok)) return tok;
+    const min = tok.toLocaleLowerCase("pt-BR");
+    if (i > 0 && MENORES.has(min)) return min;
+    return min.charAt(0).toLocaleUpperCase("pt-BR") + min.slice(1);
+  }).join(" ");
+}
+
+/**
+ * O que vai na TELA: nome do CRM apresentado, ou o id à vista.
+ *
+ * ⚠️ Nunca string vazia. Etapa desconhecida sai como `etapa 137` — o funil ganha
+ * etapa nova sem avisar o painel, e balde cego é como isso vira invisível.
+ * O id NÃO passa pelo apresentador: ali o texto é nosso, não do CRM.
+ */
+export const nomeEtapa = (id: unknown): string => {
+  const cru = NOME_ETAPA[Number(id)];
+  return cru === undefined ? `etapa ${id}` : apresentarEtapa(cru);
+};
