@@ -85,9 +85,23 @@ como **espaço**. O sintoma é `401 não autorizado` com a chave certa. Acontece
 ⚠️ No PowerShell, `curl` é **alias de `Invoke-WebRequest`** e engasga nas flags do curl
 de verdade. Use `Invoke-RestMethod`, que é nativo e já entrega o JSON pronto:
 
+⚠️ **A primeira linha não é opcional.** `$env:CRON_SECRET` **não existe** numa sessão nova
+do PowerShell — a variável do `.env.local` não é lida pelo terminal. Sem definir antes, o
+header vai vazio e a resposta é `401`, que parece problema de chave. Comando que pressupõe
+estado do ambiente que o leitor não tem é a mesma família do exemplo errado.
+
 ```powershell
-$env:CRON_SECRET = "cole-o-segredo-aqui"
+# 1. defina na sessão (some quando você fechar o terminal — é o comportamento desejado)
+$env:CRON_SECRET = "cole-aqui-o-valor-que-está-na-Vercel"
+
+# 2. agora sim
 Invoke-RestMethod -Uri "https://SEU-APP.vercel.app/api/sync-meta" -Headers @{ Authorization = "Bearer $env:CRON_SECRET" }
+```
+
+Para conferir que a variável existe antes de chamar (devolve `True`):
+
+```powershell
+[bool]$env:CRON_SECRET
 ```
 
 Para salvar num arquivo:
