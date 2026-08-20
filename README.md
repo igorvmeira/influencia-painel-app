@@ -61,9 +61,65 @@ As ações lidas são `lead` (formulário) e
    `FIREBASE_CLIENT_EMAIL` (client_email), `FIREBASE_PRIVATE_KEY` (private_key, copie
    como está no arquivo), `META_ACCESS_TOKEN`, `META_API_VERSION=v21.0` e `CRON_SECRET`
    (uma senha aleatória). Deploy.
-4. **Ligar o Meta:** para puxar os dados, abra no navegador (sem terminal):
-   `https://SEU-APP.vercel.app/api/sync-meta?key=SEU_CRON_SECRET`
-   No plano grátis isso é manual. Para rodar sozinho todo dia, veja "Automação" abaixo.
+4. **Ligar o Meta:** para puxar os dados, chame `/api/sync-meta` — ver
+   **"Como chamar as rotas internas"** logo abaixo. No plano grátis isso é manual.
+   Para rodar sozinho todo dia, veja "Automação".
+
+## Como chamar as rotas internas (sync, backfill, diagnóstico)
+
+Todas passam por `lib/cronAuth.ts` e aceitam o `CRON_SECRET` de **duas** formas:
+header `Authorization: Bearer <segredo>` **ou** querystring `?key=<segredo>`.
+
+⚠️⚠️ **O QUE O CÓDIGO ACEITA E ONDE VOCÊ DEVE PÔR O SEGREDO SÃO COISAS DIFERENTES.**
+O código aceita as duas; **use o header**. Querystring entra no histórico do navegador,
+no log do servidor, no `Referer` e no histórico do shell — lugares que ninguém limpa.
+`?key=` existe para o caso em que só há uma barra de endereços à mão, e é o modo pior.
+
+🕳️ **E há uma armadilha que torna o `?key=` não só pior, mas QUEBRADO:** se o segredo
+tiver `+`, `/`, `=`, `&` ou `#`, a URL o corrompe — em querystring, `+` é decodificado
+como **espaço**. O sintoma é `401 não autorizado` com a chave certa. Aconteceu em
+20/08/2026, abrindo a rota no navegador.
+
+### PowerShell (o terminal desta casa)
+
+⚠️ No PowerShell, `curl` é **alias de `Invoke-WebRequest`** e engasga nas flags do curl
+de verdade. Use `Invoke-RestMethod`, que é nativo e já entrega o JSON pronto:
+
+```powershell
+$env:CRON_SECRET = "cole-o-segredo-aqui"
+Invoke-RestMethod -Uri "https://SEU-APP.vercel.app/api/sync-meta" -Headers @{ Authorization = "Bearer $env:CRON_SECRET" }
+```
+
+Para salvar num arquivo:
+
+```powershell
+Invoke-RestMethod -Uri "https://SEU-APP.vercel.app/api/diag-porte" -Headers @{ Authorization = "Bearer $env:CRON_SECRET" } | ConvertTo-Json -Depth 10 | Out-File -Encoding utf8 porte.json
+```
+
+⚠️ **O `-Encoding utf8` não é enfeite.** Sem ele o redirecionamento `>` do Windows
+PowerShell grava em **UTF-16**, e a maioria das ferramentas lê o arquivo como lixo
+(`{ " o k " : t r u e`). Aconteceu em 20/08/2026.
+⚠️ E `Out-File` grava onde o PowerShell **está**, não onde você acha que está: um
+arquivo "salvo no repositório" foi parar em `C:\Users\<você>\`.
+
+Se preferir o curl de verdade, chame `curl.exe` pelo nome completo — e no PowerShell
+o descarte é `NUL`, não `/dev/null`:
+
+```powershell
+curl.exe -sS -H "Authorization: Bearer $env:CRON_SECRET" "https://SEU-APP.vercel.app/api/sync-meta"
+```
+
+### bash / WSL / Linux
+
+```bash
+curl -sS -H "Authorization: Bearer $CRON_SECRET" "https://SEU-APP.vercel.app/api/sync-meta"
+```
+
+### Navegador
+
+A barra de endereços não manda header, então só resta `?key=` — com as duas ressalvas
+acima (fica no histórico, e quebra se o segredo tiver `+`, `/`, `=`, `&` ou `#`).
+**Se o seu segredo tiver qualquer um desses caracteres, o navegador não é opção.**
 
 Rodar local (`npm run dev`) é opcional e não faz parte do fluxo online acima.
 
@@ -74,8 +130,8 @@ reclamar, use `FIREBASE_SERVICE_ACCOUNT_BASE64` (o JSON inteiro em base64, numa 
 
 ## Automação (rodar sozinho) — requer plano Vercel Pro
 Por padrão este projeto vem compatível com o plano grátis (Hobby): `vercel.json` vazio
-(`{}`) e `maxDuration = 60` na rota. Nesse modo, o sync é disparado manualmente pelo
-link `?key=`.
+(`{}`) e `maxDuration = 60` na rota. Nesse modo, o sync é disparado manualmente — ver
+"Como chamar as rotas internas".
 
 Para o sync rodar sozinho todo dia, faça o upgrade para o Pro e então:
 1. No `vercel.json`, coloque:

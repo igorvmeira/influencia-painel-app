@@ -147,8 +147,12 @@ isso sozinho: conta sem documento em `metricasAgregadas` é detectada como nova 
 recebe a **janela cheia** (`RETENCAO_DIAS`) automaticamente.
 
 ```
-/api/sync-meta?key=<CRON_SECRET>&accountId=act_1,act_2,act_3
+/api/sync-meta?accountId=act_1,act_2,act_3
 ```
+
+⚠️ O segredo vai no header `Authorization: Bearer`, não na URL — ver "Como chamar as
+rotas internas" no README da raiz. O `?key=` também funciona, mas vaza no histórico e
+**quebra em silêncio** se o segredo tiver `+`, `/`, `=`, `&` ou `#`.
 
 **Não passe `?dias`.** (A instrução anterior aqui mandava usar `&dias=117`; ficou
 obsoleta.) Com `dias` explícito, dois mecanismos são desligados de uma vez: a janela

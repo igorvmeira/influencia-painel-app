@@ -138,6 +138,19 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
 ## Segurança e variáveis de ambiente (crítico)
 - **Segredos** (tokens de API, chaves admin) ficam **só no servidor**, em variáveis de ambiente.
   Nunca no cliente, nunca no repositório.
+- ⚠️⚠️ **O QUE O CÓDIGO ACEITA E ONDE O SEGREDO DEVE IR SÃO DUAS PERGUNTAS — e confundir
+  as duas faz procurar bug onde não há.** A checagem de `CRON_SECRET` aceita header
+  `Authorization: Bearer` **e** querystring `?key=`; a regra da casa é **usar o header**,
+  porque querystring entra em log de servidor, histórico de navegador, `Referer` e
+  histórico de shell — lugares que ninguém limpa.
+  Caso real: um 401 foi lido como "a rota só aceita Bearer, o exemplo está errado". Não
+  estava — o código aceitava as duas, e o exemplo estava certo. A regra que existia era
+  sobre ONDE PÔR, não sobre O QUE O CÓDIGO ACEITA, e ela não estava escrita em lugar
+  nenhum. **Regra de conduta não anotada vira, na cabeça de quem lembra dela, uma
+  afirmação sobre o código** — e aí a próxima investigação começa no arquivo errado.
+  🕳️ E há um motivo TÉCNICO além do vazamento: se o segredo tiver `+`, `/`, `=`, `&` ou
+  `#`, o `?key=` **quebra em silêncio** — em querystring o `+` vira espaço. O sintoma é
+  `401` com a chave correta, e ele parece bug de autenticação.
 - Só use o prefixo `NEXT_PUBLIC_` para config **não secreta** do cliente (ex.: chaves públicas
   do Firebase client). Deixe claro para o usuário o que é secreto e o que é público.
 - Sempre que criar/precisar de uma env, **diga exatamente qual variável adicionar na Vercel**

@@ -844,9 +844,13 @@ fechar. O buraco é só o que **já estava encerrado em 20/08/2026**.
 **mesmo** `normalizarOportunidade`, gravando com `{ merge: true }`.
 
 ```
-/api/comercial/backfill?key=<CRON_SECRET>&reiniciar=1&aplicar=1
-/api/comercial/backfill?key=<CRON_SECRET>&aplicar=1     (repetir até concluido: true)
+/api/comercial/backfill?reiniciar=1&aplicar=1
+/api/comercial/backfill?aplicar=1     (repetir até concluido: true)
 ```
+
+⚠️ O `CRON_SECRET` vai no header `Authorization: Bearer`, não na URL — ver "Como chamar
+as rotas internas" no README da raiz. No PowerShell, `curl` é alias de
+`Invoke-WebRequest`: use `Invoke-RestMethod`.
 
 ⚠️ **Enquanto o backfill não rodar, `campanhaId` ausente NÃO significa "sem campanha"** —
 significa "esta oportunidade não passou pelo normalizador novo". São coisas diferentes, e
