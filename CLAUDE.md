@@ -893,6 +893,21 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   **A régua: antes de implementar o conserto pedido, meça se o defeito é o descrito.**
   Confirmar o diagnóstico é parte da tarefa, não etapa opcional antes dela. E quando a
   medição contraria quem pediu, isso se diz — com o número na mão, antes do código.
+- 🛑🛑 **DESCRIÇÃO DE ARRANJO DADA DE MEMÓRIA TEM A MESMA CONFIABILIDADE DE NÚMERO DADO DE
+  MEMÓRIA — e ela engana mais, porque ninguém desconfia de uma descrição.** "A sidebar usa
+  `MARCA.agencia`", "o componente tem um consumidor", "a regra é só Bearer", "o símbolo é
+  um triângulo com um círculo": todas soam como conhecimento do sistema, e todas são
+  afirmações verificáveis que ninguém verificou.
+  **Quatro vezes em 20/08/2026, dos DOIS lados da mesa — e nas quatro a correção veio de
+  ABRIR O ARQUIVO, nunca de lembrar melhor:**
+  · a sidebar tinha literal e `MARCA.agencia` tinha UM consumidor — o inverso do afirmado;
+  · o `NodeMark` tinha três chamadas, não uma;
+  · a regra do `Bearer` era de CONDUTA, e o código aceitava as duas formas;
+  · o símbolo da marca não era um triângulo — a descrição saiu de um preview em 22%.
+  🔑 **A régua: descrição de arranjo é medição, e a ferramenta é o `grep`, não a lembrança.**
+  Antes de dizer "isto consome aquilo" ou "isto tem N usos", abra. Custa segundos, e a
+  alternativa é planejar em cima de um mapa errado — que foi o que aconteceu no plano da
+  Demanda 2 e no argumento inteiro de reproduzir a logo em SVG.
 - 🛑 **AMOSTRA QUE VOCÊ VIU NÃO É AMOSTRA QUE VOCÊ TIROU — e a diferença é que a
   primeira é ENVIESADA POR CONSTRUÇÃO.** O que aparece na primeira tela é o topo de uma
   ordenação, não um sorteio: é exatamente o recorte com **maior** chance de parecer

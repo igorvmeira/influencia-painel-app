@@ -46,6 +46,93 @@ acompanhou o flip sozinho — ele usa `TEMA.destaque`, e está em **15,32:1** so
 sidebar, que é a versão AMARELA que o manual manda em fundo escuro. A tela está correta;
 o que falta é a marca de verdade.
 
+### 🔶 O FAVICON PROVISÓRIO — como foi gerado, e o que é ESCOLHA nele
+
+Gerado em 20/08/2026 de `LOGO_INFLUENCIA_MARKETING.PNG` (1080×1920, RGBA), que **não está
+no repositório** — é fonte, não asset servido. Fica em `C:\dev\influencia-painel-app\`.
+
+**Medido no arquivo, não estimado:**
+
+| | |
+|---|---|
+| conteúdo real da imagem | 799×163 px — o resto dos 1920 é padding transparente |
+| **símbolo** | **182×163 px** (x 126..307, y 879..1041) |
+| palavra "Influência" | 579×89 px (x 346..924) |
+| vão entre os dois | **38px** — contra 9–10px entre letras, separação inequívoca |
+| cor na fonte | branco puro `255,255,255` |
+
+⚠️ **O símbolo NÃO é "um triângulo com traço interno e um círculo".** Essa descrição veio de
+um preview em 22% de zoom e foi corrigida renderizando o arquivo: são **três traços curvos
+que se cruzam sobre uma base horizontal**. Isso é o que **eliminou a opção de reproduzir em
+SVG** — redesenhar à mão inventaria uma marca diferente.
+
+#### Os arquivos e a composição
+
+`app/icon.png` (48×48) e `app/apple-icon.png` (180×180), por **convenção de arquivo do
+Next** — não há `public/` neste projeto e não deve haver por causa disto.
+
+⚠️ **Sem 512px:** ele serve para manifest PWA, e este projeto **não tem manifest**. Quando
+tiver, o SVG oficial já resolve — 182px de fonte não dariam 512 sem borrar.
+
+**Símbolo PRETO sobre `#FFDD02`.** O símbolo na fonte é BRANCO; o alfa vira máscara e a
+tinta é preta. Três motivos, e o segundo é o que decide:
+1. amarelo é a cor de reconhecimento da marca — numa fileira de abas o que identifica é a
+   mancha de cor, não a forma;
+2. **fundo escuro com símbolo amarelo desapareceria na aba escura do Chrome** — o amarelo
+   funciona nos dois temas;
+3. preto sobre `#FFDD02` é o par de maior contraste da paleta.
+
+#### ✅ TESTADO EM 16px, SEM AJUSTE DE ESPESSURA
+
+**Isto é diferente de "não testado", e por isso está escrito.** O teste foi feito, os três
+traços continuam distinguíveis e a base horizontal sobrevive cheia — **o engrossamento não
+foi necessário e não foi aplicado.** Não há dívida escondida para quem trocar pelo SVG
+oficial: a espessura nos arquivos é a da fonte.
+
+#### 🔑 A COBERTURA CONSTANTE É A PROVA DE QUE O RECORTE ESTÁ CERTO
+
+```
+ 16px: 25,0% cheio · 11,3% antialias
+ 32px: 25,2% cheio ·  7,4%
+ 48px: 25,3% cheio ·  5,3%     ← app/icon.png
+180px: 25,1% cheio ·  3,1%     ← app/apple-icon.png
+```
+
+**A fração de tinta cheia não muda com o tamanho — só o antialias cresce.** É isso que
+prova que o símbolo não está perdendo estrutura ao encolher; se estivesse, o "cheio"
+cairia nos pequenos.
+
+🔧 **Para quem REGERAR os arquivos: esta é a conferência.** Se o "cheio" cair nos tamanhos
+pequenos, o recorte está errado — não é impressão, é medição.
+
+#### ⚠️ A MARGEM DE 8% É ESCOLHA, NÃO REGRA DA MARCA
+
+O manual pede área de respiro e tamanho mínimo, e **essa é uma das perguntas que estão com
+o Thiago**. Os 8% saíram de teste, não do manual — quando a resposta chegar, o número troca
+e os arquivos se refazem.
+
+🛑 **E QUEM AJUSTAR PRECISA SABER QUE A RELAÇÃO NÃO É MONOTÔNICA: aumentar o respiro pode
+PIORAR.** Mais margem encolhe o símbolo dentro do mesmo quadrado, e é o encolhimento que
+funde os traços. Medido:
+
+| margem | resultado em 16px |
+|---|---|
+| 0% | 🛑 encosta nas bordas — a base seria cortada pelo arredondamento do Chrome |
+| **8%** | ✅ respiro suficiente, traços separados, base cheia |
+| 14% | 🛑 os traços começam a se tocar |
+
+**O teste não é olhar o respiro — é olhar o VÃO ENTRE OS TRAÇOS em 16px.**
+
+#### ⚠️ Limite conhecido: o vão tem ~1px em 16
+
+A separação entre o traço esquerdo e o direito sobrevive, mas ocupa cerca de **1px** no
+tamanho de 16 — então **depende do antialias do navegador**. Em tela não-Retina ele pode
+fechar e o símbolo virar mancha.
+
+**Isso é limite do recorte, não defeito.** Se alguém reportar "o favicon virou mancha no
+monitor antigo", a explicação é esta — e o conserto é o SVG oficial, não mexer na margem
+(ver a não-monotonicidade acima).
+
 ### 📋 QUANDO O SVG OFICIAL CHEGAR — a lista do que trocar
 
 **Lista de substituição, NÃO abstração.** Um módulo único não se justifica aqui e o motivo
