@@ -873,6 +873,129 @@ vezes*. Um clone pode não ter campanha vinculada, e um lead de campanha pode se
 
 ---
 
+## 🪦 `/api/diag-porte` — REMOVIDA em 20/08/2026, e o que ela mediu
+
+Rodou uma vez, em 20/08/2026 às 15:05Z. **4.905 leituras**, uma varredura de
+`comercial_oportunidades`. Denominadores: 2.693 pessoas distintas, **2.608 com telefone**
+(a régua), 85 sem.
+
+### O número que substitui o "~8%"
+
+| régua | cobertura de porte |
+|---|---|
+| por PESSOA, telefone estrito | **254 de 2.608 (9,7%)** |
+| por OPORTUNIDADE (a régua antiga) | 255 de 4.905 (5,2%) |
+
+🔑 **254 pessoas, 255 oportunidades** — a etiqueta pousa em UMA oportunidade por pessoa,
+quase nunca em duas. Então a diferença entre as duas réguas **não vem do numerador, vem do
+denominador**: contar linha divide por 4.905 quando só existem 2.608 pessoas.
+
+⚠️ O "212 de 2.670" antigo **não foi reconstruído** e não vai lado a lado com estes. O mais
+próximo é `254 de 2.693` = 9,4% sobre todas as chaves — pista, não reconciliação.
+
+### 🛑 A COBERTURA É UMA RAMPA, NÃO UM PATAMAR
+
+| desde | pessoas | com faixa | cobertura |
+|---|---|---|---|
+| 01/06/2026 | 575 | 179 | **31,1%** |
+| 01/07/2026 | 375 | 142 | **37,9%** |
+| 01/08/2026 | 161 | 114 | **70,8%** |
+
+**Os 9,7% gerais são a média de duas eras** — 24 meses entre 0% e 9,5%, e uma era nova que
+ainda está subindo. A `[38] Sem Perfil` aparece pela primeira vez em jun/26, coerente com
+a etiqueta ter sido criada em 29/06/2026.
+
+🔑 **OS TRÊS CORTES SE PAGARAM, e este é o registro que mais vale reusar.** Com um corte
+só, o relatório teria dito *"31% desde junho"* — e isso seria lido como PATAMAR. São três
+medidas do mesmo dado que discordam entre si, e a discordância É a informação: **um corte
+só não tem como se defender.** O custo de três foi zero, porque cabem na mesma varredura.
+
+### 4️⃣ O NÍVEL 4 É O ÚNICO PLANO — herança direta para a Demanda 2
+
+| nível | desde 01/06 | desde 01/07 | desde 01/08 |
+|---|---|---|---|
+| 2 Follow-up | 43,2% | 49,5% | 79,5% |
+| 3 Agendado Reunião | 34,4% | 29,6% | 71,4% |
+| **4 Negociação** | **77,3%** | **78,9%** | **80,0%** |
+| 5 Fechamento | 0% (n=4) | 0% (n=2) | — (n=0) |
+
+**Onde o lead chega em Negociação, a etiqueta está lá em ~80% dos casos, independente do
+corte.** É o ÚNICO recorte da base sobre o qual dá para afirmar alguma coisa hoje — os
+outros ainda estão em movimento.
+
+🔧 **Se a Demanda 2 precisa de um denominador defensável, é o nível 4.** E o motivo da data
+de corte vai NA TELA junto do número (ver a obrigação registrada acima).
+
+### ⏳ A MEDIÇÃO DO FECHAMENTO PRECISA SER REPETIDA — e o motivo mudou
+
+126 das 130 pessoas no Fechamento entraram ANTES de junho. Só **4** são da era nova, e
+nenhuma tem faixa. Com n=4 não há conclusão possível.
+
+A leitura inicial foi *"é cedo demais, o ciclo comercial não teve tempo"*. **Medido, ela
+não fecha.** Tempo entre criar a oportunidade e chegar ao Fechamento, nas 95 abertas hoje
+em `[20]` (via `getPipeOpportunities`, zero leitura de Firestore):
+
+```
+mín 0d · p25 11d · MEDIANA 24d · p75 51d · p90 136d · máx 377d
+83% chegaram em até 80 dias — o tempo decorrido desde 01/06
+```
+
+🛑 **Se a mediana é 24 dias e 83% chegam em 80, a safra de junho JÁ TEVE TEMPO.** A base
+inteira tem 130 de 2.608 (5%) no Fechamento; aplicada às 575 pessoas da era nova, essa
+taxa preveria ~29 — e são 4. **A explicação do calendário acerta a direção e não fecha o
+valor, então não é explicação.**
+
+⚠️ E a mediana tem SOBREVIVÊNCIA embutida: ela descreve quem CHEGOU, não a probabilidade
+de chegar. Serve para dizer que quem chega, chega rápido — não para estimar quantos chegam.
+
+**Quando repetir:** a partir de **novembro/2026** a safra de junho terá ~150 dias, além do
+p90 de 136 — aí o silêncio deixa de ter desculpa de calendário. Se em novembro ainda houver
+pouca gente da era nova no Fechamento, a pergunta deixa de ser sobre etiqueta e passa a ser
+sobre o funil.
+
+### 🆕 A QUARTA SAÍDA QUE FALTAVA NA LISTA: **CEDO DEMAIS**
+
+Uma série que muda de patamar tem quatro leituras, não três:
+
+| leitura | como se reconhece | o que fazer |
+|---|---|---|
+| **DEGRAU** | o veredito é o mesmo em todos os cortes | usar o número |
+| **RAMPA** | o veredito muda com o corte | não há número único ainda |
+| **BURACO** | volume suficiente e cobertura baixa | investigar, agir |
+| **CEDO DEMAIS** | n pequeno demais para qualquer conclusão | **esperar** |
+
+🔑 **A quarta se parece com as outras três e não se resolve investigando — se resolve
+esperando.** E os dois erros de classificação são caros em direções opostas: confundi-la
+com BURACO gera ação sobre um problema que não existe; confundi-la com RESÍDUO gera falsa
+tranquilidade sobre um que pode existir.
+⚠️ **E ela não é desculpa automática:** foi o que quase aconteceu aqui. "Cedo demais" só
+vale depois de medir o tempo de ciclo — que é exatamente o que derrubou a explicação.
+
+### ✅ A etapa 28 é resíduo puro, sem ressalva
+
+**1.641 de 1.641** criadas antes de junho, nos três cortes. `depoisSemFaixa = 0` em todos.
+Zero oportunidades criadas depois de junho estão lá. É a cova dos clones de maio/2025, e
+está fechada — derruba os agregados como peso morto histórico, não como processo vivo.
+
+### 🪣 O `semData` veio ZERO — e isso é resultado, não desperdício
+
+A rota isolou os registros sem data num balde próprio em vez de deixá-los cair em "antes".
+Vieram **0** em todos os níveis e etapas: a decisão não mudou o resultado.
+
+🔑 **Mas isso só se soube MEDINDO.** Se tivesse vindo alto, teria mudado tudo — e teria
+mudado para o lado que CONFIRMA a hipótese do resíduo histórico, que é o lado que ninguém
+investiga. **Balde vazio confirmado é resultado**; balde vazio presumido é sorte.
+Ver a régua no CLAUDE.md.
+
+### O que a rota mediu e não cabe aqui
+
+Distribuição das 5 faixas (a menor é `[41] 3k a 5k` com 20 pessoas — não sustenta gráfico),
+cobertura por etapa crua, série mensal de 28 meses e concentração por responsável (82% das
+marcações em oportunidades **sem responsável informado**; entre os nomeados só o id 23
+marca — o 49, com 29,5% de toda a base, marcou zero). O JSON completo ficou com o Igor.
+
+---
+
 ## 🪦 A rota `/api/diag-etiquetas` foi REMOVIDA em 20/08/2026 — e o que ela sabia
 
 Lápide explícita, não silêncio: ela nunca chegou a rodar (faltava credencial do Firebase
