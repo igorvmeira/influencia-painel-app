@@ -252,6 +252,17 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   não mostrou.
   **A régua: antes de confiar numa constante compartilhada, procure o VALOR dela, não o
   NOME.** Nome acha quem já participa; valor acha quem devia participar e não participa.
+  🛑 **E O CONTRAEXEMPLO VAI JUNTO DA RÉGUA, senão a próxima varredura vira substituição
+  em massa. A régua acha CANDIDATOS; separar conceito de valor é leitura humana.**
+  `lib/kpis.ts` formata moeda com `currency: "BRL"` e isso **NÃO** é `MOEDA_ACEITA`: se a
+  agência passar a aceitar dólar, a constante muda e o formatador **não deve** mudar junto.
+  Valor igual, conceito diferente — trocar ali acoplaria duas decisões que precisam ser
+  independentes.
+  O mesmo na varredura de `"sistema"`: 12 ocorrências eram `db.collection("sistema")` e
+  **duas eram `por: "sistema"`** — autoria da mudança, conceito oposto com a mesma string.
+  ⚠️ E a varredura acha um terceiro caso que não é literal duplicado: **constante
+  AUSENTE**. `doc("sync")` e `"limitesConta"` não têm constante nenhuma para coincidir —
+  são buraco, não duplicação, e o conserto é criar, não trocar.
 - ⚠️ **AUSÊNCIA DE REGISTRO NÃO É AUSÊNCIA DE HISTÓRIA — a quarta da mesma família.**
   Uma listagem "do que não está cadastrado" mistura duas populações que exigem decisões
   opostas: o que **nunca existiu** e o que foi **removido de propósito**. Sem separar, quem
