@@ -255,7 +255,7 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   🛑 **E O CONTRAEXEMPLO VAI JUNTO DA RÉGUA, senão a próxima varredura vira substituição
   em massa. A régua acha CANDIDATOS; separar conceito de valor é leitura humana.**
 
-  **AS QUATRO CATEGORIAS QUE UMA VARREDURA DE LIMIAR ENCONTRA — e só a primeira se
+  **AS CINCO CATEGORIAS QUE UMA VARREDURA DE LIMIAR ENCONTRA — e só a primeira se
   conserta trocando:**
 
   | # | categoria | como se reconhece | conserto |
@@ -264,6 +264,15 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   | 2 | **constante ausente** | não há o que coincidir | **criar**, não trocar |
   | 3 | **valor igual, conceito diferente** | coincide e **não deve** ser trocado | deixar, e escrever por quê |
   | 4 | **nome que codifica valor** | o número está DENTRO do identificador | renomear — ou **declarar a dívida** |
+  | 5 | **não pode ser compartilhada por ONDE MORA** | o import cruzaria fronteira cliente/servidor | mudar de casa — ou **declarar nos DOIS lados** |
+
+  🛑 **E UM CASO DA CATEGORIA 1 QUE NÃO É ORGANIZAÇÃO, É SEGURANÇA:** escrita e leitura
+  do MESMO documento, em arquivos diferentes, acopladas por string crua. O Firestore
+  aceita **qualquer** string como docId — então um erro de digitação não daria erro em
+  lugar nenhum: criaria um documento novo, o outro lado leria vazio, e o painel diria
+  que nunca sincronizou. Caso real: `doc("sync")` escrito em `app/api/sync-meta` e lido
+  em `lib/data.ts`, os dois à mão. **Quando as duas pontas de um docId moram em arquivos
+  diferentes, a constante não é organização — é a única coisa que faz o erro EXISTIR.**
 
   **1 — literal que coincide.** `MOEDA_ACEITA = "BRL"` em `lib/filaContas.ts`, e o literal
   `"BRL"` em três lugares da rota. É o caso que abre esta régua.
@@ -286,6 +295,23 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   DECLARADA na declaração do campo — trocar a constante obriga a renomear junto.**
   Sem isso, extrair a constante cria uma sensação falsa de vínculo: o valor passa a ter um
   lugar só, e o nome continua afirmando o valor antigo para quem ler.
+
+  **5 — não pode ser compartilhada por ONDE MORA. Mesmo valor, mesmo conceito, e mesmo
+  assim o import é que não pode existir.** `TETO_PADRAO_MS` vive em
+  `lib/buscaAutenticada.ts`, que importa `lib/firebaseClient.ts` — módulo com
+  `"use client"` que chama `initializeApp` no nível do módulo. `lib/xmax.ts` é servidor
+  (rotas de sync e backfill) e ainda é importado por `lib/comercial.ts`. Ligar os dois
+  `20000` arrastaria o SDK **cliente** do Firebase para dentro da cadeia do servidor.
+  **Não se resolve trocando.** Ou a constante muda de casa — módulo neutro, sem import
+  nenhum, como `lib/colecoes.ts` — ou a duplicação **FICA, com o motivo escrito NOS DOIS
+  LADOS**. Duplicação declarada é outra coisa que duplicação esquecida.
+
+  🔑 **E a lição que só apareceu errando:** eu classifiquei este caso como "renomeação
+  pura, risco zero" e ele era o único da leva que não era mecânico. **A categoria de uma
+  duplicata não se decide pelo VALOR nem pelo CONCEITO — se decide por ONDE ELA MORA, e
+  isso só aparece lendo a cadeia de import.** Antes de chamar uma troca de mecânica,
+  siga os imports do módulo de origem até o fim; o `tsc` passa nos cinco casos e só o
+  `next build` acusa este.
 - ⚠️ **AUSÊNCIA DE REGISTRO NÃO É AUSÊNCIA DE HISTÓRIA — a quarta da mesma família.**
   Uma listagem "do que não está cadastrado" mistura duas populações que exigem decisões
   opostas: o que **nunca existiu** e o que foi **removido de propósito**. Sem separar, quem
