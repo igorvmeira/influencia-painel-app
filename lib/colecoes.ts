@@ -62,3 +62,30 @@ export const DOC_FILA = "filaContas";
 
 /** Contas que alguém dispensou da fila — decisão humana, não some sozinha. */
 export const DOC_IGNORADAS = "contasIgnoradas";
+
+// ===========================================================================
+// AINDA FORA DAQUI — candidatos medidos em 20/08/2026, com consumidor real
+// ===========================================================================
+// ⚠️ NÃO são código morto esperando uso: cada linha abaixo JÁ TEM consumidores
+// hoje, escritos à mão. Não foram trazidos porque a migração de cada um toca
+// arquivos que não estavam no recorte — não porque não valham.
+//
+//   14x  collection("contas")            o maior de todos
+//    5x  collection("orientacoes")
+//    2x  doc("funil")                    em comercial_agregados
+//    1x  collection("metricasDiarias")
+//    1x  doc("etapas")                   em comercial_config
+//
+// 🔑 E UM CASO QUE A RÉGUA DAS CINCO CATEGORIAS NÃO PREVIA — a busca falha dos
+// DOIS lados, porque nem os NOMES coincidem:
+//
+//   `"comercial_oportunidades"` está declarado DUAS vezes, como `COL_OP`, em
+//   `app/api/comercial/backfill/route.ts` e em `app/api/comercial/sync/route.ts`.
+//   `"comercial_agregados"` está declarado duas vezes com nomes DIFERENTES:
+//   `COL_AGREGADO` em `app/api/comercial/sync` e `COL` em `app/api/comercial/funil`.
+//
+// Nas cinco categorias sempre havia um lado com nome — procurar o VALOR achava o
+// outro. Aqui os dois lados têm nome, os nomes divergem, e os valores são iguais:
+// **nem a busca por nome nem a busca por valor liga as duas pontas**, porque quem
+// procura `COL_AGREGADO` não sabe que existe um `COL`. Constante privada com nome
+// local é o disfarce mais completo de duplicação que este projeto tem.

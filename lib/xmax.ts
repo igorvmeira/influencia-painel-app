@@ -240,6 +240,18 @@ export async function chamarXmax<T = unknown>(
   operacao: string,
   escopo: EscopoXmax,
   corpo: Record<string, unknown> = {},
+  // ⚠️⚠️ DUPLICADA DE PROPÓSITO, E DECLARADA NOS DOIS LADOS.
+  // O gêmeo é TETO_PADRAO_MS, em lib/buscaAutenticada.ts. Mesmo valor, MESMO CONCEITO (teto de fetch, que não tem
+  // timeout próprio) — e mesmo assim os dois NÃO podem se importar:
+  // lib/buscaAutenticada.ts importa lib/firebaseClient.ts, que tem "use client" e
+  // chama initializeApp no nível do módulo; lib/xmax.ts é servidor (rotas de sync e
+  // backfill) e ainda é importado por lib/comercial.ts. Um import ligando os dois
+  // arrastaria o SDK CLIENTE do Firebase para a cadeia do servidor.
+  // O tsc passa nos dois casos; quem acusaria é o next build.
+  //
+  // 🔧 COMO FECHAR: mover o valor para um módulo neutro (zero import, como
+  // lib/colecoes.ts) e os dois importarem de lá. Enquanto isso não acontecer,
+  // MUDAR UM OBRIGA A MUDAR O OUTRO — é a categoria 5 do CLAUDE.md.
   timeoutMs = 20000
 ): Promise<RespostaXmax<T>> {
   // A chave é a MESMA nos dois escopos (ver lerConfigXmax); o que muda é o
