@@ -812,6 +812,111 @@ de **257 pessoas** para **291**, e os ~13% de diferença são o retorno de clien
 > principal por decisão do dono. **A diferença entre elas é informação:** é o retorno de
 > cliente.
 
+## `fk_campaign` entrou no normalizador — 20/08/2026
+
+O campo existe na API (`OpportunityObject`, `docs/xmax-openapi.yaml.txt`) e **não existia
+no nosso normalizador**. Quem varresse as 4.862 oportunidades gravadas hoje receberia
+zero — e o zero seria NOSSO, não do CRM. Agora ele é gravado como `campanhaId` em
+`comercial_oportunidades`.
+
+**O que ele é:** o ID da campanha de disparo de mensagens que originou a oportunidade,
+preenchido automaticamente quando ela nasce no contexto de um atendimento vindo de
+campanha. `0` quando não há vínculo.
+
+⚠️ **Gravado como `null`, não como `0`** — e isso **diverge de `origem` de propósito**. Em
+`origin` a spec não documenta sentinela, então não dá para saber se zero é ausência ou
+categoria, e o valor cru é preservado. Em `fk_campaign` a spec diz textualmente *"0 quando
+não houver vinculação"*: a ausência é **conhecível**, e ausência conhecida grava `null`.
+
+### 🛑 O HISTÓRICO SÓ FICA COBERTO SE O BACKFILL RODAR
+
+**O sync não relê oportunidade encerrada.** Ele monta a foto com `getPipeOpportunities`,
+cujo próprio sumário na spec diz *"Oportunidades já encerradas não serão retornadas"*. Uma
+oportunidade que já estava fechada quando o campo entrou **nunca mais passa pelo
+normalizador do sync** — o campo fica ausente nela para sempre.
+
+A parte que se resolve sozinha é menor do que parece, mas existe: toda oportunidade que
+estiver **aberta em qualquer sync depois de hoje** ganha o campo e o leva consigo quando
+fechar. O buraco é só o que **já estava encerrado em 20/08/2026**.
+
+**O backfill alcança o resto**, porque ele não usa a listagem: varre por ID com
+`getOpportunity`, que aceita qualquer id — inclusive encerrado — e passa o retorno pelo
+**mesmo** `normalizarOportunidade`, gravando com `{ merge: true }`.
+
+```
+/api/comercial/backfill?key=<CRON_SECRET>&reiniciar=1&aplicar=1
+/api/comercial/backfill?key=<CRON_SECRET>&aplicar=1     (repetir até concluido: true)
+```
+
+⚠️ **Enquanto o backfill não rodar, `campanhaId` ausente NÃO significa "sem campanha"** —
+significa "esta oportunidade não passou pelo normalizador novo". São coisas diferentes, e
+é a leitura tranquilizadora que vence se ninguém escrever isto. Qualquer tela ou contagem
+que use o campo antes disso precisa dizer de que recorte está falando.
+
+### O que a amostra já diz — e o que ela NÃO diz
+
+Sondadas **12 oportunidades perdidas** direto na API (as mais recentes encerradas, ids
+18239 a 18492): **`fk_campaign` = 0 nas 12**.
+
+⚠️ **Doze não fecham nada.** É a amostra mais recente, e o disparo em massa que originou a
+suspeita de clone é de **maio/2025** — justamente fora dela. O número serve para dizer que
+o campo VEM na resposta e é legível; não serve para estimar cobertura.
+
+🔑 **E mesmo cheio, ele responde outra pergunta que a heurística dos 30 dias.** `campanhaId`
+identifica *nasceu de um disparo*; a régua dos 30 dias mede *a mesma pessoa contada duas
+vezes*. Um clone pode não ter campanha vinculada, e um lead de campanha pode ser genuíno.
+**Não substitui a heurística** — no melhor caso vira uma segunda fonte para conferi-la.
+
+---
+
+## Motivo de perda: o CRM registra, a API não devolve — medido em 20/08/2026
+
+⚠️ **Isto CONFIRMA o aviso que já está na `/comercial`**, e refina o texto dele.
+
+**Os 6 motivos existem.** `getAllPipelines` devolve o `lossreasons` do funil 4:
+
+```
+Valor da Proposta · Não Teve Interesse · Sumiu
+Fechou com outra Empresa · Não tem Perfil · Sem Nenhum Retorno
+```
+
+**E a escrita aceita motivo:** `loseOpportunity` tem `closereason` ("Razão para a perda")
+e `closeobs`, os dois opcionais.
+
+🛑 **Mas a LEITURA não devolve nenhum dos dois.** Lidas 12 oportunidades perdidas reais via
+`getOpportunity`; a união das chaves dá **53 campos** e **nenhum** contém
+`reason`/`loss`/`motivo`. Só `closedat`, `closedby`, `closevalue`, `closerecurrentvalue` e
+`expectedclosedate` — todos sobre *quando* e *por quem*, nenhum sobre *por quê*.
+
+| | existe? |
+|---|---|
+| motivos cadastrados no funil | ✅ 6 |
+| `closereason` aceito na ESCRITA | ✅ string livre, opcional |
+| `closereason` devolvido na LEITURA | 🛑 **não** |
+| `fk_lossreason` na leitura | 🛑 **não** |
+
+**A correção no texto da tela é de uma frase, e ela importa:** hoje o aviso diz que o CRM
+*não devolve* o motivo — certo — mas quem lê entende *"o CRM não registra"*, que é falso e
+leva à conclusão errada ("é inútil preencher"). O motivo pode estar lá dentro; **é a nossa
+via de acesso que não o alcança.** Vira pergunta para o suporte, não limitação aceita.
+
+⚠️ E `closereason` é **string livre**, não FK para os 6 cadastrados — mesmo que o suporte
+abra a leitura, o campo pode vir com texto digitado à mão. Agrupar por motivo exigiria
+normalizar, e isso se descobre ANTES de prometer o gráfico.
+
+### Divergência da spec encontrada no caminho
+
+`closedat` está documentado como *"formato ISO 8601"* e **vem como EPOCH em segundos**
+(`1787139927`). É a mesma armadilha já blindada por `epochParaISO` em `lib/xmax.ts` — e a
+terceira vez que a spec erra sobre um campo de data. **A spec descreve a intenção; o
+`typeof` descreve o que chega.**
+
+A resposta real traz **53 campos contra os 44 documentados** — `allowviewparent`, `bsuid`,
+`fkCompany`, `freight`, `parentopportunity`, `portfolioId`, `products`, `username` e
+`visibility` não estão na spec. Nenhum deles é motivo de perda.
+
+---
+
 ## ⚠️ A régua dos "95% com valor" é 71% — medido em 17/08/2026
 
 A demanda de alerta de valor recorrente faltando veio com uma régua do dono: *"95% das
@@ -863,9 +968,7 @@ captação e essas geralmente entram sem origem. Mantida a regra "Sem origem".
 
 **Baixa prioridade, não bloqueia:**
 
-1. **Os nomes das 21 etiquetas sem nome** (`[17]` 211 usos, `[34]` 99, `[6]` 77, `[8]`
-   68, `[7]` 52, `[44]` 46 — 621 usos no total). O Marcos **não consegue rastrear por ID
-   na interface**, então ficam sem resposta por ora.
+1. ~~**Os nomes das 21 etiquetas sem nome**~~ — **a pergunta mudou em 20/08/2026.** Elas,   não estão sem nome: o endpoint que as nomeia é `getChatTags`, e ele **não responde**,   pelas filas `[15]` e `[20]` (desabilitadas, `QUEUE_008`) nem pelas `[18]` e `[22]` (a,   chave global não alcança, `AUTH_018`). Ver a seção 3 de `perguntas-agencia.md`.,   ⚠️ **A lista antiga já estava obsoleta e ninguém percebeu:** ela citava `[6]` com 77,   usos como sem nome, e `[6] GUILHERME` está em `getChatTags` desde 17/08. Contagem de,   "desconhecidos" envelhece em silêncio — ela só cresce quando alguém a recalcula.,   **Vira pedido ao suporte**, não espera pelo Marcos (que já disse não conseguir,   rastrear por ID na interface — esse caminho estava fechado desde o começo).
    **Tratamento:** balde explícito **"etiqueta não identificada"**, com o ID e a
    contagem VISÍVEIS na tela. Nunca somem em silêncio — `else` vazio já escondeu coisa
    demais em projeto deste estúdio.
@@ -905,7 +1008,7 @@ perguntas antes de qualquer feature ser escrita:
    volta oportunidade encerrada? Isso decide se há backfill retroativo de fechados.
 4. **Quantas ganhas têm `closerecurrentvalue` preenchido?** É o risco nº 2 abaixo —
    precisa ser medido ANTES de prometer a tela de MRR.
-5. **Os IDs de `tags` da oportunidade batem com `getTags`?** (`getTags` está sob a tag
+5. ~~**Os IDs de `tags` da oportunidade batem com `getTags`?**~~ ✅ **RESPONDIDA em,   20/08/2026: é UM espaço de IDs só.** As oportunidades carregam etiquetas dos dois,   endpoints — `[4]`, `[9]`, `[26]`, `[39]` vêm de `getTags` e `[6]`, `[12]`, `[13]` de,   `getChatTags`. Não são namespaces paralelos; são duas janelas parciais para a mesma,   lista. (pergunta original: `getTags` está sob a tag
    *Contatos* e diz "etiquetas de contatos" — pode ser outro namespace.)
 
 ## Coleções planejadas
@@ -969,7 +1072,11 @@ de interface, por alguém com acesso:
    direto devolve Invalid Date, que não estoura: vira NaN na tela ou some num filtro de
    período. Blindado por `epochParaISO`/`fechadaEm`/`naEtapaDesde` em `lib/xmax.ts`.
 4. **Valores × 100** — erro de 100× no MRR se alguém esquecer o `centavosParaReais`.
-5. **21 IDs de etiqueta sem nome**, 621 usos no total. Sem os nomes, viram balde cego.
+5. **IDs de etiqueta sem nome** — o balde cego continua, mas a CAUSA mudou (20/08/2026):
+   não é que ninguém saiba o nome, é que `getChatTags` não responde por 4 das 7 filas. O
+   tratamento é o mesmo (balde explícito com ID e contagem VISÍVEIS na tela, nunca `else`
+   vazio); o que muda é para quem se pede o conserto. ⚠️ **O número 21 é de 15/08 e não
+   foi recontado** — pelo menos um dos citados já tinha nome quando isto foi escrito.
 6. **Polling diário perde transições intradiárias** até as automações existirem.
 7. ~~Allowlist de IP~~ — **descartado**: a agência confirmou que não há (15/08/2026).
 8. ~~Automação pode não saber chamar URL~~ — **descartado**: faz POST e aceita cabeçalho

@@ -60,19 +60,67 @@ muda 5 pessoas; a regra tem que existir antes de a base crescer.
 
 ---
 
-## 3. O nome de 17 etiquetas — as outras 18 a API já entregou
+## 3. ~~O nome de 17 etiquetas~~ — não são desconhecidas, são INALCANÇÁVEIS
 
-**Resolvido em 17/08/2026 pela própria spec**, sem depender de ninguém. Existem **dois**
-endpoints de etiqueta, em namespaces diferentes — era isso que faltava:
+**Resolvido em 17/08/2026 pela spec; a CONCLUSÃO corrigida em 20/08/2026 por medição.**
 
-| endpoint | grupo na spec | devolve |
-|---|---|---|
-| `getTags` | Contatos | 15 etiquetas (id + nome) |
-| `getChatTags` | **Fila** | 3 etiquetas (6, 12, 13) |
+Existem **dois** endpoints de etiqueta, e era isso que faltava saber:
 
-União: **18 dos 35 ids em uso**. Varridos os 140 operationIds do arquivo — não existe
-terceiro endpoint. E as etiquetas são **globais da instância**: as filas 17 e 19 devolvem
-exatamente a mesma lista da 7.
+| endpoint | grupo na spec | devolve | vocabulário |
+|---|---|---|---|
+| `getTags` | Contatos | 15 etiquetas | **contato** |
+| `getChatTags` | **Fila** | 3 etiquetas (6, 12, 13) | **conversa** |
+
+Varridos os 140 operationIds do arquivo — **não existe terceiro endpoint**. Reconferido em
+20/08/2026.
+
+### 🛑 O QUE ESTAVA ERRADO AQUI
+
+A frase *"as etiquetas são globais da instância: as filas 17 e 19 devolvem exatamente a
+mesma lista da 7"* era uma **conclusão tirada de 3 filas de 7**. As outras quatro não
+foram consultadas, e o texto não dizia isso.
+
+⚠️ E ela contradiz o próprio sumário do endpoint na spec: *"etiquetas de chat cadastradas
+no sistema **e atribuídas à fila**"*. A atribuição é **por fila** — "global da instância"
+nunca poderia sair dessa leitura.
+
+**As 7 filas, com o motivo exato de cada silêncio** (três tentativas cada, 20/08/2026):
+
+| fila | resultado | código | o que significa |
+|---|---|---|---|
+| `[7]` Influência Marketing | ✅ responde | — | |
+| `[17]` INSTAGRAM | ✅ responde | — | |
+| `[19]` marketing | ✅ responde | — | |
+| `[15]` OS DIRETORES | 🛑 503 | `QUEUE_008` | **fila desabilitada** |
+| `[20]` DISPAROS | 🛑 503 | `QUEUE_008` | **fila desabilitada** |
+| `[18]` IA - PROVEDOR DE INTENET | 🛑 401 | `AUTH_018` | **a chave global não alcança** |
+| `[22]` Notificações Internas | 🛑 401 | `AUTH_018` | **a chave global não alcança** |
+
+⚠️ **503 aqui NÃO é instabilidade.** `QUEUE_008` é *"a fila informada está desabilitada"* —
+estado permanente, não erro transitório. Repetir não resolve; foi repetido três vezes.
+
+### A correção que interessa
+
+**As 17 sem nome não são "etiquetas que só a agência sabe".** São IDs cujo endpoint
+definidor **nós não conseguimos chamar** — por fila desabilitada ou por permissão da chave.
+Duas coisas diferentes, e a diferença muda o que fazer:
+
+- *"só a agência sabe"* → esperar alguém digitar uma lista à mão (foi o que estava escrito,
+  e o Marcos já disse que **não consegue rastrear por ID na interface** — ou seja, o
+  caminho registrado estava fechado);
+- *"a chave não alcança"* → **pedir ao suporte** que a chave global cubra as filas 18 e 22,
+  e perguntar se `getChatTags` responde por fila desabilitada. É pedido concreto, com
+  código de erro na mão.
+
+🔑 **E o ID space é COMPARTILHADO, não dois namespaces separados.** As oportunidades
+carregam etiquetas dos DOIS lados: `[4]`, `[9]`, `[26]`, `[39]` são de `getTags` e `[6]`,
+`[12]`, `[13]` são de `getChatTags`. Os dois endpoints são **duas janelas para a mesma
+lista**, cada uma mostrando um pedaço — não dois vocabulários que se somam.
+
+⚠️ Isso também desfaz a leitura de que faltava *nome*: `[38]`–`[43]` **sempre estiveram**
+em `getTags`. Nunca faltou ID nem nome para as faixas de porte; faltava saber que a
+listagem de contato e a de conversa são recortes da mesma coisa. **A pergunta certa nunca
+foi "como se chama a etiqueta 39", foi "por que a lista vem incompleta".**
 
 ### 🎉 As faixas de porte estão nomeadas — e são SEIS
 
