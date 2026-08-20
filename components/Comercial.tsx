@@ -671,12 +671,21 @@ export default function Comercial() {
         sub="Uma vez sincronizada, a oportunidade perdida não some mais — fica registrada com a data e a etapa."
       >
         <SerieMensal itens={cortar(agregado.perdas)} />
-        {/* O painel mostra ONDE o lead morreu, nunca POR QUÊ: o Xmax não devolve o
-            motivo da perda. Dito na tela em vez de coluna omitida em silêncio. */}
+        {/* O painel mostra ONDE o lead morreu, nunca POR QUÊ. Dito na tela em vez de
+            coluna omitida em silêncio.
+
+            ⚠️ A SEGUNDA FRASE NÃO É ENFEITE — sem ela o aviso é lido como "o CRM não
+            registra motivo", e a conclusão prática vira "é inútil preencher". Medido em
+            20/08/2026: o funil 4 TEM 6 motivos cadastrados (`lossreasons`) e a escrita
+            aceita `closereason`; são 12 oportunidades perdidas lidas, união de 53 campos,
+            e nenhum traz o motivo de volta. O dado pode existir lá dentro — é a nossa via
+            de acesso que não alcança. Falta da FONTE e falta da NOSSA LEITURA levam a
+            ações opostas: a primeira manda desistir, a segunda manda perguntar. */}
         <div className="mt-3">
           <Aviso>
             O CRM <b>não devolve o motivo da perda</b>, então o painel mostra quando e em que etapa
-            o lead morreu — nunca por quê.
+            o lead morreu — nunca por quê. O funil <b>tem 6 motivos cadastrados</b> e o CRM aceita
+            registrá-los; a API é que não os devolve. Se estão sendo preenchidos, daqui não dá para saber.
           </Aviso>
         </div>
       </Bloco>
