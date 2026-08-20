@@ -1207,7 +1207,28 @@ function SecaoPorte({
     .sort((a, b) => b.nivel - a.nivel)
     .flatMap((nv) => nv.pessoasNaEtapa
       .filter((x) => x.faixaPorte === null)
-      .map((x) => ({ ...x, nivelNome: nv.nome, nivel: nv.nivel })));
+      .map((x) => ({ ...x, nivelNome: nv.nome, nivel: nv.nivel }))
+      /**
+       * DENTRO DO MESMO NÍVEL: mais parado primeiro.
+       *
+       * ⚠️ SEM ISTO A ORDEM INTERNA ERA HERDADA E ERRADA. `pessoasNaEtapa` já vem
+       * ordenada pelo servidor — mas por *sem valor primeiro, depois MRR decrescente*,
+       * que é a régua da pendência de VALOR. Para a pendência de CLASSIFICAÇÃO ela não
+       * significa nada: uma lista sem ordem interna vira ruído na segunda tela de
+       * rolagem, porque quem rola não sabe mais por que uma linha veio antes da outra.
+       *
+       * ⚠️ E ISTO NÃO É A TELA RECALCULAR DECISÃO DO SERVIDOR. A ordem do servidor
+       * continua valendo para a lista dela; esta é OUTRA lista, com outra pergunta, e a
+       * regra dela mora num lugar só — aqui. O campo `diasParado` já vem publicado.
+       *
+       * ⚠️ `null` VAI PARA O FIM, nunca tratado como 0. `null` é "o CRM não devolveu
+       * `stagebegintime`", e chutar zero jogaria para o topo quem talvez não esteja
+       * parado — ou para o fim quem está há um ano. Sem dado, sem prioridade.
+       */
+      .sort((a, b) => {
+        if ((a.diasParado === null) !== (b.diasParado === null)) return a.diasParado === null ? 1 : -1;
+        return (b.diasParado ?? 0) - (a.diasParado ?? 0);
+      }));
 
   const maxFaixa = Math.max(1, ...porte.carteira.faixas.map((f) => f.pessoas));
 

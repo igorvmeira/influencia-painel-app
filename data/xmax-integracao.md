@@ -884,15 +884,36 @@ conversar**, porque na conversa o valor real costuma ser outro (declara 3k, apur
 diferença entre os dois é informação sobre a QUALIDADE DO LEAD que chega, não sobre o
 cliente. É a única coisa nesta seção que mediria o funil de entrada em vez do cadastro.
 
-### O que a spec já responde, de graça
+### 🛑 SÃO DOIS BLOQUEIOS INDEPENDENTES, e resolver UM não destrava
+
+**Escritos juntos de propósito.** Quem ler só o primeiro conclui que a agência padronizando
+as listas resolve — e não resolve.
+
+| # | bloqueio | de quem depende | resolver sozinho destrava? |
+|---|---|---|---|
+| 1 | **as taxonomias divergem** — a Meta tem faixas como "mil a dois mil" que o CRM não tem | **da agência** (padronizar) | 🛑 **não** |
+| 2 | **nenhum endpoint nomeia os campos do formulário** | **do suporte do Xmax** | 🛑 **não** |
+
+**Por que o 1 sozinho não basta:** mesmo com as listas idênticas, o retorno continua sendo
+`{ "17": "3k a 5k" }` — e sem saber o que é o campo 17 não dá para afirmar que aquele valor
+é a faixa declarada, e não outro campo qualquer do formulário.
+
+**Por que o 2 sozinho não basta:** com o mapa de campos na mão, dá para ler o declarado —
+mas comparar com o apurado exige que as duas escalas signifiquem a mesma coisa. Faixas
+diferentes produzem uma diferença que não é do lead, é do vocabulário.
+
+🔑 **A régua: bloqueio que depende de partes DIFERENTES não soma esforço, multiplica
+espera.** Um depende da agência, o outro do suporte do Xmax, e nenhum dos dois sabe do
+outro. Pedir os dois ao mesmo tempo é a única forma de isto andar.
+
+### O que a spec já respondeu, de graça
 
 ✅ **`formsdata` EXISTE** no `OpportunityObject` — `type: object`, e a descrição diz:
 *"A chave da propriedade é o ID do campo no formulário personalizado, e o valor é o valor
-do campo."* Então é estruturado, não texto solto.
+do campo."* Então é estruturado, não texto solto — o bloqueio 2 é sobre o NOME do campo,
+não sobre a existência dele.
 
-🛑 **MAS NÃO HÁ ENDPOINT QUE NOMEIE OS CAMPOS.** Varridos os operationIds: nenhum
-`getForms`, `getFormFields` ou equivalente. O retorno seria `{ "17": "3k a 5k" }` **sem
-nenhuma forma de saber o que é o campo 17** pela API.
+🛑 Varridos os operationIds: nenhum `getForms`, `getFormFields` ou equivalente.
 
 ⚠️ **É a mesma família do `getChatTags` que não responde por 4 das 7 filas:** o dado existe
 e a via de acesso não alcança o significado dele. E é o tipo de coisa que só aparece ANTES
@@ -914,6 +935,29 @@ Três resultados possíveis, e só o primeiro destrava:
 
 ⚠️ **Não medir agora foi decisão do Igor**, e a razão é a mesma de sempre: sondagem tem
 valor quando destrava decisão, e a Demanda 2 já está no ar sem isto.
+
+---
+
+## ⚠️ 79 contra 24 — a MESMA armadilha, terceira vez no mesmo dia
+
+Registrado porque na terceira vez ela apareceu **dentro do plano de uma feature**, não numa
+investigação: o desenho da Demanda 2 foi escrito em cima de "79 pessoas em Negociação", e a
+tela renderiza **24**.
+
+| número | o que é | de onde vem |
+|---|---|---|
+| **79** | o nível mais avançado da PESSOA entre **todas** as oportunidades dela, inclusive **encerradas** | `/api/diag-porte`, campo `nivelMax` |
+| **24** | quem tem uma oportunidade **ABERTA** naquele nível | `comercial_agregados/funil`, `niveis[].pessoasNaEtapa` |
+
+**As duas estão certas. A tela quer a segunda** — "quem está em Negociação AGORA" é a
+pergunta de uma fila de trabalho; o histórico não entra numa pendência acionável.
+
+Os níveis do agregado, medidos em 20/08/2026: **87 · 227 · 18 · 24 · 91 = 447**.
+
+🔑 **A lição não é sobre estes dois números, é sobre o hábito:** número que veio de um
+diagnóstico NÃO é intercambiável com o número da estrutura que a tela lê, mesmo quando os
+dois têm o mesmo rótulo. **Antes de desenhar em cima de um número, confira de qual
+estrutura a tela vai lê-lo** — foi o que faltou nas três vezes de hoje.
 
 ---
 
