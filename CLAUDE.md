@@ -499,6 +499,21 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   ⚠️ E isto NÃO é código de uma migração: fica. Toda vez que um campo novo entrar numa
   estrutura gravada, é a leitura de volta que responde se ele chegou — o que muda é só a
   contagem comparada.
+  🛑🛑 **CAMPO BOOLEANO SE CONFERE POR PRESENÇA, NUNCA CONTANDO OS `true`.** O teste é
+  `typeof x === "boolean"` — contar valor confunde **"não chegou"** com **"chegou e é
+  `false`"**, e as duas pedem ações opostas: a primeira manda investigar a gravação, a
+  segunda manda não fazer nada.
+  🔑 **E o modo de falha é o pior possível: quando a maioria é `false`, a conferência dá
+  ZERO justamente quando está tudo certo.** Ela reprova no caso NORMAL e passa no
+  excepcional — o inverso do que uma conferência existe para fazer. **Conferência que
+  erra no caso normal é pior que conferência nenhuma**, porque a primeira coisa que se
+  faz com um alarme que grita sempre é desligá-lo.
+  Caso real: `semPerfil` entrou em `PessoaNaEtapa` e a leitura de volta ia contar quantas
+  pessoas o tinham `true`. São 16 de 447 — o número teria parecido "quase não chegou"
+  com o campo perfeitamente gravado nas 447.
+  ⚠️ **Vale para toda conferência de PRESENÇA**: booleano, `0` numérico legítimo, string
+  vazia válida. Sempre que o valor de repouso do campo for indistinguível da ausência,
+  a pergunta é "o campo existe?", nunca "quanto ele vale?".
   ⚠️⚠️ **E VALE PARA A FERRAMENTA DE QUEM ESCREVE, NÃO SÓ PARA O CÓDIGO ESCRITO:**
   *script de edição que não confere o resultado depois de escrever não é conferência.*
   Ele imprime "ok" porque a âncora casou — e âncora casada prova que ACHOU o lugar, nunca
@@ -856,6 +871,17 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   **A régua: antes de implementar o conserto pedido, meça se o defeito é o descrito.**
   Confirmar o diagnóstico é parte da tarefa, não etapa opcional antes dela. E quando a
   medição contraria quem pediu, isso se diz — com o número na mão, antes do código.
+- 🛑 **AMOSTRA QUE VOCÊ VIU NÃO É AMOSTRA QUE VOCÊ TIROU — e a diferença é que a
+  primeira é ENVIESADA POR CONSTRUÇÃO.** O que aparece na primeira tela é o topo de uma
+  ordenação, não um sorteio: é exatamente o recorte com **maior** chance de parecer
+  padrão, porque foi ordenado por alguma coisa.
+  Caso real: cinco títulos com a faixa escrita à mão apareceram na parte visível de uma
+  lista de 121 e viraram *"várias pendentes já têm a faixa no título"*. Medido: **5 de
+  128 (4%)** — e os cinco eram exatamente os cinco visíveis. **Não havia um sexto.**
+  Eram 101 de 121 que ninguém tinha olhado.
+  **A régua: antes de generalizar do que está à vista, pergunte quantos você NÃO viu.**
+  E se a lista tem teto de exibição, o número está na própria tela — "mostrando 20 de
+  121" é o denominador que impede a extrapolação.
 - ⚠️ **A PREMISSA NÃO MEDIDA TAMBÉM MORA NO TAMANHO DA AMOSTRA, não só no conteúdo.**
   Apresentar uma lista como completa quando ela veio de uma janela curta é a mesma falha,
   um nível abaixo — e é pior, porque a lista *parece* dado, não opinião.
