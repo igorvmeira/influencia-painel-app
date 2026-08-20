@@ -292,5 +292,13 @@ export interface OportunidadeXmax {
   closedat?: number;
   tags?: number[];
   responsableid?: number;
+  /**
+   * ID da campanha de disparo que ORIGINOU a oportunidade. `0` = sem vínculo
+   * (a spec documenta o zero como ausência, ao contrário de `origin`).
+   *
+   * ⚠️ Único campo snake_case da resposta — o resto é camelCase. Não é engano de
+   * digitação; é assim que a API devolve, medido em 12 oportunidades reais.
+   */
+  fk_campaign?: number;
   formsdata?: Record<string, unknown>;
 }

@@ -297,6 +297,15 @@ export interface OportunidadeGravada {
   origem: number;
   tags: number[];
   responsavelId: number | null;
+  /**
+   * Campanha de disparo que originou a oportunidade. `null` = sem vínculo.
+   *
+   * ⚠️ DIVERGE DE `origem` DE PROPÓSITO. Ali o zero é gravado cru porque a spec
+   * não documenta sentinela — não dá para saber se 0 é ausência ou categoria.
+   * Aqui a spec diz explicitamente "0 quando não houver vinculação", então a
+   * ausência É conhecível e vira `null`, como manda a regra da casa.
+   */
+  campanhaId: number | null;
   valorCent: number | null;
   recorrenteCent: number | null;
   fechamentoValorCent: number | null;
@@ -331,6 +340,7 @@ export function normalizarOportunidade(op: OportunidadeXmax): OportunidadeGravad
     origem: Number(op.origin ?? 0) || 0,
     tags: Array.isArray(op.tags) ? op.tags.map(Number).filter(Number.isFinite) : [],
     responsavelId: n(op.responsableid),
+    campanhaId: Number(op.fk_campaign) > 0 ? Number(op.fk_campaign) : null,
     valorCent: n(op.value),
     recorrenteCent: n(op.recurrentvalue),
     fechamentoValorCent: n(op.closevalue),
