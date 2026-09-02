@@ -58,8 +58,25 @@ exatamente como no `getChatTags`. Ver `data/perguntas-agencia.md`, seção 3.
 🔧 **A saída é `backupChatAsJson`**, que usa a chave global e alcançou **todas** as filas da
 amostra, inclusive a 22. Ele devolve o chat inteiro com as mensagens embutidas.
 
-📌 **Distribuição real dos encerrados (amostra de 25, 30 dias):** fila **19 → 20**,
-fila 7 → 3, fila 22 → 2. **A nossa fila é minoria no histórico** — ler só a 7 perderia 88%.
+📌 **Distribuição dos encerrados — MEDIDA NOS 152, não numa amostra:**
+
+| fila | encerrados em 30 dias |
+|---|---|
+| **7** (a nossa) | **89** (58,6%) |
+| 19 | 60 (39,5%) |
+| 22 | 3 (2,0%) |
+
+**Ler só a fila 7 perderia ~41% do histórico.** Significativo, e menos do que parecia.
+
+🛑 **CORREÇÃO — o primeiro número que escrevi aqui estava ERRADO.** A versão inicial deste
+arquivo dizia *"fila 19 → 20, fila 7 → 3, a nossa é minoria, perderia 88%"*. Aquilo veio de
+ler **os 25 primeiros IDs** de `getChatsByDateRange` — que é uma FATIA ORDENADA, não uma
+amostra. Lendo os 152, a proporção inverte: a fila 7 é MAIORIA.
+
+⚠️ **É a mesma armadilha registrada no CLAUDE.md — *amostra que você viu não é amostra que
+você tirou* — e ela me pegou no mesmo dia, no arquivo em que estava documentando outras
+armadilhas.** `.slice(0, 25)` sobre uma lista ordenada parece amostragem e não é.
+**Sempre que a população couber inteira, leia inteira**: os 152 levaram 3 segundos.
 
 ---
 
@@ -108,34 +125,52 @@ text, quotedText, quotedMessageId, buttonId, transcription, serverReceivedTime,
 clientReceivedTime, clientReadTime, deleted, error, reaction, visualGroupId, subject,
 failed, assistantId, ivrId, rewrittenByAi, insultDetected, file, location, ad`
 
-🛑 **`opportunities` NÃO está no backup** — 0 de 25. O vínculo com a oportunidade só aparece
-em `getAllOpenChats`.
+🛑 **`opportunities` NÃO está no backup** — e a evidência é ESTRUTURAL, não estatística: a
+chave simplesmente **não existe** na lista de campos do chat acima. Não é "veio vazio em N
+casos", é "o endpoint não devolve o campo".
+O vínculo com a oportunidade só aparece em `getAllOpenChats`.
 
 ---
 
 ## 🔑 O mapa `direction` ↔ `directionCode`
 
-Medido em 369 mensagens de 25 atendimentos encerrados:
+Medido em **3.222 mensagens de TODOS os 152 atendimentos** encerrados em 30 dias:
 
-| `direction` | código | mensagens | com `userId` | sem |
-|---|---|---|---|---|
-| `in` | **1** | 252 | 121 | 131 |
-| `system` | **10** | 104 | 98 | 6 |
-| `out` | **2** | **5** ⚠️ | 5 | 0 |
-| `alert` | **8** | 3 | 0 | 3 |
-| `info` | **5** | 3 | 0 | 3 |
-| `alert` | **9** | 2 | 0 | 2 |
+| `direction` | código | mensagens | % | com `userId` | chars/msg |
+|---|---|---|---|---|---|
+| `system` | **10** | 2.349 | **72,9%** | 2.231 | 98 |
+| `in` | **1** | 596 | 18,5% | 284 | 99 |
+| `info` | **5** | 91 | 2,8% | 0 | 41 |
+| `alert` | **9** | 78 | 2,4% | 17 | 129 |
+| `alert` | **8** | 75 | 2,3% | 0 | 42 |
+| **`out`** | **2** | **33** | **1,0%** | 29 | 181 |
 
-🛑 **A MENSAGEM DE AGENTE SÃO CINCO, EM 25 ATENDIMENTOS.** `out` / código 2 é o que o
-vendedor escreve — e há 5 delas contra 252 `in` e 104 `system`.
+## 🛑🛑 O NÚMERO QUE DECIDE A PROPOSTA: **1% do volume é mensagem de agente**
 
-⚠️⚠️ **Isso é pouco demais para qualquer conclusão sobre desempenho de vendedor.** Cinco
-mensagens não medem tempo de resposta, não medem qualidade, não medem nada. Qualquer
-métrica de atendimento construída sobre esta amostra estaria descrevendo ruído.
+A amostra foi ampliada de 25 para **os 152 encerrados**, e o padrão não só se confirmou —
+ficou mais extremo:
 
-**E a amostra precisa crescer ANTES da proposta, não depois** — porque o número muda o que
-se promete: se o padrão se confirmar, a maior parte do que sai da empresa é `system`, e o
-produto analisaria automação em vez de conversa.
+| | |
+|---|---|
+| mensagens de agente (`out`) | **33 de 3.222 — 1,0%** |
+| atendimentos com ALGUMA `out` | **16 de 152 — 10,5%** |
+| com `firstResponseTime` | 6 de 152 — 3,9% |
+| `system` | **72,9%** |
+| usuários distintos em 3.222 mensagens | **1** (id 23) |
+
+🔑 **Em 89% dos atendimentos encerrados NINGUÉM da empresa escreveu nada.** O que sai é
+`system` — automação — e vem tudo sob um único usuário.
+
+**Isso muda o que se promete, não como se implementa.** Um módulo de "análise de
+atendimento" treinado nesta base analisaria **automação**, não conversa de vendedor. As
+métricas óbvias — tempo de resposta, qualidade da abordagem, aderência a script — não têm
+sobre o que ser calculadas em 9 de cada 10 atendimentos.
+
+⚠️ **E o que ISSO não diz:** não diz que a equipe não atende. Pode atender por outro canal,
+por outra fila, ou por um caminho que a API não expõe. **Diz apenas que a conversa de
+vendedor não está NESTES dados** — e é sobre estes dados que o módulo seria construído.
+
+📌 O texto de agente, quando existe, tem mediana de **354 caracteres** em 16 atendimentos.
 
 ⚠️ **`alert` tem DOIS códigos (8 e 9).** A spec lista cinco valores de enum; a API usa pelo
 menos seis códigos. Não sei o que separa 8 de 9.
@@ -145,8 +180,8 @@ menos seis códigos. Não sei o que separa 8 de 9.
 Lendo só o `getChatMessages` (que dá o número cru), o padrão parecia óbvio: `direction: 10`
 com `fk_user` preenchido = mensagem do agente humano, porque era 313 de 321 num chat.
 
-**`10` é `system`.** A mensagem de agente é `out`, código **2** — e são **5 em 25
-atendimentos**.
+**`10` é `system`.** A mensagem de agente é `out`, código **2** — e são **33 em 3.222
+mensagens (1,0%)**, medido sobre os 152.
 
 **O que desfez a inferência não foi pensar melhor: foi o `backupChatAsJson` trazer o rótulo
 ao lado do código.** Enquanto só havia o número, a correlação com `fk_user` era o único
@@ -176,7 +211,7 @@ NÃO significa humano.** Pergunta aberta para o Manuel.
 O chat traz `aiSummary`, `aiSuggestion`, `aiScore`; a mensagem traz `rewrittenByAi`,
 `insultDetected`, `transcription`, `assistantId`.
 
-**Medido: 0 de 25 chats com qualquer um preenchido.**
+**Medido: 0 de 152 chats com qualquer um preenchido.**
 
 ⚠️ **E zero preenchido não autoriza dizer que a plataforma não faz isso.** Diz que **nestes
 25 não estava em uso** — pode ser recurso não contratado, desligado, ou de outra fila. A
@@ -219,14 +254,17 @@ encerrados nos últimos 30 dias**, em todas as filas.
 
 ## Volume e custo, medidos
 
-Sobre 25 encerrados (30 dias), via `backupChatAsJson`:
+Sobre **TODOS os 152** encerrados em 30 dias, via `backupChatAsJson` (3 segundos):
 
 | | valor |
 |---|---|
-| mensagens por atendimento | **mediana 6** · p25 4 · **maior 178** |
-| caracteres de texto | **mediana 303** · maior 27.561 |
-| tokens (piso ~4 chars) | **mediano ~76** · **maior ~6.890** |
-| bytes do backup | mediana 6.884 · maior 187.032 |
+| mensagens por atendimento | **mediana 10** · p90 55 · **maior 178** |
+| caracteres de texto | **mediana 975** · p90 5.605 · maior 27.561 |
+| tokens (piso ~4 chars) | **mediano ~244** · p90 ~1.401 · **maior ~6.890** |
+
+🛑 **Estes números substituem os de uma amostra de 25 que estava enviesada** (davam mediana
+6 mensagens / 303 caracteres). Mesma causa da correção por fila: `.slice(0, 25)` de uma
+lista ordenada.
 
 ⚠️ **A mediana e o máximo diferem 90×.** Um teto por atendimento é obrigatório: o pior caso
 sozinho é ~6.900 tokens de entrada.
