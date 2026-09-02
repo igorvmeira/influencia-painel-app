@@ -952,6 +952,33 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   que se tomou em cima do número.
   **Diga sempre de que recorte a lista veio, e pergunte se o recorte é grande o bastante
   para a lista fechar.** Item raro é justamente o que uma amostra curta esconde.
+- 🛑🛑 **FILTRO HERDADO DE OUTRO PROPÓSITO — o número não sabe de onde veio.** A terceira
+  da família da amostra, e a que menos se parece com erro: aqui **ninguém escolheu um
+  recorte enviesado**. O recorte era LEGÍTIMO no script onde nasceu, e virou corte
+  silencioso quando o número saiu dali.
+  Caso real (02/09/2026). Um script de **resumo de campos** do Firestore só guardava os
+  valores de string com **≤22 caracteres** — ele existia para imprimir "os valores mais
+  comuns de cada campo", e cortar texto longo ali é a coisa certa a fazer. Ele reportou
+  `cliente: 109 valores distintos` para 117 contas. Li aquilo como **8 nomes repetidos** e
+  levei o número para um relatório de mapeamento e para uma lista que ia a outra pessoa.
+  **Não havia 8.** Há **1** nome repetido; os outros "7" eram nomes com mais de 22
+  caracteres que o resumo nunca tinha contado. O filtro fazia sentido no resumo e nenhum
+  na pergunta seguinte.
+  🔑 **Por que escapa:** os outros vieses da família se denunciam pela FORMA do número —
+  amostra pequena, lista truncada, topo de uma ordenação. Este sai com cara de censo:
+  "109 de 117" tem denominador, parece a população inteira, e a conta até fecha. **O que
+  está errado não é a medida, é a PERGUNTA que ela responde** — e essa não viaja junto.
+  ⚠️ **A régua: número reaproveitado de um script escrito para outra pergunta se REMEDE,
+  não se cita.** Antes de reusar um valor que já está na tela, releia o código que o
+  produziu procurando `slice`, `filter`, `length <=`, `head`, `LIMIT`, `take` — todo corte
+  que era razoável lá e ninguém carregou para cá.
+  🔑 **E o conserto é barato quando se pergunta a coisa certa:** medir duplicata é
+  `new Set(...).size`, três segundos, sobre a população inteira. O caro foi ter aceitado
+  um subproduto de outro cálculo como se fosse a resposta.
+  🛑 **A cura estrutural: função que devolve número para fora não devolve subproduto.** Se
+  o valor existe só como efeito colateral de outro cálculo, ele fica **dentro** daquele
+  cálculo — e quem precisar da resposta escreve a medição dela. É a mesma frase de sempre
+  numa forma nova: *reusar o RESULTADO é barato; reusar a PREMISSA é o que custa.*
 - ⚠️ **NÚMERO QUE VAI PARA FORA SE MEDE UMA VEZ, NA POPULAÇÃO INTEIRA.** Corrigir o mesmo
   número duas vezes para quem vai levá-lo a uma reunião gasta a confiança nele — na
   terceira, ninguém acredita em nenhum. Se o cálculo depende de uma base que está sendo
