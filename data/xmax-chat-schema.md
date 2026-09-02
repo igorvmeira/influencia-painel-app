@@ -243,6 +243,54 @@ NÃO significa humano.** Pergunta aberta para o Manuel.
 
 ---
 
+### 🛑🛑 A RÉGUA IRMÃ: **MEDIÇÃO TEM ENDPOINT E DATA. SEM OS DOIS, ELA VIRA CRENÇA.**
+
+A régua acima trata de um número lido **na fonte errada**. Esta trata do mesmo número lido
+na fonte certa e depois **citado fora dela** — e é a mais fácil de cometer, porque não
+exige erro nenhum no momento da medição.
+
+**Caso real, 02/09/2026.** Estava escrito neste arquivo: *"a fila 22 devolve 401 mesmo com
+o `queueId` certo"*. O 401 tinha sido medido — **em 20/08/2026, no `getChatTags`**. A frase
+o transportou para o `getChatMessages`, onde nunca fora medido, e para uma data em que já
+não valia. **Nada foi inventado; só perdeu as duas etiquetas.**
+
+🔑 **A medição vira crença exatamente quando as etiquetas caem**, e o sintoma é que ela
+passa a soar como propriedade do sistema. Compare:
+
+| com etiqueta (medição) | sem etiqueta (crença) |
+|---|---|
+| "`getChatTags` na fila 22 deu 401 em 20/08/2026" | "a fila 22 dá 401" |
+| "`me/adaccounts` não listou 9 das 117 em 16/08/2026" | "o token não enxerga conta de BM" |
+| "117 chamadas ao `/api/sync-meta`, 17/08/2026: mediana 4,2s, maior 33,7s, zero estouros" | "o plano grátis corta em ~10s" |
+
+⚠️ **A terceira linha estava no `CLAUDE.md` deste estúdio**, herdada da documentação da
+Vercel, e quase fez quebrar um sync em blocos por causa de um teto que não existia. Crença
+não precisa vir de medição nenhuma — basta soar como fato.
+
+A coluna da direita é sempre **mais curta, mais útil e mais fácil de repetir** — por isso
+ela vence. E é a única que não dá para conferir nem expirar: sem endpoint não se sabe o que
+repetir, sem data não se sabe se ainda vale.
+
+⚠️ **O custo é assimétrico e recai sobre TERCEIROS.** Esta crença específica quase virou um
+chamado ao fornecedor pedindo que investigasse um 401 inexistente num endpoint que nunca
+falhou. Medição errada gasta o nosso tempo; **crença exportada gasta o de quem confia na
+gente**, e volta como desconfiança de tudo o mais que a gente mandou.
+
+🔧 **Na prática, três exigências — e a terceira é a que faltou aqui:**
+1. toda linha que afirma comportamento da API nomeia o **endpoint** e a **data**;
+2. guarda o **corpo cru**, não só o status — `{"errorCode":"AUTH_018"}` tem 24 bytes e é o
+   que separa "mudou" de "eu errei" quando alguém remedir;
+3. **antes de exportar um número para fora, remeça.** Este tinha treze dias, e treze dias
+   foram suficientes.
+
+⚠️ **Corolário — CORREÇÃO SE FAZ RISCANDO, NÃO APAGANDO.** A frase errada fica no arquivo,
+tachada, com a data e a medição nova ao lado (é o formato usado no topo deste arquivo e na
+tabela de filas de `perguntas-agencia.md`). Apagar deixaria o doc CERTO e esconderia o que
+mais importa: **que ele esteve errado, por quanto tempo, e que ninguém notou.** Quem lê um
+doc sem cicatriz confia demais nele — e a próxima frase sem etiqueta passa igual.
+
+---
+
 ## Os campos de IA que a plataforma JÁ TEM
 
 O chat traz `aiSummary`, `aiSuggestion`, `aiScore`; a mensagem traz `rewrittenByAi`,
