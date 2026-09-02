@@ -481,6 +481,30 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   atividade" (a fonte veio incompleta, é divergência).**
   É a mesma família do vazio ambíguo, aplicada à própria régua — o lugar onde ela é mais
   difícil de ver, porque quem escreve a conferência confia nela.
+- 🛑🛑 **RÉGUA QUE DEVOLVE UMA CAUSA PRECISA LISTAR AS CAUSAS QUE ELA NÃO SEPARA — senão
+  ela devolve a mais DRAMÁTICA e ninguém confere.** Um andar acima da anterior: lá a
+  conferência aprovava o que não tinha olhado; aqui ela **olha, acerta que há algo errado,
+  e erra o PORQUÊ** — que é o que decide a ação.
+  Caso real (02/09/2026). A defesa contra o vazio silencioso do Xmax estava escrita assim:
+  *"se o chat vem vazio no `getChatMessages`, peça o backup do mesmo id — se vier com
+  mensagens, o vazio era PERMISSÃO"*. São **três** causas para o mesmo `200 +
+  messages: []`, byte por byte idêntico: **permissão** (chat de outra fila), **filtro** (só
+  há `system`/`alert` e faltou `includeSystemInfo`) e **dado** (o chat é vazio mesmo). O
+  backup prova que o vazio é falso; **não diz qual das três** — quem diz é o CAMPO dele
+  (`queueId`, `directionCode`), não o fato de ele ter respondido.
+  🔑 **E repare para que lado a régua errava: sempre para a causa mais grave.** "Permissão"
+  manda pedir acesso ao fornecedor; "filtro" manda corrigir um parâmetro nosso. A régua
+  escrita para não subestimar o problema passou a superestimá-lo — e a versão dramática é
+  a que ninguém investiga, porque investigar dá trabalho e ela já soa como a conclusão
+  responsável.
+  ⚠️ **A régua acha CANDIDATOS a causa, nunca a causa.** Quando o sintoma é o mesmo para N
+  motivos, o texto da conferência enumera os N e diz **qual evidência separa cada um** —
+  uma tabela de três linhas. Escrever só o mais provável é o mesmo defeito de "explicação
+  parcial não vai para a tela", cometido dentro da ferramenta que existia para evitá-lo.
+  🔑 **Como ele apareceu:** ninguém procurou. Caiu de uma reprodução pedida por OUTRO
+  motivo. **Régua não é auditada por quem a escreveu — é auditada pelo caso real que passa
+  por ela**, então todo caso que a exercita merece a pergunta "ela concluiu certo, ou
+  concluiu o que eu esperava?".
 - ⚠️⚠️ **CONFERIR O QUE SE MONTOU É CONFERIR A SI MESMO — a escrita se prova LENDO DE
   VOLTA.** Rotina que grava e relata costuma calcular o relatório a partir do objeto EM
   MEMÓRIA. Isso descreve a INTENÇÃO, não o resultado: o objeto pode estar perfeito e o
