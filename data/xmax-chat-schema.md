@@ -29,7 +29,21 @@ mudado o escopo do produto para "só analisa o que entrar daqui pra frente".
 
 🔧 **A defesa é o `backupChatAsJson`** (chave global), que alcança todas as filas. E a
 conferência que denuncia: se um chat vem vazio no `getChatMessages`, peça o backup do
-MESMO id — se vier com mensagens, o vazio era permissão.
+MESMO id — se vier com mensagens, o vazio **não era o chat**.
+
+⚠️ **O backup diz que o vazio é falso; NÃO diz por quê — e há três motivos possíveis**
+(medido em 02/09/2026, ver a seção do vazio silencioso adiante):
+
+| causa | como se distingue | o que fazer |
+|---|---|---|
+| **permissão** — chat de outra fila | o `queueId` do backup ≠ o que você pediu | pedir com o `queueId` certo |
+| **filtro** — só há `system`/`alert` | os `directionCode` do backup são 8 e 10 | ligar os `include*` |
+| **dado** — o chat é vazio mesmo | o backup também vem sem mensagens | nada; é verdade |
+
+🛑 **Concluir "permissão" só porque o backup trouxe mensagens é pular do vazio para a causa
+mais dramática das três.** Foi o erro que gerou a correção de 02/09 neste arquivo: a mesma
+resposta de 26 bytes serve às três, e é o CAMPO do backup (`queueId`, `directionCode`) que
+separa, nunca o fato de ele ter respondido.
 
 ---
 
@@ -52,11 +66,34 @@ Medido — 12 encerrados lidos com `queueId=7`:
 
 Passando o `queueId` correto, os mesmos chats devolvem 3, 4 e **178** mensagens.
 
-⚠️ E a fila 22 devolve **401** mesmo com o `queueId` certo — a chave global não a alcança,
-exatamente como no `getChatTags`. Ver `data/perguntas-agencia.md`, seção 3.
+🛑 **CORREÇÃO — 02/09/2026. Esta linha dizia o contrário do medido.**
 
-🔧 **A saída é `backupChatAsJson`**, que usa a chave global e alcançou **todas** as filas da
-amostra, inclusive a 22. Ele devolve o chat inteiro com as mensagens embutidas.
+> ~~"E a fila 22 devolve **401** mesmo com o `queueId` certo — a chave global não a
+> alcança, exatamente como no `getChatTags`."~~
+
+**Reproduzido em 02/09/2026, 20:23Z: `getChatMessages` com `queueId: 22` e o chat 14004
+devolve `HTTP 200`.** Não há 401 na fila 22 em endpoint nenhum. A fila que 401 é a **18**,
+e lá o `AUTH_018` atinge os quatro endpoints escopados de uma vez — é por FILA, nunca por
+endpoint. Matriz completa em `data/perguntas-agencia.md`, seção 3.
+
+⚠️ **De onde veio o erro:** o 401 foi medido em **20/08/2026 no `getChatTags`** e eu o
+apliquei ao `getChatMessages`, onde nunca tinha sido medido — e à fila 22, que desde então
+passou a responder. Duas trocas numa frase só, e ela ficou aqui treze dias parecendo
+medição.
+
+🔧 **`backupChatAsJson`** usa a chave global e alcança **todas** as filas da amostra,
+inclusive a 22 (confirmado de novo em 02/09: `HTTP 200`, `queueId: 22`, 4 mensagens). Ele
+devolve o chat inteiro com as mensagens embutidas. **Mas ele não é mais a "saída" para a
+fila 22** — o `getChatMessages` também chega lá. Ele continua sendo a saída para o vazio
+silencioso de fila errada, que é outra coisa.
+
+🕳️ **E o vazio da fila 22 tinha uma TERCEIRA causa, que não é nenhuma das duas acima:
+FILTRO.** O chat 14004 só tem mensagens `alert` (8) e `system` (10) — zero `in`/`out`. Sem
+`includeSystemInfo: true`, o `getChatMessages` não tem o que devolver e responde vazio
+**corretamente**. Com a flag, devolve as 2 e `maxKId: 463192`.
+**Três coisas produzem `200` + `messages: []`, e a resposta é idêntica nas três:** chat de
+outra fila (permissão), chat sem mensagem (dado), e mensagem que existe mas está fora do
+filtro pedido (parâmetro). O `backupChatAsJson` distingue as três; a resposta, nenhuma.
 
 📌 **Distribuição dos encerrados — MEDIDA NOS 152, não numa amostra:**
 

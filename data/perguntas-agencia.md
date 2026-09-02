@@ -84,20 +84,48 @@ foram consultadas, e o texto não dizia isso.
 no sistema **e atribuídas à fila**"*. A atribuição é **por fila** — "global da instância"
 nunca poderia sair dessa leitura.
 
-**As 7 filas, com o motivo exato de cada silêncio** (três tentativas cada, 20/08/2026):
+**As 7 filas, com o motivo exato de cada silêncio.** Endpoint: **`getChatTags`**, chave
+global, três tentativas cada. Medido em **20/08/2026** e **remedido em 02/09/2026**:
 
-| fila | resultado | código | o que significa |
-|---|---|---|---|
-| `[7]` Influência Marketing | ✅ responde | — | |
-| `[17]` INSTAGRAM | ✅ responde | — | |
-| `[19]` marketing | ✅ responde | — | |
-| `[15]` OS DIRETORES | 🛑 503 | `QUEUE_008` | **fila desabilitada** |
-| `[20]` DISPAROS | 🛑 503 | `QUEUE_008` | **fila desabilitada** |
-| `[18]` IA - PROVEDOR DE INTENET | 🛑 401 | `AUTH_018` | **a chave global não alcança** |
-| `[22]` Notificações Internas | 🛑 401 | `AUTH_018` | **a chave global não alcança** |
+| fila | 20/08 | 02/09 | código hoje | o que significa hoje |
+|---|---|---|---|---|
+| `[7]` Influência Marketing | ✅ 200 | ✅ 200 | — | 3 etiquetas |
+| `[17]` INSTAGRAM | ✅ 200 | ✅ 200 | — | 2 etiquetas |
+| `[19]` marketing | ✅ 200 | ✅ 200 | — | 2 etiquetas |
+| `[15]` OS DIRETORES | 🛑 503 | 🛑 503 | `QUEUE_008` | **fila desabilitada** |
+| `[20]` DISPAROS | 🛑 503 | 🛑 503 | `QUEUE_008` | **fila desabilitada** |
+| `[18]` IA - PROVEDOR DE INTENET | 🛑 401 | 🛑 401 | `AUTH_018` | **a chave global não alcança** |
+| `[22]` Notificações Internas | 🛑 401 | **✅ 200** | — | **passou a responder** |
+
+🔄 **A `[22]` MUDOU entre as duas medições, e é por isso que esta tabela tem duas colunas.**
+Em 02/09/2026 ela devolve 200 nas três tentativas, com as **mesmas 2 etiquetas** das filas
+17 e 19 (`[12] GOOGLE` e `[13] ABRINT`).
+⚠️ **Não dá para saber daqui SE alguém liberou a fila ou se a medição de 20/08 estava
+errada** — só o código de status foi guardado da primeira vez, não o corpo cru, e os dois
+cenários produzem o retorno de hoje. Quem responde é o log do servidor do fornecedor.
+🔑 **A lição operacional: guardar o CORPO, não só o status.** Um `{"errorCode":"AUTH_018"}`
+de 24 bytes teria custado nada e deixaria esta linha decidível.
 
 ⚠️ **503 aqui NÃO é instabilidade.** `QUEUE_008` é *"a fila informada está desabilitada"* —
-estado permanente, não erro transitório. Repetir não resolve; foi repetido três vezes.
+estado permanente, não erro transitório. Repetir não resolve; foi repetido três vezes, nas
+duas datas.
+
+🛑 **O `AUTH_018` é por FILA, não por endpoint — matriz medida em 02/09/2026, 20:28Z:**
+
+| endpoint | [7] | [17] | [19] | [15] | [20] | [18] | [22] |
+|---|---|---|---|---|---|---|---|
+| `getChatTags` | 200 | 200 | 200 | 503 | 503 | **401** | 200 |
+| `getAllOpenChats` | 200 | 200 | 200 | 503 | 503 | **401** | 200 |
+| `getChatMessages` | 200 | 200 | 200 | 503 | 503 | **401** | 200 |
+| `getChatDetail` | 404 | 404 | 404 | 503 | 503 | **401** | 200 |
+| `getChatsMinIdAndDate` | 200 | 200 | 200 | **200** | **200** | **200** | 200 |
+
+Na `[18]`, os quatro endpoints escopados falham com o **mesmo código, no mesmo byte**. Não
+é endpoint quebrado — é fila que a chave não alcança, e isso vale para todos de uma vez.
+
+🕳️ **E a última linha é um achado próprio: `getChatsMinIdAndDate` devolve 200 nas SETE
+filas**, inclusive nas duas desabilitadas e na `[18]`. Ele aceita `queueId` e não o
+respeita — é o único que fura o escopo. Vale como pergunta ao fornecedor por si só.
 
 ### A correção que interessa
 
@@ -108,9 +136,10 @@ Duas coisas diferentes, e a diferença muda o que fazer:
 - *"só a agência sabe"* → esperar alguém digitar uma lista à mão (foi o que estava escrito,
   e o Marcos já disse que **não consegue rastrear por ID na interface** — ou seja, o
   caminho registrado estava fechado);
-- *"a chave não alcança"* → **pedir ao suporte** que a chave global cubra as filas 18 e 22,
-  e perguntar se `getChatTags` responde por fila desabilitada. É pedido concreto, com
-  código de erro na mão.
+- *"a chave não alcança"* → **pedir ao suporte** que a chave global cubra a fila **18**
+  (a 22 passou a responder sozinha em algum ponto entre 20/08 e 02/09), e perguntar se
+  `getChatTags` responde por fila desabilitada. É pedido concreto, com código de erro na
+  mão.
 
 🔑 **E o ID space é COMPARTILHADO, não dois namespaces separados.** As oportunidades
 carregam etiquetas dos DOIS lados: `[4]`, `[9]`, `[26]`, `[39]` são de `getTags` e `[6]`,

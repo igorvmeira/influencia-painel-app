@@ -1375,8 +1375,12 @@ captação e essas geralmente entram sem origem. Mantida a regra "Sem origem".
 
 1. ~~**Os nomes das 21 etiquetas sem nome**~~ — **a pergunta mudou em 20/08/2026.** Elas
    não estão sem nome: o endpoint que as nomeia é `getChatTags`, e ele **não responde**
-   pelas filas `[15]` e `[20]` (desabilitadas, `QUEUE_008`) nem pelas `[18]` e `[22]` (a
-   chave global não alcança, `AUTH_018`). Ver a seção 3 de `perguntas-agencia.md`.
+   pelas filas `[15]` e `[20]` (desabilitadas, `QUEUE_008`) nem pela `[18]` (a chave
+   global não alcança, `AUTH_018`). Ver a seção 3 de `perguntas-agencia.md`.
+   🔄 **CORRIGIDO EM 02/09/2026:** este parágrafo dizia `[18]` **e `[22]`**. A `[22]` foi
+   remedida no mesmo endpoint, três tentativas, e responde **200** — devolve as 2
+   etiquetas das filas 17 e 19. São **três** filas fora de alcance, não quatro. Se
+   liberaram a fila ou se a medição de 20/08 errou, não dá para saber daqui.
    ⚠️ **A lista antiga já estava obsoleta e ninguém percebeu:** ela citava `[6]` com 77
    usos como sem nome, e `[6] GUILHERME` está em `getChatTags` desde 17/08. Contagem de
    "desconhecidos" envelhece em silêncio — ela só cresce quando alguém a recalcula.
