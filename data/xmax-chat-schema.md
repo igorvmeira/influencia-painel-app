@@ -167,6 +167,42 @@ chave simplesmente **não existe** na lista de campos do chat acima. Não é "ve
 casos", é "o endpoint não devolve o campo".
 O vínculo com a oportunidade só aparece em `getAllOpenChats`.
 
+### 🛑🛑 `queueType` NÃO é o tipo configurado da fila — medido em 05/09/2026
+
+O backup traz um campo `queueType` no chat. **Ele não fala o mesmo idioma do campo `type`
+do `getAllQueues`**, que é onde mora a configuração real da fila. Nas três filas em que os
+dois endpoints têm dado, eles discordam nas **três**:
+
+| fila | `backupChatAsJson` → `chat.queueType` | `getAllQueues` → `type` |
+|---|---|---|
+| 7 | `WA Cloud API` | **`WAGS`** |
+| 19 | `WAMD` | **`WAMD3`** |
+| 22 | `WAMD` | **`WAMD2`** |
+
+O backup **colapsa as variantes** (`WAMD2` e `WAMD3` viram `WAMD`) e na fila 7 diverge por
+inteiro. Medido em 05/09/2026 sobre 80 chats de `getChatsByDateRange` (janela de 30 dias) e
+uma chamada a `getAllQueues`, tudo com a chave global.
+
+📌 **Os tipos reais das 7 filas, por `getAllQueues` (05/09/2026):**
+
+| fila | nome | `type` | `enabled` |
+|---|---|---|---|
+| 7 | Influência Marketing | `WAGS` | true |
+| 15 | OS DIRETORES | `WAMD` | false |
+| 17 | INSTAGRAM | `WAGS` | true |
+| 18 | IA - PROVEDOR DE INTENET | `WAMD` | false |
+| 19 | marketing | `WAMD3` | true |
+| 20 | DISPAROS | `WAMD` | false |
+| 22 | Número de Notificações Internas | `WAMD2` | true |
+
+⚠️ E a spec **também não bate**: a linha 1720 do `data/xmax-api.yaml` documenta o tipo como
+enum NUMÉRICO (`5 para WAMD`, `9 para WAGS`). O `getAllQueues` devolve **string com
+variantes**. São **três** vocabulários para a mesma ideia — o da spec, o do `getAllQueues`
+e o do backup — e só o do meio descreve a configuração.
+
+🔧 **Para qualquer pergunta sobre o TIPO da fila, a fonte é `getAllQueues`.** O `queueType`
+do backup serve para agrupar chats, e só.
+
 ---
 
 ## 🔑 O mapa `direction` ↔ `directionCode`
@@ -288,6 +324,51 @@ tachada, com a data e a medição nova ao lado (é o formato usado no topo deste
 tabela de filas de `perguntas-agencia.md`). Apagar deixaria o doc CERTO e esconderia o que
 mais importa: **que ele esteve errado, por quanto tempo, e que ninguém notou.** Quem lê um
 doc sem cicatriz confia demais nele — e a próxima frase sem etiqueta passa igual.
+
+---
+
+### 🛑🛑 A TERCEIRA IRMÃ: **CAMPO COM O MESMO NOME EM DOIS ENDPOINTS NÃO É O MESMO CAMPO.**
+
+As três atacam o mesmo ponto — dar sentido a um valor — por eixos diferentes:
+
+| | o que o valor tinha | como enganou |
+|---|---|---|
+| `direction: 10` | **número sem rótulo** | a correlação disponível apontava para o lado errado |
+| a fila 22 "dá 401" | **rótulo sem endpoint e sem data** | virou propriedade do sistema |
+| `queueType: "WAMD"` | **rótulo que EXISTE nos dois lugares, com vocabulários diferentes** | pareceu confirmação |
+
+**Caso real, 05/09/2026.** O TI do fornecedor disse *"a chave global não abre fila do tipo
+WAMD, e a 18 é WAMD"*. O backup mostrava a fila 22 com `queueType: "WAMD"` e ela responde
+`200` — contradição aparente, pronta para ser mandada de volta.
+
+**Não havia contradição.** A 22 é **`WAMD2`** no `getAllQueues`; `WAMD` era o rótulo do
+backup, que colapsa as variantes. Nem os nomes dos campos eram iguais — `queueType` × `type`
+— e mesmo assim li um como o outro, **porque o VALOR era plausível**.
+
+🔑 **É esse o mecanismo: valor plausível dispensa a conferência do campo.** Se o backup
+tivesse devolvido `queueType: 5` ou `queueType: "tipo_3"`, ninguém teria comparado com o
+`type` do `getAllQueues` sem olhar duas vezes. Foi a **coincidência parcial de vocabulário**
+que fez a comparação parecer desnecessária. Um valor esquisito protege; um valor razoável
+não.
+
+⚠️ **A régua: antes de comparar valores de dois endpoints, confirme que os dois campos
+falam a mesma língua — medindo os casos em que AMBOS têm dado.** Foi o que resolveu aqui:
+três filas com dado nos dois lados, três discordâncias. A conferência custou uma chamada.
+
+🛑🛑 **E O QUE ISTO QUASE CUSTOU NÃO ERA NOSSO — a assimetria de novo, agora no pior
+sentido.** As duas irmãs acima produziram **erro interno**: doc errado, investigação no
+arquivo errado, tempo nosso. Esta ia virar **objeção mandada para fora** — o TI abriria o
+`getAllQueues`, leria `WAMD2`, e a nossa contestação cairia sozinha.
+
+**Medição errada gasta o nosso tempo; objeção errada gasta a confiança de quem responde a
+gente** — e essa não volta na medição seguinte. Vale para o fornecedor, para o Manuel e
+para a agência: quem já foi contestado com um argumento furado passa a conferir tudo, e o
+custo recai justamente sobre as medições CERTAS que vierem depois.
+
+🔧 **O procedimento que sai daqui: toda afirmação que vai CONTESTAR alguém passa por uma
+conferência a mais que uma afirmação que fica em casa** — e a conferência é sempre a mesma
+pergunta, *"de que endpoint veio este campo, e ele é o campo de que a outra pessoa está
+falando?"*.
 
 ---
 
