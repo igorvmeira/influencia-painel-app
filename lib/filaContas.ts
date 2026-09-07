@@ -199,6 +199,74 @@ export function podeCadastrar(c: CandidataFila): { ok: boolean; motivo: string |
 }
 
 /**
+ * ⚠️⚠️ POR QUE SÃO TRÊS ESTADOS E NÃO DOIS — e por que o texto do segundo é longo.
+ *
+ * Ao pedir este caminho, a pergunta natural foi *"a recusa diz se a conta não existe
+ * ou se o acesso não foi concedido?"*. **A Meta não permite responder isso.** Medido
+ * em 07/09/2026, Graph v21.0, com o token da agência:
+ *
+ * | id                                | HTTP | code | type                 |
+ * |-----------------------------------|------|------|----------------------|
+ * | conta real, sem acesso            | 403  | 200  | OAuthException       |
+ * | `act_999888777666555` (inventado) | 403  | 200  | OAuthException       |
+ * | sem prefixo / prefixo errado      | 400  | 100/33 | GraphMethodException |
+ * | **com espaço no fim**             | 400  | 100/33 | GraphMethodException |
+ * | texto não numérico                | 400  | 100/33 | GraphMethodException |
+ *
+ * **Um id inventado devolve o MESMO `403 code 200` de uma conta real sem permissão.**
+ * E é de propósito: se o Graph separasse os dois, daria para enumerar contas alheias
+ * perguntando uma a uma.
+ *
+ * 🛑 **A REGRA QUE ISTO IMPÕE: fonte que não separa duas causas não autoriza escolher
+ * uma.** A escolha tentadora aqui é a tranquilizadora — *"o id está errado"* — porque
+ * ela põe a culpa num erro de digitação, que é barato. E ela manda o humano conferir
+ * o texto colado quando a ação certa pode ser **pedir a parceria de Business Manager
+ * ao cliente**. Duas ações diferentes, e o `403` não diz qual.
+ *
+ * ⚠️ O texto do estado `naoAcessivel` NÃO PODE ser encurtado para "id inexistente".
+ * A frase que diz que a Meta responde igual nos dois casos é a única coisa que impede
+ * a próxima pessoa (ou eu, daqui a três meses) de reescrever isso como uma causa só.
+ */
+export type FalhaSonda = "formatoInvalido" | "naoAcessivel" | "outro";
+
+export interface VereditoSonda {
+  estado: FalhaSonda;
+  /** Título curto, para o topo da mensagem. */
+  titulo: string;
+  /** O que a pessoa faz agora. Pode citar DUAS ações quando a causa é ambígua. */
+  oQueFazer: string;
+}
+
+export function classificarFalhaSonda(codigo: number | null, subcodigo: number | null): VereditoSonda {
+  // 100/33 = GraphMethodException: o Graph nem chegou a resolver o objeto.
+  if (codigo === 100 && subcodigo === 33) {
+    return {
+      estado: "formatoInvalido",
+      titulo: "O id não está num formato que o Meta reconhece.",
+      oQueFazer:
+        "Confira o texto colado: precisa ser `act_` seguido só de dígitos. Os erros mais comuns "
+        + "são espaço no fim, o prefixo faltando e o prefixo escrito errado (`acct_`).",
+    };
+  }
+  if (codigo === 200) {
+    return {
+      estado: "naoAcessivel",
+      titulo: "O token não consegue ler esta conta — e há DOIS motivos possíveis.",
+      oQueFazer:
+        "O Meta responde exatamente igual quando o id não existe e quando a conta existe mas o "
+        + "dono não concedeu acesso ao nosso Business Manager. Daqui não dá para saber qual é. "
+        + "Faça as duas coisas: peça o accountId à agência EM TEXTO para conferir se é este mesmo, "
+        + "e peça ao cliente a liberação de `ads_read` para o nosso BM.",
+    };
+  }
+  return {
+    estado: "outro",
+    titulo: "O Meta recusou por um motivo que esta tela não sabe interpretar.",
+    oQueFazer: "Mande o erro cru abaixo para quem cuida da integração — ele não foi classificado de propósito.",
+  };
+}
+
+/**
  * A linha do `data/contas.json` para quem quiser manter o arquivo completo.
  *
  * ⚠️ EXISTE PORQUE A FONTE FICOU DIVIDIDA. Conta cadastrada pela tela nasce no

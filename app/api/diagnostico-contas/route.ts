@@ -53,6 +53,7 @@ import { ContaMap } from "@/lib/types";
 // com um comentário dizendo "mesmo valor do /api/diagnostico-contas" nos outros
 // arquivos — promessa, não vínculo. Extraídas em 20/08/2026.
 import { LOTE_SONDA, MOEDA_ACEITA, STATUS_ROTULO, bare } from "@/lib/filaContas";
+import { sondarIdentidade as sondar, sondarGasto } from "@/lib/descobrirContas";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -81,68 +82,13 @@ interface AdAccount {
 
 // STATUS_ROTULO e bare() vêm de @/lib/filaContas.
 const idDe = (m: AdAccount) => m.id || `act_${m.account_id}`;
-const ymd = (d: Date) => d.toISOString().slice(0, 10);
 
-/** Resultado da sonda por CONSULTA DIRETA — o teste que corresponde ao sync. */
-interface Sonda {
-  acessivelDireto: boolean;
-  nomeNaMeta: string | null;
-  status: number | null;
-  statusRotulo: string | null;
-  moeda: string | null;
-  erro: string | null;
-}
-
-async function sondar(accountId: string): Promise<Sonda> {
-  const vazio: Sonda = {
-    acessivelDireto: false, nomeNaMeta: null, status: null,
-    statusRotulo: null, moeda: null, erro: null,
-  };
-  try {
-    const url = `https://graph.facebook.com/${API}/${accountId}`
-      + `?fields=name,account_status,currency&access_token=${TOKEN}`;
-    const r = await fetch(url, { cache: "no-store" });
-    const j = await r.json();
-    if (!r.ok) return { ...vazio, erro: String(j?.error?.message ?? `HTTP ${r.status}`).slice(0, 160) };
-    return {
-      acessivelDireto: true,
-      nomeNaMeta: j.name ?? null,
-      status: j.account_status ?? null,
-      statusRotulo: STATUS_ROTULO[j.account_status] ?? null,
-      moeda: j.currency ?? null,
-      erro: null,
-    };
-  } catch (e) {
-    return { ...vazio, erro: String(e).slice(0, 160) };
-  }
-}
-
-/** Gasto dia a dia na janela — única prova de VEICULAÇÃO (status não serve). */
-async function sondarGasto(accountId: string, dias: number) {
-  const until = new Date();
-  const since = new Date(until.getTime() - (dias - 1) * 86400000);
-  const p = new URLSearchParams({
-    fields: "spend",
-    time_range: JSON.stringify({ since: ymd(since), until: ymd(until) }),
-    time_increment: "1", level: "account", limit: "500", access_token: TOKEN,
-  });
-  try {
-    const r = await fetch(`https://graph.facebook.com/${API}/${accountId}/insights?${p}`, { cache: "no-store" });
-    const j = await r.json();
-    if (!r.ok) return { erro: String(j?.error?.message ?? `HTTP ${r.status}`).slice(0, 160) };
-    const dias = ((j.data ?? []) as { spend?: string; date_start: string }[])
-      .filter((x) => Number(x.spend ?? 0) > 0);
-    return {
-      total: Number(dias.reduce((s, x) => s + Number(x.spend ?? 0), 0).toFixed(2)),
-      diasComGasto: dias.length,
-      ultimoDiaComGasto: dias.length ? dias[dias.length - 1].date_start : null,
-      erro: null,
-    };
-  } catch (e) {
-    return { erro: String(e).slice(0, 160) };
-  }
-}
-
+/**
+ * ⚠️ AS DUAS SONDAS SAÍRAM DAQUI EM 07/09/2026 — eram cópia quase idêntica das de
+ * lib/descobrirContas.ts, e o caminho novo de cadastro por id seria a TERCEIRA.
+ * Concordavam por coincidência, não por import: a de lá já descartava o error.code
+ * e esta também, então nenhuma das duas conseguia separar #100 de #200.
+ */
 // Roda as sondas em lotes pequenos (paralelo controlado).
 async function emLotes<T, R>(itens: T[], n: number, fn: (x: T) => Promise<R>): Promise<R[]> {
   const out: R[] = [];

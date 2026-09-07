@@ -90,26 +90,68 @@ async function listarContasMeta(): Promise<AdAccount[]> {
   return out;
 }
 
-/** Identidade + moeda + status pela CONSULTA DIRETA. */
-async function sondarIdentidade(accountId: string) {
+export interface SondaConta {
+  /** Respondeu à CONSULTA DIRETA — o mesmo caminho do sync. Não é `me/adaccounts`. */
+  acessivelDireto: boolean;
+  nomeNaMeta: string | null;
+  status: number | null;
+  statusRotulo: string | null;
+  moeda: string | null;
+  /** A mensagem, para o humano ler. NUNCA para classificar — use `codigo`. */
+  erro: string | null;
+  /**
+   * ⚠️⚠️ O CAMPO QUE FAZ A CLASSIFICAÇÃO SER POSSÍVEL, e que esta função descartava.
+   * `error.code` do Graph. Sem ele só resta casar a MENSAGEM com regex, e aí `#100`
+   * (campo proibido — culpa da nossa consulta) e `#200` (o dono não concedeu acesso)
+   * viram a mesma coisa. Ver `classificarFalhaSonda` em ./filaContas.
+   */
+  codigo: number | null;
+  subcodigo: number | null;
+}
+
+/**
+ * Identidade + moeda + status pela CONSULTA DIRETA.
+ *
+ * ⚠️⚠️ NÃO ACRESCENTE CAMPOS A ESTA CONSULTA. São exatamente três — `name`,
+ * `account_status`, `currency` — e o Graph **derruba a resposta INTEIRA** quando um
+ * campo pedido exige permissão que o token não tem. Medido em 05/09/2026: pedir
+ * `business` fez 13 contas voltarem com `(#100) Requires business_management
+ * permission to access the field`, e 5 delas eram perfeitamente legíveis. Campo a
+ * mais aqui não adiciona informação — arrisca a resposta toda.
+ *
+ * 🏠 MORA AQUI porque este módulo já era o dono da cópia canônica e não importa nada
+ * de cliente (só `import type` do Firestore). Os três consumidores são de servidor.
+ * Se algum dia precisar sondar sem arrastar a descoberta, o caminho é um módulo
+ * neutro — não uma quarta cópia.
+ */
+export async function sondarIdentidade(accountId: string): Promise<SondaConta> {
+  const vazio: SondaConta = {
+    acessivelDireto: false, nomeNaMeta: null, status: null, statusRotulo: null,
+    moeda: null, erro: null, codigo: null, subcodigo: null,
+  };
   try {
     const url = `https://graph.facebook.com/${API}/${accountId}`
       + `?fields=name,account_status,currency&access_token=${TOKEN}`;
     const r = await fetch(url, { cache: "no-store" });
     const j = await r.json();
     if (!r.ok) {
-      return { nomeNaMeta: null, status: null, statusRotulo: null, moeda: null,
-        erro: String(j?.error?.message ?? `HTTP ${r.status}`).slice(0, 160) };
+      return { ...vazio,
+        erro: String(j?.error?.message ?? `HTTP ${r.status}`).slice(0, 160),
+        codigo: typeof j?.error?.code === "number" ? j.error.code : null,
+        subcodigo: typeof j?.error?.error_subcode === "number" ? j.error.error_subcode : null };
     }
     return {
+      acessivelDireto: true,
       nomeNaMeta: j.name ?? null,
       status: j.account_status ?? null,
       statusRotulo: STATUS_ROTULO[j.account_status] ?? null,
       moeda: j.currency ?? null,
-      erro: null as string | null,
+      erro: null,
+      codigo: null,
+      subcodigo: null,
     };
   } catch (e) {
-    return { nomeNaMeta: null, status: null, statusRotulo: null, moeda: null, erro: String(e).slice(0, 160) };
+    return { ...vazio, erro: String(e).slice(0, 160) };
   }
 }
 
@@ -117,7 +159,7 @@ async function sondarIdentidade(accountId: string) {
  * Gasto dia a dia na janela — a ÚNICA prova de veiculação.
  * ⚠️ `account_status: ACTIVE` diz que a conta está regular, NÃO que anunciou.
  */
-async function sondarGasto(accountId: string, dias: number) {
+export async function sondarGasto(accountId: string, dias: number) {
   const until = new Date();
   const since = new Date(until.getTime() - (dias - 1) * 86400000);
   const p = new URLSearchParams({
