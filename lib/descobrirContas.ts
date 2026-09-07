@@ -17,7 +17,7 @@
 import type { Firestore } from "firebase-admin/firestore";
 import { CandidataFila, FilaContas, Ignorada, LOTE_SONDA, STATUS_ROTULO, bare } from "./filaContas";
 import { COL_AGREGADAS } from "./agregadas";
-import { COL_LIMITES, COL_SISTEMA, DOC_FILA, DOC_IGNORADAS } from "./colecoes";
+import { COL_LIMITES, COL_SISTEMA, DOC_FILA, DOC_IGNORADAS, DOC_REMOVIDAS } from "./colecoes";
 
 const API = process.env.META_API_VERSION || "v21.0";
 const TOKEN = process.env.META_ACCESS_TOKEN || "";
@@ -227,6 +227,22 @@ export async function descobrirContas(
    * causa de um enfeite é pior. Mesma regra da etapa secundária no sync-meta.
    */
   const rastro = new Map<string, string | null>();
+  /**
+   * A LÁPIDE — `sistema/contasRemovidas`, o documento que o bloco de `COLECOES_RASTRO`
+   * pedia pelo nome. UMA leitura, não por candidata.
+   *
+   * ⚠️ Ela SOMA ao rastro por sobra, não o substitui, e as duas fontes cobrem buracos
+   * opostas: a lápide só sabe do que foi registrado (nada antes de 07/09/2026), e a
+   * sobra só sabe do que a limpeza esqueceu. A conta fantasma
+   * `act_191616327202757` é a prova de que a sobra sozinha não basta — ela saiu das
+   * três coleções e por isso saía daqui como `false`, "verdadeiro para o dado, falso
+   * para o fato".
+   *
+   * 🛑 `false` CONTINUA SENDO SILÊNCIO, e isso não mudou: significa "não há lápide e
+   * não há sobra", nunca "a conta é nova". O que a lápide muda é que, daqui para
+   * frente, `true` passa a ter data EXATA em vez de piso.
+   */
+  const removidas = new Map<string, { removidaEm?: string; motivo?: string }>();
   try {
     const refs = COLECOES_RASTRO.flatMap((col) =>
       aSondar.map((m) => db.collection(col).doc(m.id || `act_${m.account_id}`))
@@ -241,6 +257,10 @@ export async function descobrirContas(
         const atual = rastro.get(id);
         rastro.set(id, atual && em && atual > em ? atual : (em ?? atual ?? null));
       }
+    }
+    const snapRem = await db.collection(COL_SISTEMA).doc(DOC_REMOVIDAS).get();
+    for (const [id, v] of Object.entries((snapRem.data()?.contas ?? {}) as Record<string, { removidaEm?: string; motivo?: string }>)) {
+      removidas.set(id, v);
     }
   } catch (e) {
     console.error("[descobrirContas] rastro indisponível (segue sem a marca):", e);
@@ -277,8 +297,13 @@ export async function descobrirContas(
           erro: ident.erro ?? gasto.erro,
           // `has`, não truthiness: o rastro pode existir com `atualizadoEm` ausente,
           // e aí a conta esteve na carteira mesmo sem data para mostrar.
-          jaEsteveNaCarteira: rastro.has(accountId),
+          // A lápide entra por OU: qualquer uma das duas fontes acende a marca.
+          jaEsteveNaCarteira: rastro.has(accountId) || removidas.has(accountId),
           ultimaSincronizacao: rastro.get(accountId) ?? null,
+          // Só existe quando há LÁPIDE — e aí é data de remoção, não piso. É o que
+          // a tela mostra em vez de "sincronizada até", quando os dois competem.
+          removidaEm: removidas.get(accountId)?.removidaEm ?? null,
+          motivoRemocao: removidas.get(accountId)?.motivo ?? null,
         };
       })
     );

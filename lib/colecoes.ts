@@ -63,6 +63,29 @@ export const DOC_FILA = "filaContas";
 /** Contas que alguém dispensou da fila — decisão humana, não some sozinha. */
 export const DOC_IGNORADAS = "contasIgnoradas";
 
+/**
+ * Lápide: contas que ESTIVERAM na carteira e saíram. A `lib/descobrirContas.ts`
+ * pedia este documento pelo nome desde 20/08/2026 (ver o bloco de `COLECOES_RASTRO`).
+ *
+ * ⚠️⚠️ NÃO É O MESMO QUE `DOC_IGNORADAS`, e juntar os dois quebraria os dois.
+ * `contasIgnoradas` é DECISÃO sobre a fila — mutável, e existe `desfazerIgnorar`
+ * para apagá-la. `contasRemovidas` é FATO sobre a história — e desfazer um "ignorar"
+ * nunca pode apagar o fato de a conta ter estado na carteira. Um é reversível por
+ * desenho, o outro é append-only por desenho.
+ *
+ * 🔑 O que ele conserta: hoje `jaEsteveNaCarteira` sai de SOBRA de sincronização
+ * (docs órfãos em `limitesConta`/`metricasAgregadas`), então `true` é afirmação e
+ * `false` é silêncio — e a data é PISO, não a data da remoção. Com a lápide, a data
+ * é exata, o rastro deixa de depender de limpeza incompleta, e os órfãos podem ser
+ * apagados sem destruir o sinal.
+ *
+ * ⚠️ O que ele NÃO conserta: `false` continua sendo silêncio para tudo que saiu da
+ * carteira ANTES de a lápide existir. Ela só torna afirmativo o que for registrado
+ * daqui para frente, mais o que for preenchido à mão — e cada registro retroativo
+ * diz isso no campo `fonte`.
+ */
+export const DOC_REMOVIDAS = "contasRemovidas";
+
 // ===========================================================================
 // AINDA FORA DAQUI — candidatos medidos em 20/08/2026, com consumidor real
 // ===========================================================================

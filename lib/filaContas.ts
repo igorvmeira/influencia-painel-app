@@ -135,6 +135,18 @@ export interface CandidataFila {
    * o dado não conta. Chamar de "removida em" seria inventar precisão.
    */
   ultimaSincronizacao: string | null;
+  /**
+   * Data EXATA da remoção, quando existe lápide em `sistema/contasRemovidas`.
+   *
+   * ⚠️ É o par honesto de `ultimaSincronizacao`, não um substituto: aquela é PISO
+   * ("saiu depois disto") e esta é o FATO. Quando as duas existem, a tela mostra
+   * esta — mas `null` aqui **não** significa que a conta não foi removida, significa
+   * que ninguém registrou. Toda conta que saiu da carteira antes de 07/09/2026 tem
+   * `null` aqui e continua dependendo da sobra de sincronização.
+   */
+  removidaEm?: string | null;
+  /** O porquê escrito por quem removeu. É o texto que a tela mostra por inteiro. */
+  motivoRemocao?: string | null;
 }
 
 export interface FilaContas {
