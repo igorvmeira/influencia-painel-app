@@ -302,7 +302,22 @@ function CadastroPorId({ nichos }: { nichos: string[] }) {
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Campo rotulo="accountId" dica="Formato act_ seguido de dígitos. Espaço no fim é o erro mais comum.">
-          <input value={id} onChange={(e) => setId(e.target.value)}
+          {/**
+            * ⚠️⚠️ TROCAR O ID APAGA O VEREDITO ANTERIOR. Sem isto a mensagem da consulta
+            * PASSADA fica na tela ao lado do id NOVO, e o formulário é feito para colar
+            * vários ids em sequência — o uso normal produz a leitura errada.
+            *
+            * Medido em 07/09/2026 dirigindo a tela: depois da recusa de
+            * `act_369467934206077` ("esta conta já está cadastrada"), colar a conta
+            * fantasma deixava aquela frase embaixo dela. Ou seja, a tela afirmava que a
+            * FANTASMA já estava na carteira — a stale message mais cara possível aqui,
+            * porque é exatamente a conclusão que a lápide existe para impedir.
+            *
+            * 🔑 Limpar no SUBMIT não bastava: entre colar e clicar existe um intervalo em
+            * que a pessoa lê. O veredito morre quando o assunto dele muda, não quando o
+            * próximo chega.
+            */}
+          <input value={id} onChange={(e) => { setId(e.target.value); setFalha(null); setFeito(null); }}
             className="w-full rounded-lg px-3 py-2 text-sm outline-none placeholder:text-brand-placeholder"
             style={{ background: TEMA.fundo, color: TEMA.texto, border: `1px solid ${TEMA.bordaForte}` }}
             placeholder="act_1087022722588031" />

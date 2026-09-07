@@ -201,10 +201,22 @@ export async function POST(req: Request) {
     }
 
     /**
-     * Normaliza ANTES de gastar uma requisição no Meta. O `act_` faltando e o espaço
-     * no fim são os erros de colagem mais comuns, e os dois voltariam do Graph como
-     * `100/33` — um erro que fala de sintaxe e que a pessoa leria como "não existe".
-     * Resolver aqui dá uma mensagem melhor e não custa chamada.
+     * Normaliza ANTES de gastar uma requisição no Meta.
+     *
+     * ⚠️ CORRIGIDO EM 07/09/2026, exercitando a tela. Este comentário dizia que a
+     * normalização é o que salva o **espaço no fim**. Não é: o `accountId` já chega
+     * aqui com `.trim()` aplicado na leitura do corpo, uma linha que existe desde
+     * antes desta ação. Colar `"act_191616327202757 "` no formulário nunca produziu
+     * `100/33` — o espaço morre lá em cima. O que esta normalização de fato cobre é o
+     * prefixo (`act_` faltando ou escrito `acct_`) e qualquer coisa que não seja
+     * dígito.
+     *
+     * 🕳️ E a consequência disso é uma que não estava prevista: **o estado
+     * `formatoInvalido` de `classificarFalhaSonda` é INALCANÇÁVEL por este
+     * formulário.** Tudo que seria `100/33` no Graph é barrado aqui, com a mensagem
+     * abaixo. O classificador continua com os três estados porque ele é da SONDA, não
+     * da tela — outro chamador pode receber um `100/33` de verdade —, mas ninguém
+     * deve esperar ver aquele texto vindo daqui.
      */
     const id = `act_${bareId(accountId)}`;
     if (!/^act_\d{6,}$/.test(id)) {
