@@ -181,6 +181,38 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   cria registro fantasma que nunca sincroniza. Peça sempre o retorno em **texto**.
 - **Joins sempre por ID único, nunca por nome.** Nomes de cliente se repetem e geram
   duplicação silenciosa (a mesma conta aparecendo em vários lugares).
+- 🛑🛑 **FONTE QUE NÃO SEPARA DUAS CAUSAS NÃO AUTORIZA ESCOLHER UMA — e a escolha
+  errada é sempre a tranquilizadora.** A régua irmã da de baixo, e o degrau seguinte:
+  lá o código do erro **existe** e distingue; aqui ele existe e **não distingue**, e a
+  tentação passa a ser preencher o buraco com a causa mais barata.
+  Caso real (07/09/2026), medido no Graph v21.0 antes de escrever a mensagem:
+
+  | id consultado | HTTP | code | o que significa |
+  |---|---|---|---|
+  | conta real sem acesso | 403 | 200 | o dono não concedeu `ads_read` |
+  | `act_999888777666555` — **inventado** | 403 | **200** | **resposta idêntica** |
+  | sem prefixo / prefixo errado / **espaço no fim** | 400 | 100/33 | o id nem foi resolvido |
+
+  **Um id inventado responde byte a byte como uma conta real sem permissão** — e é de
+  propósito: se o Graph separasse os dois, daria para enumerar contas alheias
+  perguntando uma a uma. **A ambiguidade é uma decisão de projeto da fonte, não uma
+  falha nossa** — e é por isso que ela não vai embora com mais esforço.
+  🔑 **Por que a escolha errada tem direção:** "o id está errado" põe a culpa num
+  typo, que é barato e nosso; "o dono não concedeu acesso" obriga a cobrar um cliente.
+  Escrever a primeira manda a pessoa **conferir o texto colado** quando a ação certa
+  pode ser **pedir a parceria de Business Manager** — e ela vai conferir, não achar
+  nada, e concluir que o sistema está quebrado.
+  ⚠️ **A régua: quando a fonte não separa, a mensagem cita as DUAS causas e manda
+  fazer as duas coisas.** Não é prolixidade: é a única saída honesta, porque um texto
+  mais curto teria de mentir sobre qual é. E o texto que diz *"a Meta responde igual
+  nos dois casos"* fica no código com essa justificativa escrita — a tentação de
+  encurtar para "id inexistente" volta em toda revisão, e o comentário é o que a
+  barra. Ver `classificarFalhaSonda` em `lib/filaContas.ts`.
+  🔑 **Como saber que se está neste caso:** a pergunta não é "qual erro a fonte
+  devolveu", é **"que respostas diferentes eu consigo provocar?"**. Só se sabe que
+  duas causas colapsam num código depois de **construir os dois casos de propósito** —
+  aqui, inventando um id que garantidamente não existe. Sem esse teste, a primeira
+  conta que falhasse teria virado "não existe" para sempre.
 - 🛑🛑 **LER O CÓDIGO DO ERRO, NÃO A MENSAGEM — e o mesmo HTTP esconde causas com donos
   diferentes.** Erro de API tem um campo `code` justamente porque o texto não é
   classificável; casar a mensagem com regex junta erros que pedem ações opostas.
