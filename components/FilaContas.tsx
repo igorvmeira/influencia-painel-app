@@ -6,7 +6,7 @@ import { MARCA } from "@/lib/brand";
 import { brlDec } from "@/lib/format";
 import { OPCOES_GESTOR } from "@/lib/gestores";
 import { useContas } from "@/lib/useContas";
-import { useFilaContas, procurarAgora, acaoFila, RespostaFila } from "@/lib/useFilaContas";
+import { useFilaContas, procurarAgora, acaoFila, acaoFilaBruto, ErroFila, RespostaFila } from "@/lib/useFilaContas";
 import { CandidataFila, MOEDA_ACEITA, MSG_RESTRITO, podeCadastrar, linhaJson } from "@/lib/filaContas";
 import SecaoHeader from "./SecaoHeader";
 import AvisoDadoVelho from "./AvisoDadoVelho";
@@ -239,7 +239,152 @@ export default function FilaContas() {
           )}
 
           <AvisoDoRodape />
+          <CadastroPorId nichos={nichos} />
         </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * ⚠️⚠️ ESTE FORMULÁRIO FICA COLADO NO AVISO DO RODAPÉ, e a ordem não é estética.
+ *
+ * O aviso terminava mandando *"peça o accountId à agência em texto e sonde pela
+ * consulta direta antes de cadastrar"* — e não havia onde fazer isso. A tela admitia
+ * o limite e o botão agia como se não existisse; quem lia o aviso não tinha ação.
+ * Aviso sem caminho vira decoração, e decoração se aprende a pular.
+ */
+function CadastroPorId({ nichos }: { nichos: string[] }) {
+  const [aberto, setAberto] = useState(false);
+  const [id, setId] = useState("");
+  const [cliente, setCliente] = useState("");
+  const [gestor, setGestor] = useState("");
+  const [nicho, setNicho] = useState("");
+  const [tipo, setTipo] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [falha, setFalha] = useState<{ msg: string; d: Record<string, unknown> } | null>(null);
+  const [feito, setFeito] = useState<Record<string, unknown> | null>(null);
+
+  const enviar = async () => {
+    setEnviando(true); setFalha(null); setFeito(null);
+    try {
+      const resp = await acaoFilaBruto({
+        acao: "cadastrarPorId", accountId: id.trim(), cliente: cliente.trim(), gestor, nicho, tipo,
+      });
+      setFeito(resp);
+      setId(""); setCliente(""); setGestor(""); setNicho(""); setTipo("");
+    } catch (e) {
+      const err = e as ErroFila;
+      setFalha({ msg: err.message, d: err.detalhe ?? {} });
+    } finally { setEnviando(false); }
+  };
+
+  if (!aberto) {
+    return (
+      <button
+        onClick={() => setAberto(true)}
+        className="mt-3 w-full rounded-lg px-4 py-3 text-[13px] font-medium text-left"
+        style={{ background: TEMA.card, color: TEMA.texto, border: `1px solid ${TEMA.bordaForte}` }}
+      >
+        + Cadastrar uma conta pelo accountId <span style={{ color: MUTED }}>
+          — para as que não aparecem na listagem acima</span>
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-3 rounded-lg p-4" style={{ background: TEMA.card, border: `1px solid ${TEMA.bordaForte}` }}>
+      <div className="text-[13px] font-medium mb-1" style={{ color: TEMA.texto }}>Cadastrar pelo accountId</div>
+      <div className="text-[12px] mb-3" style={{ color: MUTED }}>
+        A conta é validada pela <b>consulta direta</b> — o mesmo caminho do sync —, nunca pela
+        listagem. Cole o id que a agência mandou <b>em texto</b>.
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Campo rotulo="accountId" dica="Formato act_ seguido de dígitos. Espaço no fim é o erro mais comum.">
+          <input value={id} onChange={(e) => setId(e.target.value)}
+            className="w-full rounded-lg px-3 py-2 text-sm outline-none placeholder:text-brand-placeholder"
+            style={{ background: TEMA.fundo, color: TEMA.texto, border: `1px solid ${TEMA.bordaForte}` }}
+            placeholder="act_1087022722588031" />
+        </Campo>
+        <Campo rotulo="Nome comercial" dica="Como a agência chama o cliente.">
+          <input value={cliente} onChange={(e) => setCliente(e.target.value)}
+            className="w-full rounded-lg px-3 py-2 text-sm outline-none placeholder:text-brand-placeholder"
+            style={{ background: TEMA.fundo, color: TEMA.texto, border: `1px solid ${TEMA.bordaForte}` }}
+            placeholder="Ex.: SIGA ON" />
+        </Campo>
+        <Campo rotulo="Gestor" dica="Lista fechada — só os gestores de lib/gestores.ts.">
+          <select value={gestor} onChange={(e) => setGestor(e.target.value)}
+            className="w-full rounded-lg px-3 py-2 text-sm outline-none"
+            style={{ background: TEMA.fundo, color: TEMA.texto, border: `1px solid ${TEMA.bordaForte}` }}>
+            <option value="">Escolha…</option>
+            {OPCOES_GESTOR.map((g) => <option key={g} value={g}>{g}</option>)}
+          </select>
+        </Campo>
+        <Campo rotulo="Nicho (opcional)" dica="Sugestões vêm da carteira — evita nicho novo por typo.">
+          <input value={nicho} onChange={(e) => setNicho(e.target.value)} list="nichos-por-id"
+            className="w-full rounded-lg px-3 py-2 text-sm outline-none placeholder:text-brand-placeholder"
+            style={{ background: TEMA.fundo, color: TEMA.texto, border: `1px solid ${TEMA.bordaForte}` }}
+            placeholder="Deixe vazio se não souber" />
+          <datalist id="nichos-por-id">{nichos.map((n) => <option key={n} value={n} />)}</datalist>
+        </Campo>
+      </div>
+
+      <div className="mt-3 flex gap-2">
+        <button onClick={enviar} disabled={enviando || !id.trim() || !cliente.trim() || !gestor}
+          className="rounded-lg px-4 py-2 text-[13px] font-medium disabled:opacity-50"
+          style={{ background: TEMA.destaque, color: TEMA.textoSobreDestaque }}>
+          {enviando ? "Sondando…" : "Sondar e cadastrar"}
+        </button>
+        <button onClick={() => { setAberto(false); setFalha(null); setFeito(null); }}
+          className="rounded-lg px-4 py-2 text-[13px]"
+          style={{ background: TEMA.fundo, color: MUTED, border: `1px solid ${TEMA.bordaForte}` }}>
+          Fechar
+        </button>
+      </div>
+
+      {/**
+        * ⚠️ A RECUSA MOSTRA O QUE FAZER, NÃO SÓ O QUE FALHOU — e os dois motivos do
+        * estado `naoAcessivel` aparecem JUNTOS, porque a Meta responde igual nos dois
+        * casos e escolher um mandaria a pessoa para a ação errada.
+        */}
+      {falha && (
+        <div className="mt-3 rounded-lg px-3 py-2.5 text-[12.5px] leading-relaxed"
+          style={{ background: TEMA.avisoFundo, color: TEMA.destaque }}>
+          <b>{falha.msg}</b>
+          {typeof falha.d.oQueFazer === "string" && <><br />{falha.d.oQueFazer as string}</>}
+          {falha.d.ignorada != null && (
+            <><br /><br /><b>Motivo registrado:</b>{" "}
+              {String((falha.d.ignorada as Record<string, unknown>).motivo ?? "(sem motivo)")}</>
+          )}
+          {falha.d.metaErro != null && (
+            <><br /><br /><span style={{ color: MUTED }}>
+              Retorno cru da Meta: {JSON.stringify(falha.d.metaErro)}
+            </span></>
+          )}
+        </div>
+      )}
+
+      {feito && (
+        <div className="mt-3 rounded-lg px-3 py-2.5 text-[12.5px] leading-relaxed"
+          style={{ background: TEMA.card, color: TEMA.texto, border: `1px solid ${TEMA.bordaForte}` }}>
+          <b>Cadastrada.</b> {String(feito.accountId)} · {String(feito.nomeNaMeta ?? "sem nome na Meta")}
+          {" · "}{String(feito.moeda)} · {String(feito.statusRotulo ?? "")}
+          {feito.gasto != null && (() => {
+            const g = feito.gasto as { total: number; diasComGasto: number };
+            return <><br />Gasto em 120 dias: R$ {g.total.toFixed(2)} em {g.diasComGasto} dia(s).</>;
+          })()}
+          {/* Aviso no SUCESSO: a conta entrou, e quem cadastrou precisa saber disto. */}
+          {feito.jaEsteveNaCarteira === true && (
+            <div className="mt-2 rounded px-2 py-1.5" style={{ background: TEMA.avisoFundo, color: TEMA.destaque }}>
+              ⚠ <b>Esta conta já esteve na carteira e alguém a removeu.</b>{" "}
+              {(feito.lapide as Record<string, unknown> | null)?.removidaEm
+                ? `Saiu em ${String((feito.lapide as Record<string, unknown>).removidaEm)}. `
+                : ""}
+              {String((feito.lapide as Record<string, unknown> | null)?.motivo ?? "")}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

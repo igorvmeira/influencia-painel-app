@@ -40,10 +40,37 @@ const TETO_ACAO_MS = 30000;
 /** A busca sob demanda fala com o Meta; o servidor já se corta em 8s. */
 const TETO_PROCURAR_MS = 40000;
 
-export async function acaoFila(
+/**
+ * ⚠️ O ERRO CARREGA O CORPO INTEIRO, e não só a frase.
+ *
+ * `new Error(j.erro)` jogava fora tudo o que a rota manda junto — `oQueFazer`,
+ * `metaErro` (código cru da Meta) e `ignorada` (o motivo de quem dispensou a conta).
+ * Enquanto só existia "cadastrar" isso não custava nada, porque a recusa cabia numa
+ * linha. O cadastro por id colado recusa por TRÊS motivos diferentes, e dois deles
+ * mandam a pessoa fazer coisas diferentes — encurtar para o título traria de volta o
+ * problema que a classificação foi feita para resolver.
+ */
+export class ErroFila extends Error {
+  detalhe: Record<string, unknown>;
+  constructor(msg: string, detalhe: unknown) {
+    super(msg);
+    this.name = "ErroFila";
+    this.detalhe = (detalhe ?? {}) as Record<string, unknown>;
+  }
+}
+
+/**
+ * A chamada CRUA: devolve o corpo inteiro da resposta.
+ *
+ * ⚠️ `acaoFila` existe em cima desta e devolve `RespostaFila | null` porque as ações
+ * antigas só precisavam saber "deu certo". O cadastro por id colado precisa dos campos
+ * do sucesso também — `nomeNaMeta`, `moeda`, `gasto`, e principalmente a lápide, que é
+ * um AVISO exibido depois de a conta já ter entrado.
+ */
+export async function acaoFilaBruto(
   corpo: Record<string, unknown>,
   { tetoMs = TETO_ACAO_MS }: { tetoMs?: number } = {}
-): Promise<RespostaFila | null> {
+): Promise<Record<string, unknown>> {
   const u = auth?.currentUser;
   if (!u) throw new Error("Sessão expirada. Faça login novamente.");
   const token = await u.getIdToken();
@@ -58,9 +85,8 @@ export async function acaoFila(
       signal: ctrl.signal,
     });
     const j = await r.json();
-    if (!r.ok || !j.ok) throw new Error(j?.erro || `Erro ${r.status}`);
-    // "procurar" já devolve a fila nova — evita um GET a mais logo depois.
-    return (j.candidatas ? (j as RespostaFila) : null);
+    if (!r.ok || !j.ok) throw new ErroFila(j?.erro || `Erro ${r.status}`, j);
+    return j as Record<string, unknown>;
   } catch (e) {
     if ((e as Error)?.name === "AbortError") {
       throw new Error(
@@ -72,6 +98,15 @@ export async function acaoFila(
   } finally {
     clearTimeout(t);
   }
+}
+
+/** Envelope compativel com as acoes antigas: "procurar" ja devolve a fila nova. */
+export async function acaoFila(
+  corpo: Record<string, unknown>,
+  opts: { tetoMs?: number } = {}
+): Promise<RespostaFila | null> {
+  const j = await acaoFilaBruto(corpo, opts);
+  return (j.candidatas ? (j as unknown as RespostaFila) : null);
 }
 
 /** Busca sob demanda ("procurar agora"): fala com o Meta e reescreve a fila. */
