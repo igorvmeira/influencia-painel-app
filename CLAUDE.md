@@ -807,6 +807,51 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   e escolher outro recorte.
   ⚠️ O aviso descreve a CHEGADA e some no primeiro clique do seletor: depois disso ele
   passaria a explicar uma escolha que não está mais na tela.
+- 🛑🛑 **LIMPAR NO SUBMIT NÃO BASTA — VEREDITO MORRE QUANDO A ENTRADA MUDA, NÃO QUANDO A
+  PRÓXIMA RESPOSTA CHEGA.** Entre colar e clicar existe um intervalo em que a pessoa
+  **lê**, e nesse intervalo a tela mostra o resultado ANTIGO ao lado da entrada NOVA.
+  Caso real (07/09/2026), exercitando o cadastro por accountId da `/fila-contas`. O
+  formulário recusou `act_369467934206077` com *"esta conta já está cadastrada"*. Ao
+  colar em seguida o id da **conta fantasma**, a frase continuou embaixo dela — ou seja,
+  **a tela afirmava que a fantasma já estava na carteira**, que é exatamente a conclusão
+  que a lápide em `sistema/contasRemovidas` existe para impedir.
+  🔑 **E o defeito mora no uso NORMAL, não no excepcional.** O campo foi feito para colar
+  vários ids em sequência — recusa, corrige, cola o próximo. A sequência que produz a
+  leitura errada é a única sequência que existe.
+  ⚠️ **A régua: o estado de resultado é limpo no `onChange` do campo que define o
+  ASSUNTO dele**, não no envio. `setErro(null)` dentro do `submit` parece suficiente
+  quando se lê o código de cima para baixo, porque a limpeza "acontece antes" da próxima
+  resposta — o que ela não cobre é a espera.
+  🔑 **Como se acha:** não é lendo, é **colando duas coisas em sequência**. Passei por
+  esse código três vezes e só apareceu quando a tela foi dirigida com um segundo id.
+- 🛑🛑 **VALIDAÇÃO LOCAL A MONTANTE DE UM CLASSIFICADOR MATA RAMOS DELE EM SILÊNCIO — e o
+  ramo morto PARECE testado.** Quando você acrescenta uma checagem própria antes de
+  chamar a fonte, ela passa a interceptar entradas que antes chegavam lá — e algum caso
+  do classificador deixa de ser alcançável **por aquele caminho**. Nada acusa: o tipo
+  fecha, a união continua exaustiva, o `tsc` e o `next build` passam.
+  🔑 **E o que o faz parecer COBERTO é justamente o cuidado que se teve com ele:** o ramo
+  está lá, nomeado, com o comentário explicando quando dispara e a medição que o
+  originou. Quem lê o classificador vê três casos tratados e conclui que os três
+  acontecem. *(Neste repositório não há suíte de testes — a falsa cobertura vem da
+  leitura do código, não de um teste verde. Onde houver teste, é pior: o ramo passa
+  no unitário do classificador e mesmo assim nunca roda em produção.)*
+  Caso real (07/09/2026). `classificarFalhaSonda` tem três estados, e o `formatoInvalido`
+  (`100/33` do Graph) foi escrito para o id colado com espaço, prefixo errado ou não
+  numérico. Nenhum deles chega lá: a rota valida o formato antes e devolve mensagem
+  própria. **Um dos três estados é inalcançável pelo formulário que motivou os três.**
+  ⚠️ **NÃO REMOVA O RAMO por isso.** O classificador é da SONDA, não da tela — outro
+  chamador pode receber um `100/33` de verdade. Apagar trocaria código morto por buraco.
+  **O conserto é ANOTAR, no ponto onde a validação intercepta, quais ramos ela torna
+  inalcançáveis dali** — senão a próxima pessoa lê os três, testa um, e acha que cobriu.
+  🔑 **A pergunta que revela:** ao pôr uma validação na frente de uma fonte, liste o que
+  ela passa a **impedir de acontecer**. Validação é filtro, e todo filtro tem um lado de
+  fora que ninguém mais visita.
+  ⚠️ **E o corolário sobre COMENTÁRIO, que é a mesma família do número fora do contexto
+  que o definia:** eu escrevi que a normalização "resolve o espaço no fim". Não resolve —
+  o `.trim()` da leitura do corpo já resolvia, e é linha **anterior** à minha. Comentário
+  que atribui a si um comportamento HERDADO é caro de um jeito específico: quem ler
+  depois vai achar que **pode remover a linha antiga sem quebrar nada**. Antes de
+  escrever "isto trata X", confirme que X ainda chegava aqui.
 - 🛑 **IMPORT DE VALOR NUM COMPONENTE ARRASTA A CADEIA INTEIRA PARA O BUNDLE DO CLIENTE.**
   `import type` é apagado na compilação; import de valor não é. Caso real: a tela importou
   uma constante de `lib/comercialAgregado.ts`, que importa `lib/comercial.ts`, que importa
