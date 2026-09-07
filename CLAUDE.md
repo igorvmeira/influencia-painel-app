@@ -1043,6 +1043,25 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   · o `NodeMark` tinha três chamadas, não uma;
   · a regra do `Bearer` era de CONDUTA, e o código aceitava as duas formas;
   · o símbolo da marca não era um triângulo — a descrição saiu de um preview em 22%.
+
+  **Mais duas em 07/09/2026, e o que elas acrescentam é o MECANISMO DA CORREÇÃO:**
+  · *"a LÍDER ASSESSORIA precisa de confirmação com o Ismail"* — eu disse isso num
+    relatório. **A resposta já estava no repositório**, em dois arquivos: aquele
+    `accountId` é a conta fantasma, documentada em `lib/filaContas.ts` e em
+    `app/api/diagnostico-contas/route.ts`. Um `grep` no id teria evitado mandar uma
+    pergunta a uma pessoa;
+  · *"o ramo parece testado porque o classificador tem teste"* — dito do outro lado da
+    mesa, ao ditar uma régua. **Não há suíte de testes neste repositório**, zero
+    arquivos `.test`/`.spec`. A régua entrou com o mecanismo certo (a falsa cobertura
+    vem da leitura do código) porque o `git ls-files` foi rodado antes de escrever.
+  🔑 **O QUE AS SEIS TÊM EM COMUM NÃO É O ERRO, É O CONSERTO: nas seis, a correção veio
+  de CONFERIR, nunca de raciocinar melhor.** Nenhuma foi desfeita pensando com mais
+  cuidado sobre a afirmação — todas foram desfeitas por um `grep`, um `ls`, um arquivo
+  aberto. É a mesma forma do `direction: 10`, onde o que derrubou a inferência não foi
+  análise, foi uma FONTE que trouxe o rótulo ao lado do código.
+  ⚠️ **A consequência prática: quando bater a dúvida sobre uma afirmação de arranjo, o
+  reflexo certo NÃO é reler a frase procurando o furo — é abrir o arquivo.** Reler
+  costuma confirmar, porque a frase foi escrita por quem já acreditava nela.
   🔑 **A régua: descrição de arranjo é medição, e a ferramenta é o `grep`, não a lembrança.**
   Antes de dizer "isto consome aquilo" ou "isto tem N usos", abra. Custa segundos, e a
   alternativa é planejar em cima de um mapa errado — que foi o que aconteceu no plano da
