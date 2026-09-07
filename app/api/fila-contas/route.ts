@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { getDb, getAuthAdmin } from "@/lib/firebaseAdmin";
 import { ehGestorValido } from "@/lib/gestores";
-import { podeCadastrar, CandidataFila, FilaContas, Ignorada, MOEDA_ACEITA, MSG_RESTRITO } from "@/lib/filaContas";
-import { descobrirContas } from "@/lib/descobrirContas";
+import { podeCadastrar, classificarFalhaSonda, CandidataFila, FilaContas, Ignorada, MOEDA_ACEITA, MSG_RESTRITO, bare as bareId } from "@/lib/filaContas";
+import { descobrirContas, sondarIdentidade, sondarGasto } from "@/lib/descobrirContas";
 // ⚠️ Este arquivo já importava DOC_FILA e DOC_IGNORADAS e escrevia collection("sistema")
 // à mão OITO vezes — na mesma linha em que usava a constante do documento. Participava
 // da decisão para o nome do doc e não para o da coleção.
-import { COL_SISTEMA, DOC_FILA, DOC_IGNORADAS } from "@/lib/colecoes";
+import { COL_SISTEMA, DOC_FILA, DOC_IGNORADAS, DOC_REMOVIDAS } from "@/lib/colecoes";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -15,6 +15,15 @@ export const maxDuration = 60;
 // Orçamento da busca sob demanda ("procurar agora"). Maior que o do sync porque
 // aqui existe uma pessoa esperando na tela, e nada mais divide a chamada.
 const DESCOBERTA_MS = 8000;
+
+/**
+ * Janela do gasto no cadastro por id colado. Igual a DIAS_GASTO da descoberta (120):
+ * a pergunta e a mesma -- "rodou em algum momento?" -- e dois numeros diferentes para
+ * a mesma pergunta fariam a mesma conta parecer ativa num caminho e parada no outro.
+ * ⚠️ Duplicado de proposito: lib/descobrirContas nao exporta o dele. Mudar um obriga
+ * a mudar o outro ate que exista um lugar neutro para os dois.
+ */
+const DIAS_GASTO_POR_ID = 120;
 
 /**
  * A fila de aprovação: LÊ o que o sync descobriu, e ESCREVE a decisão humana.
@@ -162,6 +171,160 @@ export async function POST(req: Request) {
   }
 
   // ----------------------------------------------------------------- CADASTRAR
+  // ------------------------------------------------------ CADASTRAR POR ID COLADO
+  /**
+   * ⚠️⚠️ O CAMINHO QUE A FILA NÃO PODE OFERECER, E POR ISSO EXISTE.
+   *
+   * A ação `cadastrar` exige que a conta esteja em `sistema/filaContas.candidatas`, e
+   * essa fila NASCE do `me/adaccounts` — que comprovadamente não lista conta vinda de
+   * parceria de Business Manager. **A tela era estruturalmente incapaz de cadastrar
+   * exatamente as contas que a listagem esconde**, e o rodapé dourado já mandava o
+   * humano "pedir o accountId em texto e sondar pela consulta direta" — um fluxo que
+   * não existia. Medido em 05/09/2026: das 13 contas da planilha gerencial que
+   * faltavam no painel, **10 estavam fora da listagem**, e duas delas (SIGA ON e VOX
+   * ITABUNA) respondiam normalmente e somavam R$ 3.918,82 no mês. As duas tiveram de
+   * entrar por script porque não havia caminho na tela.
+   *
+   * 🔑 A DIFERENÇA PARA `cadastrar` É UMA SÓ: a fonte da verdade sobre a conta.
+   * Lá é a fila gravada; aqui é a **sondagem viva**. Tudo o mais — moeda, ignoradas,
+   * conta já existente, forma do documento — é a mesma régua, importada, não copiada.
+   */
+  if (acao === "cadastrarPorId") {
+    const cliente = String(corpo.cliente ?? "").trim();
+    const gestor = String(corpo.gestor ?? "").trim();
+    const nicho = String(corpo.nicho ?? "").trim();
+    const tipo = String(corpo.tipo ?? "").trim();
+
+    if (!cliente) return NextResponse.json({ ok: false, erro: "informe o nome comercial" }, { status: 400 });
+    if (!ehGestorValido(gestor)) {
+      return NextResponse.json({ ok: false, erro: "gestor fora da lista de lib/gestores.ts" }, { status: 400 });
+    }
+
+    /**
+     * Normaliza ANTES de gastar uma requisição no Meta. O `act_` faltando e o espaço
+     * no fim são os erros de colagem mais comuns, e os dois voltariam do Graph como
+     * `100/33` — um erro que fala de sintaxe e que a pessoa leria como "não existe".
+     * Resolver aqui dá uma mensagem melhor e não custa chamada.
+     */
+    const id = `act_${bareId(accountId)}`;
+    if (!/^act_\d{6,}$/.test(id)) {
+      return NextResponse.json({
+        ok: false,
+        erro: "o accountId precisa ser `act_` seguido de pelo menos 6 dígitos — confira o texto colado",
+        idNormalizado: id,
+      }, { status: 400 });
+    }
+
+    // Já cadastrada? Mesma resposta da outra ação: não sobrescreve.
+    const refNova = db.collection("contas").doc(id);
+    if ((await refNova.get()).exists) {
+      return NextResponse.json({ ok: false, erro: "esta conta já está cadastrada" }, { status: 409 });
+    }
+
+    /**
+     * ⚠️ IGNORADAS BLOQUEIAM AQUI TAMBÉM — e este é o ponto do caminho novo que mais
+     * podia passar despercebido. A ação `cadastrar` nunca precisou desta checagem
+     * porque a tela já filtra as ignoradas da lista. Colando o id à mão não há lista,
+     * e sem isto o registro da NEXA (moeda ARS) e a lápide da conta fantasma
+     * `act_191616327202757` deixariam de proteger justamente no caminho que não passa
+     * pela fila. O motivo escrito volta INTEIRO: quem decidiu isso escreveu por quê.
+     */
+    const snapIgn2 = await db.collection(COL_SISTEMA).doc(DOC_IGNORADAS).get();
+    const jaIgnorada = ((snapIgn2.data()?.contas ?? {}) as Record<string, Ignorada>)[id];
+    if (jaIgnorada) {
+      return NextResponse.json({
+        ok: false,
+        erro: "esta conta foi dispensada de propósito — leia o motivo antes de insistir",
+        ignorada: { por: jaIgnorada.por, em: jaIgnorada.em, motivo: jaIgnorada.motivo ?? null },
+      }, { status: 409 });
+    }
+
+    // ---- A SONDAGEM VIVA: consulta direta, nunca a listagem ----
+    const s = await sondarIdentidade(id);
+    if (!s.acessivelDireto) {
+      const v = classificarFalhaSonda(s.codigo, s.subcodigo);
+      return NextResponse.json({
+        ok: false,
+        erro: v.titulo,
+        oQueFazer: v.oQueFazer,
+        estado: v.estado,
+        // O cru vai junto SEMPRE, inclusive quando foi classificado: a classificação
+        // é interpretação nossa, e quem for investigar precisa do que a Meta disse.
+        metaErro: { codigo: s.codigo, subcodigo: s.subcodigo, mensagem: s.erro },
+      }, { status: 400 });
+    }
+
+    /**
+     * ⚠️ A MESMA `podeCadastrar` DA OUTRA AÇÃO, alimentada pela sonda viva em vez da
+     * fila gravada. Reimplementar a regra da moeda aqui criaria duas verdades sobre o
+     * que o painel aceita — e foi ela que barrou a NEXA TELECOM (ARS) em 05/09/2026.
+     */
+    const sintetica: CandidataFila = {
+      accountId: id,
+      nomeNaMeta: s.nomeNaMeta,
+      moeda: s.moeda,
+      status: s.status,
+      statusRotulo: s.statusRotulo,
+      gastoPeriodo: 0,
+      diasComGasto: 0,
+      ultimoDiaComGasto: null,
+      erro: s.erro,
+      jaEsteveNaCarteira: false,
+      ultimaSincronizacao: null,
+    };
+    const conf = podeCadastrar(sintetica);
+    if (!conf.ok) {
+      return NextResponse.json({ ok: false, erro: `não pode ser cadastrada: ${conf.motivo}` }, { status: 400 });
+    }
+
+    /**
+     * ⚠️ AVISA, NÃO BLOQUEIA — a mesma regra do `jaEsteveNaCarteira`. Ter estado na
+     * carteira não é impedimento técnico; é informação que muda o julgamento humano,
+     * e o julgamento é o que esta rota nunca decide sozinha.
+     */
+    const snapRem = await db.collection(COL_SISTEMA).doc(DOC_REMOVIDAS).get();
+    const lapide = ((snapRem.data()?.contas ?? {}) as Record<string, { removidaEm?: string; motivo?: string }>)[id] ?? null;
+
+    // Gasto: só depois de passar em tudo, porque é a chamada mais cara das duas.
+    const g = await sondarGasto(id, DIAS_GASTO_POR_ID);
+
+    await refNova.set({
+      accountId: id,
+      cliente,
+      gestor,
+      nicho: nicho || null,
+      tipo: tipo || null,
+      pausado: false,
+      moeda: s.moeda ?? MOEDA_ACEITA,
+      origemCadastro: "tela",
+      cadastradaPor: sessao.email,
+      cadastradaEm: new Date().toISOString(),
+      /**
+       * ⚠️ MARCA O CAMINHO, e não é enfeite: conta que entrou por aqui é, por
+       * definição, conta que o `me/adaccounts` pode não listar. No dia em que alguém
+       * for medir a lacuna da listagem, esta é a única forma de achar essas contas
+       * sem refazer a sondagem de todas.
+       */
+      cadastradaPorIdColado: true,
+    }, { merge: true });
+
+    return NextResponse.json({
+      ok: true,
+      acao: "cadastrarPorId",
+      accountId: id,
+      cliente,
+      gestor,
+      nomeNaMeta: s.nomeNaMeta,
+      moeda: s.moeda,
+      statusRotulo: s.statusRotulo,
+      gasto: g.erro ? null : { total: g.total, diasComGasto: g.diasComGasto, ultimo: g.ultimoDiaComGasto },
+      // Sai como AVISO na resposta de sucesso — a conta foi cadastrada e a pessoa
+      // precisa saber que ela já esteve na carteira e alguém a tirou.
+      jaEsteveNaCarteira: !!lapide,
+      lapide: lapide ? { removidaEm: lapide.removidaEm ?? null, motivo: lapide.motivo ?? null } : null,
+    });
+  }
+
   if (acao !== "cadastrar") {
     return NextResponse.json({ ok: false, erro: "ação desconhecida" }, { status: 400 });
   }
