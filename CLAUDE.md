@@ -181,6 +181,33 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   cria registro fantasma que nunca sincroniza. Peça sempre o retorno em **texto**.
 - **Joins sempre por ID único, nunca por nome.** Nomes de cliente se repetem e geram
   duplicação silenciosa (a mesma conta aparecendo em vários lugares).
+- 🛑🛑 **LER O CÓDIGO DO ERRO, NÃO A MENSAGEM — e o mesmo HTTP esconde causas com donos
+  diferentes.** Erro de API tem um campo `code` justamente porque o texto não é
+  classificável; casar a mensagem com regex junta erros que pedem ações opostas.
+  Caso real (05/09/2026), sondando 13 contas do Meta:
+
+  | código | mensagem | de quem é a culpa | o que fazer |
+  |---|---|---|---|
+  | `#100` | *Requires business_management permission to access **the field*** | **da nossa consulta** — pedimos um campo proibido | tirar o campo |
+  | `#200` | *Ad account owner has NOT grant ads_management or ads_read* | **do dono da conta** | cobrar liberação ao cliente |
+
+  Eu tinha acrescentado `business` e `disable_reason` à consulta, campos que a rota
+  `/api/diagnostico-contas` **não** pede. **O Graph derruba a chamada INTEIRA quando um
+  campo pedido é proibido** — não devolve resposta parcial. As 13 voltaram como "sem
+  acesso", e a minha classificação (`/permission|not have|access/i` na mensagem) mandou
+  todas para *"parceria de BM pendente"*.
+  **Eram 8, não 13.** As outras 5 respondiam normalmente: 3 prontas para cadastrar com
+  **R$ 6.142,15** de gasto no mês, 1 sem veiculação e 1 em **ARS** — que teria entrado
+  somando pesos ao total em reais.
+  🔑 **Repare para que lado o erro empurrava: TUDO para "problema do cliente".** Um
+  relatório assim vira cobrança a 5 clientes que não devem nada, e é exportado — a mesma
+  assimetria de sempre.
+  ⚠️ **A régua tem duas metades, e a segunda é a que dói:**
+  · **classifique por `code`, nunca por texto** — a mensagem é para humano, o código é
+    para máquina, e o texto muda sem aviso de versão;
+  · **não amplie a lista de campos de uma consulta que já funciona.** A rota pedia
+    `name,account_status,currency` e estava certa; eu "melhorei" e quebrei. Campo a mais
+    numa consulta ao Graph não é adicionar informação — é **arriscar a resposta toda**.
 - **Status ≠ atividade.** No Meta, `account_status: ACTIVE` diz que a conta de anúncios
   está **regular** (não desabilitada, não encerrada) — **não** que há campanha rodando.
   Veiculação só se afere por **gasto > 0 no período**, consultado dia a dia. Confundir os
@@ -227,6 +254,17 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   dias** ficaram fora do painel exatamente assim. Fila vazia ali significa "o token não
   listou nada novo", nunca "não há contas novas". **O aviso vai na tela, junto do vazio** —
   documentar no código não protege ninguém, porque quem lê a tela não lê o código.
+  📌 **E a lacuna pegou mais duas em 05/09/2026, das 13 contas que a planilha do gerencial
+  tinha e o painel não:** `SIGA ON` (`act_1087022722588031`) e `VOX ITABUNA`
+  (`act_1871903866278085`) **não aparecem no `me/adaccounts`**, respondem normalmente à
+  consulta direta e gastaram **R$ 3.918,82 no mês** — 10 das 13 estavam fora da listagem.
+  **Não é um caso isolado de 2026: é o comportamento normal da listagem**, e cada vez que
+  alguém confia nela o painel perde conta que fatura.
+  🔑 **O corolário operacional, medido no mesmo dia:** a `/fila-contas` só deixa cadastrar
+  o que está em `sistema/filaContas.candidatas`, e essa fila **nasce do `me/adaccounts`**.
+  Ou seja, **a tela é estruturalmente incapaz de cadastrar exatamente as contas que a
+  listagem esconde** — as duas acima tiveram de entrar por script. O limite da fonte virou
+  limite do produto sem ninguém decidir isso.
   É a mesma família do `situacaoDoAnuncio`, que devolve `null` (e não "pausado") quando a
   Meta não responde: **ausência de dado não é evidência de ausência do fato.** Antes de
   escrever "nenhum X encontrado", pergunte se a fonte enxerga todos os X — e se não
