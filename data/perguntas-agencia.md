@@ -96,7 +96,7 @@ global, três tentativas cada. Medido em **20/08/2026**, remedido em **02/09/202
 | `[22]` Notificações Internas | `WAMD2` | true | 🛑 401 | **✅ 200** | ✅ 200 | — | **mudou uma vez, e parou** |
 | `[15]` OS DIRETORES | `WAMD` | **false** | 🛑 503 | 🛑 503 | 🛑 503 | `QUEUE_008` | **fila desabilitada** |
 | `[20]` DISPAROS | `WAMD` | **false** | 🛑 503 | 🛑 503 | 🛑 503 | `QUEUE_008` | **fila desabilitada** |
-| `[18]` IA - PROVEDOR DE INTENET | `WAMD` | **false** | 🛑 401 | 🛑 401 | 🛑 401 | `AUTH_018` | **a chave não abre — causa NÃO isolada ↓** |
+| ~~`[18]` IA - PROVEDOR DE INTENET~~ | `WAMD` | **false** | 🛑 401 | 🛑 401 | 🛑 401 | `AUTH_018` | ✅ **ENCERRADA em 08/09/2026 — causa provada, fila fora de uso** |
 
 🔄 **A `[22]` MUDOU entre 20/08 e 02/09, e NÃO mudou mais até 05/09.** É por isso que esta
 tabela tem três colunas de data em vez de uma linha reescrita: **a remedição idêntica é
@@ -111,39 +111,49 @@ cenários produzem o retorno de hoje. Quem responde é o log do servidor do forn
 🔑 **A lição operacional: guardar o CORPO, não só o status.** Um `{"errorCode":"AUTH_018"}`
 de 24 bytes teria custado nada e deixaria esta linha decidível.
 
-🛑🛑 **O QUE ESTA TABELA NÃO RESOLVE — leia antes de usá-la para argumentar.**
+## ✅ RESOLVIDO em 08/09/2026 — a causa era a CHAVE DA FILA VAZIA, não o tipo
 
-As três filas `WAMD` são **exatamente** as três com `enabled = false`. Não existe nesta
-instância uma fila `WAMD` habilitada, nem uma não-`WAMD` desabilitada. **As duas hipóteses
-preveem o mesmo resultado nas 7 filas**, então a matriz não separa:
+A agência comparou as telas de configuração no admin do Xmax. O que separa as três:
 
-- *"a chave global não abre fila do tipo `WAMD`"* — foi o que o TI do fornecedor disse em
-  05/09/2026;
-- *"fila desabilitada não serve, e o tipo é coincidência"*.
+| fila | `apikey` da fila | servidor | resultado |
+|---|---|---|---|
+| `[15]` | **preenchida** | desabilitado | `503 QUEUE_008` |
+| `[18]` | 🛑 **VAZIA** | desabilitado | `401 AUTH_018` |
+| `[19]` | **preenchida** | autenticado | funciona |
 
-⚠️ **E há um resto que a hipótese do tipo não cobre:** as três `WAMD` desabilitadas dão
-**dois códigos diferentes** — `[15]` e `[20]` devolvem `503 QUEUE_008`, `[18]` devolve
-`401 AUTH_018`. Se o tipo fosse a causa, o erro seria o mesmo nas três. O único campo do
-`getAllQueues` que separa a `[18]` das outras duas é **`ivrId = 76`** (as duas têm `0`) —
-mas a `[22]` também tem URA (`122`) e responde 200, então `ivrId` sozinho também não
-explica. **Candidato, não causa.**
+🔑 **A causa é a ORDEM DE VERIFICAÇÃO: o sistema autentica ANTES de checar o estado da
+fila.** Sem chave de fila, a `[18]` é barrada na autenticação e **nunca chega a ser
+avaliada como desabilitada**. Por isso duas filas no mesmo estado (`enabled: false`) davam
+erros diferentes — a diferença não estava no estado, estava em quão longe cada uma chegava
+no fluxo antes de ser recusada.
 
-🔧 **O que separaria as duas não está ao nosso alcance — são TRÊS perguntas para o
-suporte:**
+🛑 **A explicação do fornecedor NÃO era a causa.** Em 05/09/2026 o TI disse *"a chave global
+não abre filas WAMD"*. A tabela desmente por duas vias independentes:
+- a `[15]` **é `WAMD`** e chega ao `QUEUE_008` — ou seja, passou da autenticação;
+- a `[22]` é `WAMD2` e funciona.
+O tipo nunca explicou o `AUTH_018`.
 
-1. **A chave global abre alguma fila `WAMD` HABILITADA**, em qualquer instância? (Aqui não
-   existe uma para testar — é o experimento que falta.)
-2. **Por que a `[18]` dá `401 AUTH_018` e a `[15]`/`[20]` dão `503 QUEUE_008`**, sendo as
-   três `WAMD` e desabilitadas? Se o tipo fosse a causa, o erro seria o mesmo.
-3. **Por que o `getChatsMinIdAndDate` responde `200` nas sete filas**, inclusive nas três
-   que os outros endpoints recusam? Ele aceita `queueId` e não o respeita.
+⚠️⚠️ **E o que fez essa causa aparecer não foi a matriz — foi uma tela que a API não
+expõe.** A matriz é consistente com a explicação do tipo, com a do `enabled` E com a da
+chave vazia: as três preveem exatamente as mesmas 7 linhas. **Nenhuma medição pela API
+poderia ter separado**, porque a `apikey` da fila não é um campo que a API devolva. O
+confundimento só se desfez com evidência de FORA do instrumento — e essa é a lição que
+fica: quando várias hipóteses preveem o mesmo resultado, mais medição no mesmo eixo não
+decide nada. É preciso um eixo novo.
 
-A 1 e a 2 fecham a causa; a 3 é achado nosso e vale por si.
+📌 **A `[18]` está ENCERRADA:** desabilitada desde **08/09/2025**, e a agência confirmou que
+não voltará. A linha fica na tabela riscada, com a data e o motivo — apagá-la esconderia
+que houve um `AUTH_018` investigado por 19 dias e que a causa é conhecida.
 
-🛑 **NÃO use a `[22]` como contraexemplo.** Ela responde 200 e o `backupChatAsJson` a rotula
-como `queueType: "WAMD"` — mas o **`getAllQueues` diz `WAMD2`**, e é ele que carrega a
-configuração. O campo do backup colapsa as variantes e discorda do `getAllQueues` nas três
-filas em que ambos têm dado. Ver `data/xmax-chat-schema.md`, a seção do `queueType`.
+🕳️ **Continua em aberto, e é achado nosso, não do fornecedor:** o `getChatsMinIdAndDate`
+responde `200` nas sete filas, inclusive nas três que todos os outros endpoints recusam.
+Ele aceita `queueId` e não o respeita. Isso não tem nada a ver com a `[18]` e vale como
+pergunta ao suporte por si só.
+
+🛑 **NÃO use a `[22]` como contraexemplo de tipo.** Ela responde 200 e o `backupChatAsJson`
+a rotula como `queueType: "WAMD"` — mas o **`getAllQueues` diz `WAMD2`**, e é ele que
+carrega a configuração. O campo do backup colapsa as variantes e discorda do `getAllQueues`
+nas três filas em que ambos têm dado. Ver `data/xmax-chat-schema.md`, seção do `queueType`.
 
 ⚠️ **503 aqui NÃO é instabilidade.** `QUEUE_008` é *"a fila informada está desabilitada"* —
 estado permanente, não erro transitório. Repetir não resolve; foi repetido três vezes, nas
@@ -193,12 +203,15 @@ Duas coisas diferentes, e a diferença muda o que fazer:
 - *"só a agência sabe"* → esperar alguém digitar uma lista à mão (foi o que estava escrito,
   e o Marcos já disse que **não consegue rastrear por ID na interface** — ou seja, o
   caminho registrado estava fechado);
-- *"a chave não alcança"* → **pedir ao suporte** que a chave global cubra a fila **18**
-  (a 22 passou a responder sozinha em algum ponto entre 20/08 e 02/09, e segue respondendo
-  em 05/09). **Atualizado em 05/09/2026:** o TI respondeu que a chave global não abre fila
-  do tipo `WAMD` — o que é consistente com a matriz e **não é verificável nela**, porque as
-  três `WAMD` são as três desabilitadas. As três perguntas que fecham isso estão na tabela
-  acima, em *"o que esta tabela não resolve"*.
+- ~~*"a chave não alcança"* → **pedir ao suporte** que a chave global cubra a fila **18**~~
+  ✅ **PEDIDO ENCERRADO em 08/09/2026, sem precisar do suporte.** A `[18]` está
+  desabilitada desde 08/09/2025 e a agência confirmou que não volta; e a causa do
+  `AUTH_018` era a `apikey` da fila estar VAZIA, não a chave global não alcançar. Ver a
+  seção resolvida acima. **A `[22]` já respondia desde 02/09** e segue respondendo.
+  ⚠️ Sobram as filas `[15]` e `[20]`, que são `QUEUE_008` — **desabilitadas de propósito,
+  configuração da agência, não defeito do fornecedor.** Não há pedido de suporte aberto
+  sobre nenhuma das quatro. O único item que ainda vale mandar a eles é o
+  `getChatsMinIdAndDate`, que ignora o `queueId`.
 
 🔑 **E o ID space é COMPARTILHADO, não dois namespaces separados.** As oportunidades
 carregam etiquetas dos DOIS lados: `[4]`, `[9]`, `[26]`, `[39]` são de `getTags` e `[6]`,

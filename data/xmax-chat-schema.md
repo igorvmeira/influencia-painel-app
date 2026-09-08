@@ -76,6 +76,14 @@ devolve `HTTP 200`.** Não há 401 na fila 22 em endpoint nenhum. A fila que 401
 e lá o `AUTH_018` atinge os quatro endpoints escopados de uma vez — é por FILA, nunca por
 endpoint. Matriz completa em `data/perguntas-agencia.md`, seção 3.
 
+✅ **E em 08/09/2026 a causa do `AUTH_018` ficou provada: a `apikey` DA FILA 18 está
+VAZIA.** O sistema **autentica antes de checar o estado da fila**, então sem chave a 18 é
+barrada na autenticação e nunca chega a ser avaliada como desabilitada — é por isso que
+ela e a `[15]`, no mesmo `enabled: false`, davam erros diferentes.
+🔑 **Nenhuma medição pela API poderia ter achado isso:** a `apikey` da fila não é campo
+que a API devolva. A causa saiu de comparar as telas de configuração no admin. A `[18]`
+está fora de uso desde 08/09/2025 e não volta.
+
 ⚠️ **De onde veio o erro:** o 401 foi medido em **20/08/2026 no `getChatTags`** e eu o
 apliquei ao `getChatMessages`, onde nunca tinha sido medido — e à fila 22, que desde então
 passou a responder. Duas trocas numa frase só, e ela ficou aqui treze dias parecendo

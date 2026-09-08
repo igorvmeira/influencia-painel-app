@@ -1375,8 +1375,13 @@ captação e essas geralmente entram sem origem. Mantida a regra "Sem origem".
 
 1. ~~**Os nomes das 21 etiquetas sem nome**~~ — **a pergunta mudou em 20/08/2026.** Elas
    não estão sem nome: o endpoint que as nomeia é `getChatTags`, e ele **não responde**
-   pelas filas `[15]` e `[20]` (desabilitadas, `QUEUE_008`) nem pela `[18]` (a chave
-   global não alcança, `AUTH_018`). Ver a seção 3 de `perguntas-agencia.md`.
+   pelas filas `[15]` e `[20]` (desabilitadas, `QUEUE_008`) nem pela `[18]`
+   (~~a chave global não alcança~~ — **corrigido em 08/09/2026: a `apikey` DA FILA está
+   vazia, e o sistema autentica antes de checar o estado da fila**, `AUTH_018`).
+   Ver a seção 3 de `perguntas-agencia.md`.
+   ✅ **E a `[18]` está ENCERRADA:** desabilitada desde 08/09/2025, a agência confirmou
+   que não volta. As etiquetas que só ela nomearia **não serão recuperadas por esse
+   caminho** — e não vale abrir chamado, porque não há defeito do lado do fornecedor.
    🔄 **CORRIGIDO EM 02/09/2026:** este parágrafo dizia `[18]` **e `[22]`**. A `[22]` foi
    remedida no mesmo endpoint, três tentativas, e responde **200** — devolve as 2
    etiquetas das filas 17 e 19. São **três** filas fora de alcance, não quatro. Se
@@ -1519,6 +1524,28 @@ de interface, por alguém com acesso:
 4. Garantir que a fila do comercial está **habilitada** (senão: `QUEUE_008`).
 
 ## Riscos, do mais grave ao menor
+
+0. 🛑 **AS CHAVES DE FILA DO XMAX SÃO FRACAS — risco CONHECIDO E ACEITO, não tarefa.**
+   Visto em 08/09/2026, comparando as telas de configuração no admin: a chave da fila
+   **`[19]`, que é fila de CLIENTE ATIVA** (69 atendimentos encerrados em 30 dias, 242
+   abertos agora), é uma **sequência trivial de 9 dígitos** — o tipo de valor que se
+   adivinha na primeira tentativa, não que se quebra.
+   ⚠️ **O valor NÃO é transcrito aqui de propósito.** Este arquivo está versionado no
+   GitHub; escrever o segredo no repositório trocaria "fraco" por "público", que é
+   estritamente pior. Quem precisar conferir olha o admin do Xmax.
+   🔑 **O tamanho do risco não é o da chave, é o da API:** essas chaves dão acesso de
+   **ESCRITA ao CRM inteiro** — `removeOpportunity` e `sendMessageToChat` estão na API.
+   Uma chave de fila adivinhada permite apagar oportunidade e mandar mensagem em nome da
+   agência, para o cliente final.
+   📌 **Fica como risco aceito pelo mesmo motivo do `CRON_SECRET`** (ver a nota da
+   `/api/diag-xmax` mais acima): a decisão de não regenerar já foi tomada, e trocar a
+   chave da `[19]` exige coordenação com quem opera a fila, sem ganho enquanto a
+   instância inteira estiver no mesmo padrão. **Não é uma pendência esquecida — é uma
+   escolha, e ela está escrita para o dia em que alguém perguntar por que ninguém trocou.**
+   ⚠️ **O que MUDA o cálculo, e aí isto vira tarefa:** se a chave de fila passar a ser
+   usada por integração nossa (hoje o `XMAX_API_KEY_FILA` existe no `.env` e **não é
+   consumido** — ver `lib/xmax.ts`), ou se a instância passar a atender cliente externo
+   pela mesma fila. Enquanto for só a agência operando, o risco é o de hoje.
 
 1. **O MRR vazio deixou de ser hipótese: foi MEDIDO.** Das 3 ganhas da amostra, **1
    fechou com `closerecurrentvalue = 0`**. O campo é opcional no `winOpportunity`, e o
