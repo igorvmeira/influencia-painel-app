@@ -380,17 +380,86 @@ falando?"*.
 
 ---
 
-## Os campos de IA que a plataforma JÁ TEM
+## Os campos de IA que a plataforma JÁ TEM — RESPONDIDO em 08–10/09/2026
 
 O chat traz `aiSummary`, `aiSuggestion`, `aiScore`; a mensagem traz `rewrittenByAi`,
 `insultDetected`, `transcription`, `assistantId`.
 
-**Medido: 0 de 152 chats com qualquer um preenchido.**
+**Medido: 0 de 152 chats com qualquer um preenchido** (e depois 0 de 139, e 0 de 145).
 
-⚠️ **E zero preenchido não autoriza dizer que a plataforma não faz isso.** Diz que **nestes
-25 não estava em uso** — pode ser recurso não contratado, desligado, ou de outra fila. A
-diferença importa: se o Xmax já entrega resumo e score, o módulo pode estar reconstruindo
-algo que se liga num botão. **Pergunta para o Manuel, antes de qualquer proposta.**
+⚠️ ~~*"Zero preenchido não autoriza dizer que a plataforma não faz isso… pergunta para o
+Manuel."*~~ — **a pergunta foi feita e respondida.** As três respostas abaixo mudam o
+desenho do produto, e nenhuma delas veio da API.
+
+### 🛑🛑 1. O PISO DE ANÁLISE: atendimento curto NUNCA é analisado
+
+O painel do Xmax mostra o ícone de análise apagado, com a dica:
+
+> *"Esse atendimento não pode ser analisado. Para que um atendimento possa ser analisado,
+> ele precisa ter no mínimo uma mensagem enviada pelo cliente e possuir no mínimo 4
+> mensagens trocadas."*
+
+**Então `aiSummary` vazio não é ausência de suporte na API — é a análise que nunca rodou.**
+
+🔑 **"Mensagens trocadas" conta SÓ mensagem humana (`in` + `out`), não `system`/`alert`** —
+e isto se sabe por um caso discriminante, não por suposição: o chat `14370` tem **6**
+mensagens no `backupChatAsJson` (2 `in`, 1 `out`, 3 `system`) e **o painel diz "3
+mensagens"**. Se contasse tudo, diria 6.
+⚠️ *Um caso basta para identificar QUAL das duas fórmulas o sistema usa — a regra de
+contagem é código, não amostra. O que um caso não faz é estimar a TAXA; para isso, o
+número abaixo.*
+
+📌 **O que o piso custa na população real — 145 encerrados em 30 dias, medido 10/09/2026:**
+
+| | passam | nunca analisados |
+|---|---|---|
+| **contando só `in`+`out`** (a regra real) | **42 (29%)** | **103 (71%)** |
+| contando tudo, inclusive `system` | 132 (91%) | 13 (9%) |
+| fila 7 | **4 de 59** | 55 |
+| fila 19 | 37 de 81 | 44 |
+| fila 22 | 1 de 5 | 4 |
+
+**A fila 7 — a principal — perde 93% dos atendimentos.** Ela é `WA Cloud API`, cheia de
+`system`, e tem 1% de mensagem de agente.
+
+🛑 **E o viés tem direção, que é o que torna isto grave para o produto: atendimento curto
+é o ABANDONADO.** Quem some depois de uma mensagem, quem não foi respondido, quem desistiu
+— exatamente o que mais interessa medir — é o que **nunca terá resumo nem score**. Um
+produto de análise construído sobre esse campo mede os atendimentos que deram certo e é
+cego para os que não deram.
+🔧 **O que continua valendo: tempo de resposta, e por quê — ele sai do RELÓGIO**
+(`beginTime`, `firstResponseTime`, `endTime`), não do conteúdo. Não tem piso, não depende
+de a conversa ter acontecido, e existe em 100% dos chats.
+
+### 🛑🛑 2. Os campos existem porque a instância está num grupo BETA
+
+Confirmado pelo TI do Xmax: `aiSummary`, `aiScore`, `aiSuggestion` e `assistantId` existem
+no retorno **porque a instância da Influência participa de um grupo que recebe
+funcionalidade em beta**. **Instância comum não tem esses campos.**
+
+🔑 **Isto decide o desenho, e a decisão é: a análise fica sob a NOSSA lógica, não
+consumindo a deles.** Construir em cima de campo beta significaria: um recurso que pode
+mudar ou sair sem aviso, que **não existe** para nenhum outro cliente do estúdio, e cujo
+comportamento (o piso acima) não é nosso para ajustar.
+⚠️ Isso não os torna inúteis — se vierem preenchidos, são conferência gratuita contra a
+nossa própria análise. Mas **nada do produto pode depender deles**.
+
+### 🛑🛑 3. A PLATAFORMA APAGA CHAT — ela é fonte de COLETA, não arquivo
+
+Confirmado pelo TI: o Xmax **exclui chats periodicamente**, com aviso no fim do mês e opção
+de backup.
+
+⚠️ **A janela de retenção não é documentada e pode variar por plano.** Não temos o número,
+e não dá para inferi-lo do piso de histórico (`getChatsMinIdAndDate` devolve 23/09/2021,
+mas esse é o piso do que EXISTE hoje — se houve exclusão, ele já reflete o que sobrou).
+
+🔑 **Consequência de desenho, não detalhe operacional: tudo que a gente analisar precisa
+ser guardado do NOSSO lado, no momento da coleta.** Um módulo que releia o Xmax para
+recalcular vai encontrar, um dia, menos conversa do que analisou — e a série histórica
+encolhe sozinha, sem erro em lugar nenhum.
+🛑 **É a mesma família do rastro por sobra** (ver `lib/descobrirContas.ts`): depender de o
+outro lado não ter apagado é depender de algo que ninguém prometeu. **A cópia é o
+arquivo; a plataforma é a fonte.**
 
 ---
 
