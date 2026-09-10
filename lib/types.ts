@@ -50,11 +50,42 @@ export interface Reuniao {
 
 // Um registro datado da atribuição de gestor de uma conta (histórico append-only).
 // "desde: null" = "desde sempre" (registro semente do gestor atual, na 1ª edição).
+//
+// ⚠️⚠️ `desde` SIGNIFICA DUAS COISAS DIFERENTES CONFORME QUEM GRAVOU — e a segunda é
+// um TETO, não um fato. Corrigido aqui em 10/09/2026, e a correção vale RETROATIVAMENTE
+// para o que já está no banco:
+//
+//  · gravado pela TELA `/carteira` (`por` = e-mail de alguém): a pessoa clicou naquele
+//    instante. `desde` é o momento da troca. É fato.
+//  · gravado por ROTINA (`por` = "import-contas", "sync-planilha"): ninguém viu a troca
+//    acontecer. A rotina comparou o valor de hoje com o de ontem e concluiu que mudou
+//    **em algum momento entre as duas leituras**. `desde` guarda o fim dessa janela —
+//    ou seja, o instante MAIS TARDIO em que a troca pode ter ocorrido.
+//
+// 🔑 O código escrevia `desde: agoraISO` e isso AFIRMA que aconteceu agora, quando agora
+// é só o teto. É a mesma família do `ultimaSincronizacao`, que é piso e não data de
+// remoção: número honesto com rótulo que promete precisão que ele não tem. Os registros
+// gravados por `import-contas` ANTES desta data carregam esse teto sem dizer — não há
+// como reconstruir a janela deles, e por isso `precisao` ausente deve ser lido como
+// "teto, origem desconhecida", nunca como instante exato.
+//
+// ⚠️ CONSEQUÊNCIA PARA QUEM CONSOME: quando a janela atravessa a virada do mês, a
+// pergunta "esta conta trocou de gestor no meio do mês?" NÃO TEM RESPOSTA, e a tela
+// mostra "—" com o motivo em vez de escolher um lado. Com leitura diária isso acontece
+// no máximo uma vez por mês.
 export interface EntradaGestor {
   gestor: string;
   desde: string | null; // ISO de quando passou a valer; null = desde o início do histórico
   por: string;          // e-mail do autor (extraído do ID token no servidor) ou "sistema" (semente)
   em: string;           // ISO de quando o registro foi gravado
+  /**
+   * Início da janela de detecção — a leitura ANTERIOR, em que o gestor ainda era o
+   * antigo. A troca aconteceu em `(desdeNaoAntesDe, desde]`. Ausente em registro de
+   * tela (ali `desde` é exato) e em tudo que foi gravado antes de 10/09/2026.
+   */
+  desdeNaoAntesDe?: string | null;
+  /** "exata" = alguém clicou. "janela" = uma rotina detectou entre duas leituras. */
+  precisao?: "exata" | "janela";
 }
 
 export interface ContaMap {

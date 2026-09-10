@@ -151,6 +151,33 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   🕳️ E há um motivo TÉCNICO além do vazamento: se o segredo tiver `+`, `/`, `=`, `&` ou
   `#`, o `?key=` **quebra em silêncio** — em querystring o `+` vira espaço. O sintoma é
   `401` com a chave correta, e ele parece bug de autenticação.
+- 🛑🛑 **DIAGNÓSTICO QUE TOCA EM CREDENCIAL MEDE FORMATO, NUNCA IMPRIME CONTEÚDO — e a
+  trava vai NO SCRIPT, não na intenção de quem escreve.** Ao investigar por que uma
+  chave não funciona, tudo empurra para "só ver como ela está": imprimir o valor parece
+  o passo mais curto entre a dúvida e a resposta. **Não é** — as perguntas que resolvem
+  são todas sobre FORMA, e nenhuma delas precisa do conteúdo:
+  · `comprimento`, `começa com -----BEGIN`, `contém \n escapado`, `contém quebra real`,
+    `quantas linhas depois de desescapar`, e **um `sign()` de teste que devolve ok/falhou**.
+  Esse conjunto responde 100% dos defeitos reais de chave privada em env (o `\n`
+  escapado, a aspa que sobrou, a linha truncada) sem que um byte do segredo saia.
+  Caso real (10/09/2026): investigando um `DECODER routines::unsupported`, imprimi a
+  `GOOGLE_PRIVATE_KEY` **inteira** — chave viva, da conta de serviço que lê a Agenda e a
+  planilha da agência. Custo: rotação imediata da chave, em produção e em `.env.local`.
+  🔑 **E o que dói é que a defesa JÁ EXISTIA NESTE PROJETO, escrita por mim, em outro
+  script.** As sondagens da Meta carregam
+  `const sem = (s) => { if (T && s.includes(T)) throw new Error("ABORT"); return s; }` —
+  uma trava que mata o processo se a saída contiver o token. Eu a apliquei onde o segredo
+  era *contexto* e esqueci dela onde o segredo era o *assunto*. **Padrão que depende de
+  lembrar não é padrão.**
+  ⚠️ **A régua: todo script que lê credencial define primeiro a função de saída travada,
+  e só imprime por ela.** Deriva um fragmento do próprio segredo, e aborta se a linha a
+  imprimir contiver esse fragmento — assim a trava protege contra o vazamento que ninguém
+  previu, não só contra o que se lembrou de mascarar. Custa três linhas e é a diferença
+  entre um diagnóstico e um incidente.
+  🕳️ **Corolário — segredo vazado não se despublica.** Não há edição, retratação ou
+  apagamento que desfaça: a única resposta é ROTACIONAR, e dizer isso na hora. Esconder
+  para não parecer descuidado transforma um erro de dez minutos numa credencial viva
+  circulando por tempo indeterminado.
 - Só use o prefixo `NEXT_PUBLIC_` para config **não secreta** do cliente (ex.: chaves públicas
   do Firebase client). Deixe claro para o usuário o que é secreto e o que é público.
 - Sempre que criar/precisar de uma env, **diga exatamente qual variável adicionar na Vercel**
@@ -678,6 +705,33 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   ESTADO, nunca ao código de saída: `git status`, `git cat-file -e`, um `get` do
   documento. **Código de saída descreve o último comando; estado descreve o mundo.**
   É a mesma frase de sempre, no lugar mais fácil de esquecer.
+
+  🛑🛑 **E O DEGRAU SEGUINTE: CÓDIGO ESCRITO POR HEREDOC SE CONFERE NO EMITIDO, NUNCA NO
+  FONTE — porque o fonte na tela pode estar certo E o arquivo em disco errado.**
+  As duas conferências anteriores desta família ainda funcionam relendo o que se escreveu:
+  o `sed -n` na faixa alterada mostra o defeito, porque o defeito está lá. Aqui **não
+  está** — a camada que corrompe fica ENTRE o que você digitou e o que foi gravado, e
+  reler o arquivo mostra exatamente o que você esperava ver.
+  Caso real (10/09/2026). Escrevi `lib/googleAuth.ts` por heredoc com
+  `.replace(/\\n/g, "\n")` — o desescape obrigatório da chave privada que vem da env. O
+  heredoc **comeu a barra dupla** e gravou `.replace(/\n/g, "\n")`, que é um no-op. O
+  `.ts` aberto no editor parecia correto, o `tsc --noEmit` passou (é regex válida), o
+  `next build` passou. E como eu tinha acabado de refatorar `lib/googleAgenda.ts` para
+  usar esse módulo, **a Agenda teria quebrado em produção junto com a integração nova.**
+  🔑 **O que pegou foi olhar o JavaScript COMPILADO** — `grep` no `.js` emitido, onde
+  estava `replace(/\n/g, ...)` à vista. Não foi reler, não foi pensar melhor: foi olhar
+  um artefato DIFERENTE do que eu tinha escrito. É a mesma forma do "leia de volta do
+  banco" em vez do objeto em memória, e do "pergunte ao estado" acima: **a conferência
+  só vale quando olha uma cópia que não passou pelo mesmo caminho do defeito.**
+  ⚠️ E repare no recorte do estrago: das seis expressões regulares escritas por heredoc
+  naquela leva, **só a que tinha barra DUPLA foi danificada** — `\s`, `\d`, `\+`, `\/`
+  atravessaram intactas. Um defeito que atinge 1 em 6 e só a forma mais rara é exatamente
+  o que uma revisão por amostragem não pega.
+  🔧 **A régua: quando o conteúdo tiver `\\`, `` ` ``, `$(` ou aspas aninhadas, não use
+  heredoc — escreva o arquivo por uma ferramenta que não passa por shell.** E se usar,
+  **confira no emitido** (`tsc --outDir` num diretório temporário e `grep` no `.js`), não
+  no fonte. Vale para qualquer geração de código que atravesse uma camada de escape:
+  shell, template, `JSON.parse`, `sed`.
 - ⚠️ **ATUALIZAR A CONFERÊNCIA É PARTE DA MUDANÇA, NÃO ETAPA POSTERIOR.** Conferência que
   não acompanha a regra vira ruído (acusa o que está certo) ou falso negativo (aprova o que
   está errado) — e nos dois casos ela para de valer justamente quando mais precisaria.
