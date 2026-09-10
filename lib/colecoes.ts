@@ -60,6 +60,21 @@ export const DOC_SYNC_COMERCIAL = "sync_comercial";
 /** Fila de contas novas aguardando aprovação. */
 export const DOC_FILA = "filaContas";
 
+/**
+ * Cursor da conciliação com a planilha de Monitoramento.
+ *
+ * ⚠️ NÃO É SÓ "QUANDO RODOU". O campo que importa é `lidaEmPlanilha` da execução
+ * ANTERIOR: ele é o início da janela em que uma troca de gestor detectada agora pode
+ * ter acontecido. Sem ele, toda troca vira "aconteceu neste instante", que é o teto e
+ * não o fato — a correção registrada em `EntradaGestor` (lib/types.ts).
+ *
+ * 🔑 E por isso ele só é gravado quando a leitura foi COMPLETA e bem-sucedida. Gravar
+ * cursor de uma execução que falhou no meio encurtaria a janela seguinte para um
+ * intervalo em que ninguém olhou de verdade, e a janela passaria a mentir para menos —
+ * o lado que parece mais preciso.
+ */
+export const DOC_SYNC_PLANILHA = "sync_planilha";
+
 /** Contas que alguém dispensou da fila — decisão humana, não some sozinha. */
 export const DOC_IGNORADAS = "contasIgnoradas";
 

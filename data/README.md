@@ -45,6 +45,157 @@ Clientes só-Google conhecidos (não cadastrar):
 Se um dia o painel passar a cobrir Google Ads, isto vira um campo de plataforma por
 conta (e uma segunda integração de sync), não uma linha a mais nesta lista.
 
+## A planilha "Monitoramento Gerência" — a segunda fonte da carteira
+
+Desde **10/09/2026** o painel lê a planilha de Monitoramento da agência
+(`PLANILHA_GERENCIAL_ID`, escopo `spreadsheets.readonly`) e concilia com a coleção
+`contas`. Rota `/api/sync-planilha`, tela `/conciliacao`, cron diário às 06:40.
+
+**O painel NUNCA escreve na planilha.** Não é disciplina de código: o escopo do token
+é `readonly`, então o Google recusa a escrita independentemente do que o código tente.
+
+### Quem manda em quê
+
+| campo | fonte | por quê |
+|---|---|---|
+| `gestor` | **a planilha** (o nome da ABA) | mover a linha de aba é como a agência troca o responsável |
+| `planilha.*` (situação, orçamentos, forma de pgto, notificação, preenche B.I) | **a planilha** | só ela tem esses dados |
+| `pausado`, `cliente`, e todo número | **o painel** | ver as duas armadilhas abaixo |
+
+🛑 **`pausado` NÃO é a situação da planilha, e confundir os dois quebra os totais.**
+A planilha mede a RELAÇÃO COMERCIAL; `pausado` mede VEICULAÇÃO (gasto > 0). Medido em
+10/09/2026 nas 84 linhas com id: concordam "ativo" **61**, planilha PAUSADO / painel
+ATIVO **11**, planilha ATIVO / painel PAUSADO **2**, concordam "pausado" **zero**.
+Nenhuma das 13 é erro. Se a situação escrevesse `pausado`, a primeira execução tiraria
+11 contas que gastam dos totais da agência e do CPL de carteira dos gestores.
+Por isso a situação entra num campo NOVO, `planilha.situacaoCrua` + `situacaoConceito`.
+
+🛑 **`cliente` também fica de fora** — os 5 pares de nome divergentes desta página são
+decisão da agência, e toda conciliação vai querer "corrigir".
+
+**A regra que torna isso mecânico:** o sync escreve dentro de `planilha.*` e mais nada,
+exceto `gestor` e `gestorHistorico`. Ver `CHAVES_QUE_O_SYNC_PODE_TOCAR` em
+`lib/conciliaPlanilha.ts`.
+
+### A guarda do balde PAUSADO
+
+`gestor: "PAUSADO"` não é uma pessoa: é o marcador de conta estacionada, e a planilha
+nunca vai dizer "PAUSADO" porque não existe aba com esse nome. **Conta cujo gestor é
+`PAUSADO` no painel não recebe o gestor da planilha** — a aba vira SUGESTÃO no
+relatório, nunca escrita.
+
+Sem essa guarda, as duas únicas trocas que a regra produzia em 10/09/2026 eram
+DRA. ANA PAULA e TRAJETO — as duas estacionadas de propósito, com o motivo escrito
+nesta página ("reativar quando voltar a veicular"). A regra desfaria exatamente as
+decisões que este arquivo registra.
+
+### O que o cron aplica e o que exige uma pessoa
+
+| | quem aplica |
+|---|---|
+| campos de `planilha.*` | **o cron**, diariamente |
+| troca de gestor | **só pessoa logada** |
+| criar conta nova | **só pessoa logada** |
+
+E isso é **mecânico, não disciplina**: as duas portas usam `Authorization: Bearer`, mas
+com credenciais de naturezas diferentes (CRON_SECRET × ID token do Firebase). A rota
+identifica qual é, e **o cron não consegue** aplicar gestor nem criar conta — não há
+flag que o autorize.
+
+O motivo é a assimetria do erro: campo de `planilha.*` errado a execução seguinte
+corrige, porque a planilha é relida inteira toda vez. `gestorHistorico` é **append-only**
+— uma linha arrastada de aba por engano às 8h59 viraria registro permanente.
+
+### A data da troca de gestor é uma JANELA, não um instante
+
+A planilha não guarda quando a linha mudou de aba. O que o sync sabe é: na leitura
+anterior o gestor era A, nesta é B — logo a troca aconteceu em
+`(leitura anterior, leitura de agora]`. O registro guarda as duas pontas
+(`desde`, `desdeNaoAntesDe`, `precisao: "janela"`).
+
+⚠️ **Isso corrige o que já estava gravado.** O `/api/import-contas` escrevia
+`desde: agora`, o que AFIRMA que aconteceu naquele instante quando aquilo é só o TETO.
+Registro com `precisao` ausente lê-se como "teto, origem desconhecida". Mesma família
+do `ultimaSincronizacao`, que é piso e não data de remoção.
+
+**Consequência para quem consome:** quando a janela atravessa a virada do mês, a
+pergunta "esta conta trocou de gestor no meio do mês?" não tem resposta, e a tela mostra
+"—" com o motivo. Com leitura diária isso acontece no máximo uma vez por mês.
+
+### As três datas
+
+Todo número da conciliação carrega **três**: quando a planilha foi lida, quando o painel
+foi lido, e quando as contas foram sondadas na Meta. **O veredito de acesso da Meta muda
+dentro do mesmo dia** — em 10/09/2026, WOLVES TATICAL, PLENA PRIME e MEGA WAVE saíram de
+`403 code 200` para `200` ao longo de uma tarde, cada uma num momento diferente
+(confirmado com 5 sondagens seguidas em cada). Pendência de "o token não lê" sem a hora
+ao lado é indistinguível de uma que já foi resolvida.
+
+### Como a coluna é encontrada
+
+Nem por posição nem por cabeçalho — **os dois já falharam**. Nove das 11 abas mudaram de
+largura entre 02 e 10/09/2026, e a varredura por cabeçalho errou duas vezes (a última
+procurando "CLIENTE" na linha 1, que não existe em 6 das 8 abas porque lá está escrito
+"CLIENTES ISMAIL").
+
+O desenho: **conteúdo para o que tem vocabulário fechado** (accountId, situação, forma
+de pagamento) e **cabeçalho ANCORADO no conteúdo para o resto** (orçamentos, notificação).
+O cabeçalho não é a fonte, é a testemunha: só passa a valer depois de acertar as colunas
+que o conteúdo já provou, e exige 2 acertos. Cabeçalho deslocado é recusado, e as colunas
+dele saem AUSENTE em vez de saírem erradas.
+
+Medido em 10/09/2026: **24/24** nas três colunas ancoradas das 8 abas. Na aba do MATHEUS
+o detector diz "não achei coluna de id" em vez de chutar, e cai para 50% na situação —
+G5 e G6 têm "Locação de Equipamentos" e "Venda de produtos", nicho no lugar errado.
+
+**Linha de cliente é regra estrutural**, o que dispensa achar onde a tabela acaba: seis
+abas têm um segundo bloco empilhado (os pausados daquele gestor) e os dois passam pelo
+mesmo filtro. Não é linha de cliente: coluna A vazia, coluna A só com número (é a linha
+de contagem), começa com "CLIENTES" ou "Pausad", ou é o nome da própria aba.
+
+**Aba de gestor = nome que está em `GESTORES` (`lib/gestores.ts`)** — a mesma lista que
+já barra escrita de gestor inválido. As 8 abas batem 8/8. Aba nova de um gestor novo fica
+de fora até alguém cadastrá-lo lá, e aparece em `abasIgnoradas`, nunca em silêncio.
+
+### O prefixo numérico da situação NÃO é estável
+
+As abas de gestor oferecem `1 - A INICIAR` e `0 - PAUSADO`; a aba CLIENTES PAUSADOS
+oferece `1 - CLIENTE INSATISFEITO` e `4 - PAUSADO`. **O número `1` significa duas coisas
+na mesma planilha e `PAUSADO` tem dois números.**
+
+🔑 E a prova não está nos valores escritos: está nas **listas de validação**. Os dois
+rótulos conflitantes não estão em uso — estão no MENU, esperando alguém clicar. Uma
+varredura dos valores diria que o prefixo é estável.
+
+Por isso: o prefixo é descartado, a chave é o TEXTO, e o cru é gravado junto. Rótulo
+desconhecido vira pendência com o texto exato — nunca um balde "outro", onde um typo
+mora para sempre.
+
+### 🛑 PENDÊNCIA DE DECISÃO: /carteira e a planilha disputam o mesmo campo
+
+A trava `gestorEditadoEm` existia para proteger a edição manual da `/carteira` contra o
+`data/contas.json`. **Ela não perde o assunto quando o JSON perder o campo `gestor` — ela
+TROCA de assunto**, porque a planilha passa a ser o segundo escritor do mesmo campo.
+
+Medido em 10/09/2026: **74 contas estão na planilha e no painel**. Editar o gestor de
+qualquer uma delas pela `/carteira` funcionaria, e a conciliação do dia seguinte
+reverteria — em silêncio, porque a tela não avisa que aquele campo tem dono.
+
+As outras **47** (39 no balde PAUSADO + 8 sem linha na planilha) continuam sob a
+`/carteira`, e para elas a edição manual é a única forma.
+
+Três saídas, e a decisão é de quem toca a carteira:
+1. a planilha ganha sempre, e a `/carteira` **avisa no momento da edição** que aquela
+   conta é conciliada e a mudança vale até amanhã;
+2. a trava fica, com o assunto novo escrito — edição manual congela o gestor daquela
+   conta e a conciliação a reporta como divergente em vez de sobrescrever;
+3. a `/carteira` deixa de editar gestor das 74, e quem quiser trocar move a linha de aba.
+
+**Enquanto isso não for decidido, a trava FICA e o `contas.json` mantém o campo `gestor`.**
+Tirar a trava agora desestacionaria duas contas: o JSON diz JOÃO PEDRO para o
+`act_1389467714612017` (Hotel Oscar) e LUCAS para o `act_901220705012452` (CAMPEZZA),
+enquanto o Firestore diz PAUSADO nas duas — **é a trava que as segura hoje**.
+
 ## `contas.json` — o de-para oficial da carteira
 
 Lista oficial das contas de anúncio. É a **fonte da verdade** consumida por

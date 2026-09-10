@@ -1,0 +1,125 @@
+name: sync-planilha
+
+# Concilia a planilha "Monitoramento Gerência" com a carteira do painel.
+#
+# ⚠️⚠️ ELE APLICA SÓ METADE, E ISSO É O DESENHO — não uma limitação a consertar
+# depois. `?aplicar=1` grava exclusivamente o bloco `planilha.*` de cada conta
+# (situação, orçamentos, forma de pagamento, notificação, preenche B.I). Troca de
+# gestor e criação de conta NÃO passam por aqui, e nem adianta acrescentar a flag:
+# a rota recusa com 403 quando o chamador é o cron, porque a autorização é pela
+# IDENTIDADE, não por parâmetro.
+#
+# O motivo é a assimetria do erro. Campo de `planilha.*` errado a execução seguinte
+# corrige sozinha — a planilha é relida inteira toda vez. Já o `gestorHistorico` é
+# APPEND-ONLY: uma linha arrastada de aba por engano às 8h59 viraria um registro
+# permanente de troca de gestor que ninguém desfaz, e ele alimenta a Análise de
+# Gestores. Conta criada por engano entra em ranking, média e CPL de carteira.
+#
+# ⚠️ E O CURSOR SÓ ANDA QUANDO GRAVA. `sistema/sync_planilha.lidaEmPlanilha` é o
+# INÍCIO da janela em que uma troca de gestor detectada depois pode ter acontecido.
+# Execução que só fez prévia não o move — senão a janela seguinte encolheria para um
+# intervalo em que ninguém comparou nada, e passaria a mentir para MENOS, que é o
+# lado que parece mais preciso.
+
+on:
+  schedule:
+    # 09:40 UTC = 06:40 em Brasília. Dez minutos depois do sync-comercial e quarenta
+    # depois do sync-meta — os três não disputam a janela de função nem o mesmo
+    # minuto de cron do GitHub.
+    - cron: "40 9 * * *"
+  workflow_dispatch:
+
+jobs:
+  conciliar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Conciliar planilha x painel (só os campos da planilha)
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+
+          # ⚠️ O SEGREDO VAI NO CABEÇALHO, NUNCA NA URL. Query string é registrada em
+          # log pelo Next, por proxy e por CDN — foi assim que o CRON_SECRET apareceu
+          # num log em 16/08/2026. O `?key=` continua existindo só para chamada manual.
+          BASE="https://influencia-painel-app.vercel.app/api/sync-planilha"
+
+          # Uma tentativa extra: a gravação é idempotente (docId determinístico, o
+          # bloco `planilha` é reescrito inteiro), então repetir é seguro. Sem isso um
+          # pico de latência do Google Sheets deixaria a conciliação um dia parada.
+          for TENTATIVA in 1 2; do
+            echo "== Tentativa ${TENTATIVA} =="
+            RESP=$(curl -sS --max-time 120 -H "Authorization: Bearer ${CRON_SECRET}" "${BASE}?aplicar=1") || RESP='{"ok":false,"erro":"curl falhou"}'
+
+            OK=$(echo "$RESP" | jq -r '.ok // false')
+            if [ "$OK" = "true" ]; then
+              break
+            fi
+
+            echo "Falhou:"
+            echo "$RESP" | jq '.' || echo "$RESP"
+            if [ "$TENTATIVA" = "2" ]; then
+              exit 1
+            fi
+            sleep 20
+          done
+
+          # ⚠️ AS TRÊS DATAS NO LOG, não uma. Planilha, painel e sondagem envelhecem
+          # separado, e o log do Actions é o único lugar onde alguém vê isto depois.
+          echo "$RESP" | jq '{
+            lidaEmPlanilha, lidaEmPainel, sondadasEm,
+            resumo: .resumo,
+            conferencia: .conferencia
+          }'
+
+          # ---------------------------------------------------------------
+          # O QUE DERRUBA O JOB, e o que só avisa
+          # ---------------------------------------------------------------
+          # ⚠️ A régua do alarme diário: só QUEBRA derruba, DERIVA avisa.
+          #
+          # As pendências derivam sozinhas — a agência preenche accountId, cliente
+          # libera acesso, alguém digita um rótulo novo. Elas mudam de tamanho todo
+          # dia sem nada estar quebrado, e um job vermelho todo dia é um job que
+          # ninguém lê. Vão como ::warning::.
+          #
+          # O que QUEBRA é a leitura: se o detector perder uma coluna de id ou de
+          # situação, a conciliação passa a gravar dado errado em silêncio. Isso vale
+          # em qualquer dia e é bug de verdade.
+
+          SEM_ID=$(echo "$RESP" | jq '[.estrutura[] | select(.colunas.accountId.indice == null)] | length')
+          SEM_SIT=$(echo "$RESP" | jq '[.estrutura[] | select(.colunas.situacao.indice == null)] | length')
+
+          # ⚠️ A aba do MATHEUS não tem coluna de id NENHUMA — é o estado real da
+          # planilha desde antes disto existir, e não é uma quebra. O piso é 1, não 0.
+          # No dia em que ela ganhar os ids, baixe para 0 e o alarme volta a proteger.
+          if [ "$SEM_ID" -gt 1 ]; then
+            echo "::error::${SEM_ID} abas sem coluna de accountId detectável (esperado no máximo 1, a do MATHEUS)."
+            exit 1
+          fi
+          if [ "$SEM_SIT" -gt 0 ]; then
+            echo "::error::${SEM_SIT} aba(s) sem coluna de situação detectável — o detector perdeu a âncora."
+            exit 1
+          fi
+
+          # Gravou e não conseguiu ler de volta = a resposta afirmaria algo que não
+          # aconteceu. Isso é quebra.
+          GRAVADAS=$(echo "$RESP" | jq -r '.resumo.gravadas // 0')
+          if [ "$GRAVADAS" -gt 0 ]; then
+            COM_BLOCO=$(echo "$RESP" | jq -r '.conferencia.comBlocoPlanilha // 0')
+            if [ "$COM_BLOCO" -eq 0 ]; then
+              echo "::error::Gravou ${GRAVADAS} documento(s) e a leitura de volta não achou o bloco planilha em nenhum."
+              exit 1
+            fi
+          fi
+
+          # --- os que só avisam ---
+          PEND=$(echo "$RESP" | jq -r '.resumo.pendencias // 0')
+          TROCAS=$(echo "$RESP" | jq -r '.resumo.trocasGestor // 0')
+          CRIAR=$(echo "$RESP" | jq -r '.resumo.criacoes // 0')
+
+          if [ "$TROCAS" -gt 0 ] || [ "$CRIAR" -gt 0 ]; then
+            echo "::warning::${TROCAS} troca(s) de gestor e ${CRIAR} conta(s) para cadastrar esperam alguém em /conciliacao — o cron não aplica essas."
+          fi
+          if [ "$PEND" -gt 0 ]; then
+            echo "::warning::${PEND} pendência(s) na conciliação — abra /conciliacao para ver o motivo de cada uma."
+          fi

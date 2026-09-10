@@ -29,6 +29,14 @@ export const MENU_PRINCIPAL: ItemMenu[] = [
   // Quem não tem acesso vê um painel NEUTRO explicando o porquê, não um erro
   // vermelho — ver o comentário de MSG_RESTRITO em lib/filaContas.ts.
   { rotulo: "Contas Novas", href: "/fila-contas", descricao: "Contas que o Meta mostra e que ainda não estão na carteira. Restrito." },
+  // ⚠️ MESMA regra do item acima: aparece para todos, abre só para quem está na
+  // FILA_EMAILS_PERMITIDOS, e a checagem é no servidor (/api/sync-planilha).
+  // ⚠️ E as DUAS telas são portas de entrada da carteira por caminhos diferentes: a
+  // /fila-contas nasce do `me/adaccounts` (listagem comprovadamente incompleta) e esta
+  // nasce da planilha da agência. Elas não se substituem — a planilha enxerga conta de
+  // BM parceira que a listagem esconde, e a listagem enxerga conta que ninguém digitou
+  // na planilha. Juntar as duas num item só faria alguém achar que uma cobre a outra.
+  { rotulo: "Conciliação", href: "/conciliacao", descricao: "Planilha de Monitoramento × carteira do painel: gestor, situação e pendências. Restrito." },
 ];
 
 export const MENU_EM_BREVE: ItemMenu[] = [
