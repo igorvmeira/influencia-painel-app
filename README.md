@@ -76,6 +76,37 @@ NOT grant ads_management or ads_read permission"*) e **fica fora de todos os nú
 painel** — não é erro de cadastro nem de sync. Medido em 10/09/2026: **8 contas da carteira
 estavam nesse estado**, distribuídas em cinco gestores.
 
+⚠️⚠️ **E `403 code 200` NÃO PROVA que falta liberação do cliente — pode ser o id ERRADO.**
+Medido em 10/09/2026: das 8, **três** (`GUARÁ NET`, `SOLUÇÃO NETWORK`, `ZAY SUSHI`) tinham
+na planilha um `accountId` que **não é o da conta compartilhada**. O cliente já havia
+liberado, o token já lia a conta certa, e ela **já estava cadastrada** — o número na
+planilha é que apontava para outra conta do mesmo dono.
+🔑 **O sintoma é idêntico nos dois casos**, e o que separa é olhar o NOME: o token lista
+uma conta com o nome do cliente e um id diferente do que está na planilha. **Antes de
+cobrar liberação, procure o nome do cliente no `me/adaccounts`** — se aparecer com outro
+id, é correção de planilha, não cobrança. Mandar a cobrança errada pede ao cliente algo
+que ele já fez.
+
+### `me/assigned_ad_accounts` — segunda listagem, ainda não investigada
+
+Existe e **responde sem `business_management`** (ao contrário de `owned_ad_accounts` e
+`client_ad_accounts`, que exigem e falham com `#100`). Medido em 10/09/2026:
+
+| endpoint | contas |
+|---|---|
+| `me/adaccounts` | **111** |
+| `me/assigned_ad_accounts` | **110** |
+
+**A única diferença é `act_191616327202757`** — a conta fantasma (`"BM 01 - Conta de
+Anuncios - 01"`), que aparece em `adaccounts` e **não** em `assigned_ad_accounts`.
+🔎 **Candidato de explicação, NÃO medido:** a fantasma é conta da própria BM da agência, e
+`assigned` parece listar só o que foi **explicitamente atribuído ao system user**. Se for
+isso, `assigned` é a lista mais fiel de "o que nos deram acesso" — mas **isso não está
+verificado**, e uma diferença de 1 em 111 não sustenta conclusão.
+⚠️ **Nenhuma das duas resolve a lacuna de BM parceira:** as contas que respondem à consulta
+direta e não aparecem em `adaccounts` também não aparecem em `assigned`. Trocar de endpoint
+não conserta aquele buraco.
+
 As ações lidas são `lead` (formulário) e
 `onsite_conversion.messaging_conversation_started_7d` (WhatsApp). Ajuste a lista em
 `lib/meta.ts` se as contas usarem outros eventos de resultado.
