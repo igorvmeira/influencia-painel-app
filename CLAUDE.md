@@ -1066,6 +1066,31 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   Antes de dizer "isto consome aquilo" ou "isto tem N usos", abra. Custa segundos, e a
   alternativa é planejar em cima de um mapa errado — que foi o que aconteceu no plano da
   Demanda 2 e no argumento inteiro de reproduzir a logo em SVG.
+  🛑🛑 **E O CASO QUE FECHA A FAMÍLIA: CONFERÊNCIA IMPOSSÍVEL NÃO AUTORIZA PULAR A
+  CONFERÊNCIA — PROCURE OUTRA FONTE.** É o eixo que faltava. Nos outros seis, a fonte
+  existia e ninguém abriu. Aqui **a fonte indicada não tinha o dado**, e é justamente aí
+  que a tentação fica legítima: *"conferi, não estava lá, então vou com o que me
+  passaram"*.
+  Caso real (10/09/2026). O pedido foi explícito: *"confere esse número no repo antes de
+  escrever, não copia do que eu acabei de falar"* — o id do Business Manager que iria
+  numa instrução para **clientes externos**. O `grep` no repositório **não achou nada**:
+  aquele id não estava registrado, e nenhum id de BM estava. A conferência pedida era
+  impossível.
+  **A saída não foi aceitar o número; foi trocar de fonte** — consultar o id no Graph da
+  Meta, que devolveu `"BM - Influência"`. Verificação mais forte do que o repo daria, e
+  que só aconteceu porque a impossibilidade foi tratada como *"onde mais eu confiro?"* em
+  vez de *"então não dá"*.
+  🔑 **Por que aceitar teria sido PIOR que não conferir:** o resultado sairia rotulado
+  como verificado. Quem lesse depois — inclusive quem pediu — leria "ele conferiu" e
+  pararia de olhar. **Conferência que não aconteceu mas parece ter acontecido não é
+  neutra: ela consome a desconfiança que protegeria o dado.**
+  ⚠️ **E o custo aqui era de terceiros, de novo:** id errado numa instrução ao cliente faz
+  ele conceder acesso à BM de **outra pessoa**, sem erro nenhum na tela. O dígito trocado
+  não falha — ele acerta o alvo errado.
+  🔧 **O procedimento: quando a conferência pedida não existe, diga isso E conferiu de
+  outro jeito.** As duas metades. Só a primeira vira desculpa; só a segunda esconde que a
+  fonte esperada estava vazia — e essa ausência costuma ser, ela mesma, um achado: aqui
+  ela virou uma linha nova no `README.md`, porque o número vivia na memória de alguém.
 - 🛑 **AMOSTRA QUE VOCÊ VIU NÃO É AMOSTRA QUE VOCÊ TIROU — e a diferença é que a
   primeira é ENVIESADA POR CONSTRUÇÃO.** O que aparece na primeira tela é o topo de uma
   ordenação, não um sorteio: é exatamente o recorte com **maior** chance de parecer

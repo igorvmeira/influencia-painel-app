@@ -44,6 +44,38 @@ O modelo está em `data/depara.example.json`. `tipo` é "B2B" (formulário) ou "
    anúncio dos clientes — sem isso a API não enxerga os números.
 4. Preencha `META_ACCESS_TOKEN` e `META_API_VERSION`.
 
+### O ID do Business Manager da agência — o número que o CLIENTE precisa receber
+
+```
+929455658485115
+```
+
+**Verificado em 10/09/2026** consultando `GET /{id}?fields=id,name` no Graph `v21.0`: o id
+responde **`"BM - Influência"`**.
+
+⚠️ **Este número não estava registrado em lugar nenhum até 10/09/2026** — vivia na memória
+de quem lembrava, e é pedido toda vez que um cliente precisa liberar acesso. Se ele mudar,
+**remeça e atualize a data acima**, porque a próxima pessoa vai confiar nesta linha.
+
+🔑 **Quem manda o número ao cliente pede que ele CONFIRA O NOME na tela antes de
+confirmar.** É a única defesa contra um dígito trocado: com o id errado o cliente concede
+acesso à BM de outra pessoa, e não há erro nenhum — a autorização simplesmente vai para o
+lugar errado. É o mesmo risco do `accountId` transcrito de print, no sentido inverso.
+
+**O caminho, do lado do cliente** (Gerenciador de Negócios **dele**, não o nosso):
+Configurações → Contas de anúncios → selecionar a conta → **Atribuir parceiros** →
+identificar por ID → `929455658485115` → conferir que aparece **BM - Influência** →
+conceder **"Ver desempenho"**.
+
+📌 **"Ver desempenho" é o mínimo, e é só leitura** — corresponde ao `ads_read`. Dizer isso
+ao cliente costuma ser o que destrava o "sim": a agência não passa a poder criar, pausar
+nem gastar nada na conta dele.
+
+🛑 **Sem essa liberação, a conta responde `HTTP 403 / code 200`** (*"Ad account owner has
+NOT grant ads_management or ads_read permission"*) e **fica fora de todos os números do
+painel** — não é erro de cadastro nem de sync. Medido em 10/09/2026: **8 contas da carteira
+estavam nesse estado**, distribuídas em cinco gestores.
+
 As ações lidas são `lead` (formulário) e
 `onsite_conversion.messaging_conversation_started_7d` (WhatsApp). Ajuste a lista em
 `lib/meta.ts` se as contas usarem outros eventos de resultado.
