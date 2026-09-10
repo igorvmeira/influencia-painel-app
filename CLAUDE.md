@@ -181,6 +181,32 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   cria registro fantasma que nunca sincroniza. Peça sempre o retorno em **texto**.
 - **Joins sempre por ID único, nunca por nome.** Nomes de cliente se repetem e geram
   duplicação silenciosa (a mesma conta aparecendo em vários lugares).
+- 🛑🛑 **DUAS COISAS COM NOMES PARECIDOS EM SISTEMAS DIFERENTES — a família mais cara de
+  todas, porque o erro não está num campo, está no que a pessoa foi INVESTIGAR.**
+  A régua do `queueType` fala de dois ENDPOINTS do mesmo sistema. Esta é o degrau acima:
+  **uma TELA de administração e uma API**, medindo coisas diferentes com nomes que se
+  parecem — e aqui não há como o `grep` ajudar, porque os dois lados são verdadeiros, só
+  não falam do mesmo assunto.
+  Caso real (10/09/2026). Uma auditoria na Business Manager listou **18 contas "não
+  atribuídas ao usuário do sistema"**, e a investigação começou como *"18 contas
+  perdidas"*. Medido: **as 18 respondem `HTTP 200` à consulta direta**, nove delas
+  faturando **R$ 11.716,49 em 30 dias**, e o painel **já sincronizava todas**. Nenhuma
+  estava perdida.
+  **A tela media ATRIBUIÇÃO INTERNA da nossa BM; a pergunta era LEGIBILIDADE pelo token.**
+  São dois grants diferentes — o acesso vinha da parceria concedida na BM do CLIENTE.
+  🔑 **Por que essa família engana mais que a do campo homônimo:** ali a suspeita nasce ao
+  ver dois valores discordando. Aqui **nada discorda** — a tela está certa sobre o que ela
+  mede, a API está certa sobre o que ela responde, e a ponte errada entre as duas mora na
+  cabeça de quem lê. Não há sintoma; há uma investigação inteira apontada para o lugar
+  errado.
+  ⚠️ **A régua: antes de investigar a partir de um número que veio de OUTRO sistema,
+  escreva a frase que ele autoriza — com o sujeito e o verbo daquele sistema.** *"18 contas
+  não estão atribuídas ao usuário do sistema dentro da nossa BM"* não contém a palavra
+  "ler", nem "acesso", nem "perdida". Tudo o que foi acrescentado veio de quem leu.
+  🔧 **E o teste é barato: pegue UM caso e meça o que você quer saber, antes de investigar
+  os N.** Aqui bastavam três contas conhecidas — as que o próprio usuário reconheceu como
+  já cadastradas e faturando. Elas responderam 200 na primeira sondagem e derrubaram a
+  premissa antes de as outras 15 serem tocadas.
 - 🛑🛑 **FONTE QUE NÃO SEPARA DUAS CAUSAS NÃO AUTORIZA ESCOLHER UMA — e a escolha
   errada é sempre a tranquilizadora.** A régua irmã da de baixo, e o degrau seguinte:
   lá o código do erro **existe** e distingue; aqui ele existe e **não distingue**, e a
@@ -292,6 +318,15 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   consulta direta e gastaram **R$ 3.918,82 no mês** — 10 das 13 estavam fora da listagem.
   **Não é um caso isolado de 2026: é o comportamento normal da listagem**, e cada vez que
   alguém confia nela o painel perde conta que fatura.
+  🛑🛑 **E EM 10/09/2026 A LACUNA GANHOU PROVA DE POPULAÇÃO, não de amostra: 18 de 18.**
+  As 18 contas da `BM - Influência` não atribuídas ao usuário do sistema foram sondadas
+  uma a uma: **as 18 respondem `HTTP 200`, e ZERO aparecem em `me/adaccounts` — nem em
+  `me/assigned_ad_accounts`**, que erra exatamente as mesmas. Nove faturavam R$ 11.716,49
+  em 30 dias, e o painel já as sincronizava, porque o sync lê por consulta direta.
+  🔑 **Por que 18/18 vale mais que 9/117 e 10/13:** aqueles ainda admitiam a leitura de
+  "casos isolados que alguém conserta". **Uma população inteira, 100% invisível e 100%
+  legível, não admite** — a listagem não está incompleta por acidente, ela responde a
+  outra pergunta. Ver `README.md`, seção 3.
   🔑 **O corolário operacional, medido no mesmo dia:** a `/fila-contas` só deixa cadastrar
   o que está em `sistema/filaContas.candidatas`, e essa fila **nasce do `me/adaccounts`**.
   Ou seja, **a tela é estruturalmente incapaz de cadastrar exatamente as contas que a

@@ -87,25 +87,50 @@ cobrar liberação, procure o nome do cliente no `me/adaccounts`** — se aparec
 id, é correção de planilha, não cobrança. Mandar a cobrança errada pede ao cliente algo
 que ele já fez.
 
-### `me/assigned_ad_accounts` — segunda listagem, ainda não investigada
+### 🛑🛑 ATRIBUIR A CONTA AO USUÁRIO DO SISTEMA **NÃO** É O QUE FAZ O TOKEN LER
+
+**Medido em 10/09/2026, em 18 contas de uma vez** — a lista de contas que estão na
+`BM - Influência` e **não** estão atribuídas ao usuário do sistema (Painel Tokens):
+
+```
+respondem 200 à consulta direta : 18 de 18
+em me/adaccounts                :  0 de 18
+em me/assigned_ad_accounts      :  0 de 18
+códigos de erro                 : NENHUM
+```
+
+**Todas não atribuídas. Todas legíveis. Nenhuma listada.** Nove delas estavam faturando —
+**R$ 11.716,49 em 30 dias** — e o painel já as sincronizava normalmente, porque o sync lê
+por consulta direta e nunca pela listagem.
+
+🔎 **De onde vem o acesso, então — CANDIDATO, NÃO MEDIDO.** Os donos dessas contas são BMs
+dos **clientes** (`BM - Sigaon Mais`, `Vox Conexão`, `hipercg`…), não a nossa. A explicação
+provável é que o acesso venha da **parceria concedida na BM DO CLIENTE**, que é um caminho
+diferente da atribuição interna. ⚠️ **Confirmar isso exigiria `business_management`, que o
+token não tem** — então fica como hipótese, não como fato.
+
+⚠️ **O que a tela da BM mede e o que a API responde são coisas diferentes.** A auditoria de
+"contas não atribuídas" descreve **configuração interna da nossa BM**; a legibilidade
+depende de outro grant. Ler uma como se fosse a outra faz procurar conta perdida onde não
+há nenhuma.
+
+### `me/assigned_ad_accounts` — a segunda listagem tem o MESMO ponto cego
 
 Existe e **responde sem `business_management`** (ao contrário de `owned_ad_accounts` e
-`client_ad_accounts`, que exigem e falham com `#100`). Medido em 10/09/2026:
+`client_ad_accounts`, que exigem e falham com `#100`). Em 10/09/2026 devolvia **110** contra
+**111** do `me/adaccounts`, e a única diferença era `act_191616327202757` — a conta
+fantasma.
 
-| endpoint | contas |
-|---|---|
-| `me/adaccounts` | **111** |
-| `me/assigned_ad_accounts` | **110** |
+🛑 **CORRIGIDO no mesmo dia.** Esta seção dizia que `assigned` *"parece listar só o que foi
+explicitamente atribuído ao system user"* e que, se fosse isso, seria *"a lista mais fiel do
+que nos deram acesso"*. **A medição das 18 desmente:** elas não estão atribuídas e também
+**não** aparecem em `assigned`. Os dois endpoints erram exatamente as mesmas contas.
+**Trocar de endpoint não conserta nada** — o ponto cego é o mesmo.
 
-**A única diferença é `act_191616327202757`** — a conta fantasma (`"BM 01 - Conta de
-Anuncios - 01"`), que aparece em `adaccounts` e **não** em `assigned_ad_accounts`.
-🔎 **Candidato de explicação, NÃO medido:** a fantasma é conta da própria BM da agência, e
-`assigned` parece listar só o que foi **explicitamente atribuído ao system user**. Se for
-isso, `assigned` é a lista mais fiel de "o que nos deram acesso" — mas **isso não está
-verificado**, e uma diferença de 1 em 111 não sustenta conclusão.
-⚠️ **Nenhuma das duas resolve a lacuna de BM parceira:** as contas que respondem à consulta
-direta e não aparecem em `adaccounts` também não aparecem em `assigned`. Trocar de endpoint
-não conserta aquele buraco.
+🔑 **A regra de ouro continua sendo a CONSULTA DIRETA a `/{accountId}`, e agora ela tem
+prova de POPULAÇÃO, não de amostra:** 18 de 18. Antes eram 9 de 117 e 10 de 13 — números
+que ainda admitiam a leitura de "casos isolados". Uma população inteira, 100% invisível e
+100% legível, não admite.
 
 As ações lidas são `lead` (formulário) e
 `onsite_conversion.messaging_conversation_started_7d` (WhatsApp). Ajuste a lista em
