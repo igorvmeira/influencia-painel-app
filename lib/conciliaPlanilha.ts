@@ -85,7 +85,23 @@ export interface ContaNoPainel {
    * responde "preciso semear?".
    */
   temHistoricoGestor: boolean;
+  /** A marca de governo que está gravada hoje. `null` = a tela ainda edita o gestor. */
+  gestorDaPlanilha?: { aba: string; em: string } | null;
 }
+
+/**
+ * ⚠️ TETO DE REMOÇÃO DE MARCA NUMA EXECUÇÃO. Acima disto, a conciliação NÃO remove —
+ * reporta e espera uma pessoa, exatamente como troca de gestor.
+ *
+ * 🛑 O modo de falha que ele existe para barrar: se uma aba for renomeada, ela cai em
+ * `abasIgnoradas` e **as contas dela somem do conjunto visto de uma vez** — a maior aba
+ * hoje tem 16 linhas. Sem o teto, uma leitura parcial desmarcaria 16 contas e **abriria
+ * permissão de escrita em silêncio**, por causa de um erro de leitura.
+ *
+ * Deriva é 1–2 linhas que alguém apagou da planilha; 16 de uma vez é quebra estrutural.
+ * É a régua do alarme diário aplicada à ESCRITA: só quebra exige gente, deriva passa.
+ */
+export const TETO_REMOCAO_MARCA = 5;
 
 /** Resultado da sondagem de um id que a planilha tem e o painel não. */
 export interface Sonda {
@@ -231,6 +247,41 @@ export interface PlanoConciliacao {
   /** Conta estacionada no balde PAUSADO — a planilha SUGERE o dono, nunca escreve. */
   sugestoesGestor: SugestaoGestor[];
   pendencias: Pendencia[];
+  /**
+   * QUEM GOVERNA O GESTOR — o campo que a `/carteira` lê para saber se edita ou não.
+   *
+   * ⚠️⚠️ A MARCA SAI POR EVIDÊNCIA, NUNCA POR PRAZO, e a frase que decide é esta:
+   * **prazo abriria permissão de escrita por causa de uma falha do cron, que é a
+   * direção errada. Trancado quando incerto, nunca editável quando incerto.**
+   *
+   * 🔑 E a versão ingênua não funciona, o que é fácil de não ver: dá vontade de comparar
+   * `planilha.lidaEm` com a última execução e expirar o que ficou para trás. Mas o
+   * `aplicar=1` **só grava conta cujos campos mudaram** — conta com linha estável não
+   * recebe escrita nenhuma e o `lidaEm` dela congela. Expirar por data desmarcaria
+   * justamente as contas que estão mais certamente na planilha.
+   *
+   * O que a conciliação sabe de verdade é o CONJUNTO de ids vistos nesta leitura. Conta
+   * com marca fora desse conjunto perdeu a linha — transição observada, não tempo
+   * esgotado. E só dispara quando a planilha foi lida com sucesso.
+   */
+  marcas: {
+    /**
+     * Contas que JÁ EXISTEM e passam a ser governadas: escrever `gestorDaPlanilha`.
+     *
+     * ⚠️ Conta a CRIAR não está aqui — a marca dela vai no payload da criação, e
+     * misturar as duas faria a lista prometer escritas que o `aplicar=1` não faz.
+     */
+    entram: { accountId: string; cliente: string; aba: string }[];
+    /** Deixaram de ser governadas: remover a marca. */
+    saem: { accountId: string; cliente: string; abaAnterior: string; motivo: string }[];
+    /** Já marcadas e na mesma aba — nada a escrever. */
+    inalteradas: number;
+    /**
+     * `saem` passou de `TETO_REMOCAO_MARCA` e NÃO deve ser aplicado nesta execução.
+     * O cron nunca remove em massa; uma pessoa confirma na /conciliacao.
+     */
+    bloqueadaPorTeto: boolean;
+  };
   /** As que o painel tem e a planilha não, separadas por natureza. */
   foraDeOperacao: { accountId: string; cliente: string }[];
   semLinhaNaPlanilha: { accountId: string; cliente: string; gestor: string }[];
@@ -284,6 +335,14 @@ export function conciliar(e: EntradaConciliacao): PlanoConciliacao {
   let inalteradas = 0;
 
   const idsVistosNaPlanilha = new Set<string>();
+  /**
+   * Contas cujo gestor o SYNC governa → aba. É o insumo de `marcas`.
+   *
+   * ⚠️ NÃO é "está na planilha": conta no balde `PAUSADO` entra em `idsVistosNaPlanilha`
+   * e NÃO entra aqui. Em 10/09/2026 são 74 contra 72 — e as 2 de diferença são
+   * exatamente as que a guarda do balde protege.
+   */
+  const governadas = new Map<string, string>();
 
   for (const l of e.linhas) {
     // ---------------------------------------------------------------------
@@ -409,6 +468,9 @@ export function conciliar(e: EntradaConciliacao): PlanoConciliacao {
         aba: l.aba, linha: l.linha,
         nomeNaMeta: sonda.nomeNaMeta ?? null, moeda: sonda.moeda ?? null,
       });
+      // Nasce governada: veio da planilha e o gestor dela É a aba. Só vira marca de
+      // verdade quando a criação for aplicada — a rota escreve as duas coisas juntas.
+      governadas.set(l.accountId, l.aba);
       continue;
     }
 
@@ -443,6 +505,11 @@ export function conciliar(e: EntradaConciliacao): PlanoConciliacao {
       continue;
     }
 
+    // Fora do balde e com linha na planilha → o sync governa o gestor desta conta, e a
+    // `/carteira` para de editá-lo (menos para PAUSADO). Vale mesmo quando o gestor já
+    // bate: governar não é "vai mudar agora", é "de quem é este campo".
+    governadas.set(l.accountId, l.aba);
+
     if (conta.gestor !== l.aba) {
       trocasGestor.push({
         accountId: l.accountId, cliente: conta.cliente,
@@ -468,10 +535,61 @@ export function conciliar(e: EntradaConciliacao): PlanoConciliacao {
     else semLinhaNaPlanilha.push({ accountId: c.accountId, cliente: c.cliente, gestor: c.gestor });
   }
 
+  // -----------------------------------------------------------------------
+  // 5. AS MARCAS DE GOVERNO — quem a /carteira deixa de editar
+  // -----------------------------------------------------------------------
+  const entram: PlanoConciliacao["marcas"]["entram"] = [];
+  const saem: PlanoConciliacao["marcas"]["saem"] = [];
+  let marcasInalteradas = 0;
+
+  for (const c of e.contas) {
+    const id = String(c.accountId).trim();
+    const aba = governadas.get(id);
+    const marca = c.gestorDaPlanilha ?? null;
+
+    if (aba && !marca) {
+      entram.push({ accountId: id, cliente: c.cliente, aba });
+    } else if (aba && marca && marca.aba !== aba) {
+      // Mudou de aba: a marca precisa apontar para a aba certa, senão a tela mandaria
+      // a pessoa mexer na linha errada — e o texto dela cita o nome da aba.
+      entram.push({ accountId: id, cliente: c.cliente, aba });
+    } else if (aba && marca) {
+      marcasInalteradas++;
+    } else if (!aba && marca) {
+      // Perdeu o governo. As duas causas são diferentes e a mensagem diz qual.
+      saem.push({
+        accountId: id, cliente: c.cliente, abaAnterior: marca.aba,
+        motivo: idsVistosNaPlanilha.has(id)
+          ? "entrou no balde PAUSADO — a planilha não escreve gestor de conta estacionada"
+          : "a linha saiu da planilha",
+      });
+    }
+  }
+
+  // 🛑 CONTA A CRIAR **NÃO** ENTRA EM `entram`, e a primeira versão disto colocava.
+  //
+  // O sintoma foi a conferência não fechar: `entram` deu 75 onde o esperado era 72. Não
+  // era a guarda do balde falhando — eram **duas populações na mesma lista**, escritas
+  // por flags diferentes. As 72 existentes o `aplicar=1` grava; as 3 a criar só existem
+  // com `aplicarCriacao=1`, e a marca delas já vai dentro do payload da criação.
+  //
+  // 🔑 Misturadas, a lista prometia 75 escritas e o cron só conseguia fazer 72 — e a
+  // diferença não apareceria como erro, apareceria como um número que ninguém consegue
+  // reconciliar. É a mesma família do balde silencioso: o resto de um recorte precisa
+  // ser contado à parte, não empurrado para o lado que parece caber.
+  //
+  // Elas estão em `criacoes`, com `aba`, que é tudo o que a rota precisa.
+
   return {
     lidaEmPlanilha: e.lidaEmPlanilha,
     lidaEmPainel: e.lidaEmPainel,
     sondadasEm: e.sondadasEm,
+    marcas: {
+      entram,
+      saem,
+      inalteradas: marcasInalteradas,
+      bloqueadaPorTeto: saem.length > TETO_REMOCAO_MARCA,
+    },
     atualizacoes,
     inalteradas,
     trocasGestor,

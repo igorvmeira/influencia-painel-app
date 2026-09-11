@@ -3,10 +3,11 @@
 import { useMemo, useState } from "react";
 import { ContaMap } from "@/lib/types";
 import { useContas, salvarGestor } from "@/lib/useContas";
-import { OPCOES_GESTOR, PAUSADO } from "@/lib/gestores";
+import { OPCOES_GESTOR, PAUSADO, msgGestorDaPlanilha } from "@/lib/gestores";
 import { TEMA } from "@/lib/brand";
 import Modal from "./Modal";
 import AnaliseConta from "./AnaliseConta";
+import AvisoDadoVelho from "./AvisoDadoVelho";
 
 const CARD = TEMA.card;
 const INK = TEMA.fundo;
@@ -62,6 +63,26 @@ export default function Carteira() {
 
   const carregando = !contas && !erro;
 
+  /**
+   * Quando a conciliação leu a planilha pela última vez — DERIVADO das marcas, não um
+   * campo à parte.
+   *
+   * ⚠️ É a maior data entre as contas governadas, e não a de uma conta qualquer: a
+   * conciliação carimba todas as marcas com o MESMO `em` (a leitura daquela execução),
+   * então o máximo é a última execução que aplicou. Uma conta sozinha poderia estar
+   * parada numa execução antiga se tivesse acabado de entrar.
+   *
+   * ⚠️ E é derivado, nunca escrito: **afirmação sobre dado vivo se calcula.** No dia em
+   * que a planilha deixar de governar qualquer conta, ele vira `null` e o aviso some
+   * sozinho, em vez de continuar ali dizendo algo que não existe mais.
+   */
+  const conciliadaEm = useMemo(() => {
+    const datas = (contas ?? [])
+      .map((c) => c.gestorDaPlanilha?.em)
+      .filter((d): d is string => typeof d === "string" && d !== "");
+    return datas.length ? datas.sort().slice(-1)[0] : null;
+  }, [contas]);
+
   return (
     <div>
       <div className="mb-6">
@@ -71,6 +92,18 @@ export default function Carteira() {
           O status (ativa/pausada) é só leitura aqui.
         </p>
       </div>
+
+      {/* ⚠️ AVISO DE DADO VELHO, com o workflow CERTO. A marca `gestorDaPlanilha` só some
+          quando a conciliação roda e VÊ que a linha saiu — então, com o cron parado, ela
+          fica e o gestor continua travado. Essa é a direção segura de propósito
+          (trancado quando incerto, nunca editável quando incerto), mas quem está na tela
+          precisa saber POR QUE não consegue editar há dias. Sem isto, o silêncio parece
+          regra e não pane. */}
+      <AvisoDadoVelho
+        geradoEm={conciliadaEm}
+        oQue="a conciliação com a planilha"
+        workflow="sync-planilha"
+      />
 
       {erro ? (
         <div className="rounded-xl px-4 py-3 text-[13px]" style={{ background: TEMA.erroFundo, color: RED }}>
@@ -174,6 +207,8 @@ function LinhaConta({ conta, ordem, onAnalisar }: {
   const [salvando, setSalvando] = useState(false);
   const [salvo, setSalvo] = useState(false);
   const [erroLocal, setErroLocal] = useState<string | null>(null);
+  /** Segundo clique do "Estacionar" — ver o porquê dos dois cliques no controle. */
+  const [confirmandoPausa, setConfirmandoPausa] = useState(false);
 
   const pausada = !!conta.pausado;
   // Divergência: o campo gestor diz PAUSADO mas a flag não (ou vice-versa). A flag é o
@@ -185,15 +220,30 @@ function LinhaConta({ conta, ordem, onAnalisar }: {
   const opcoes = OPCOES_GESTOR.includes(gestorAtual) ? OPCOES_GESTOR : [gestorAtual, ...OPCOES_GESTOR];
   const carimbo = carimboTexto(conta);
 
-  async function salvar() {
-    if (!mudou || salvando) return;
+  /**
+   * ⚠️⚠️ O GESTOR DESTA CONTA TEM OUTRO DONO — a planilha de Monitoramento.
+   *
+   * A tela **recebe a decisão, não a recalcula**: quem decide é o conciliador, e o
+   * resultado vem gravado no documento (`gestorDaPlanilha`). Aqui não há regra nenhuma
+   * sobre planilha, aba ou balde PAUSADO — só o desenho de um fato que chegou pronto.
+   *
+   * ⚠️ E o `<select>` SOME, não fica desabilitado. Campo cinza convida ao clique e não
+   * explica nada; quem tenta e não consegue conclui que quebrou. No lugar dele entra o
+   * motivo E o caminho, com o nome da aba — sem a aba, a pessoa procura em 8.
+   */
+  const daPlanilha = conta.gestorDaPlanilha ?? null;
+
+  async function salvar(alvo: string = sel) {
+    if (salvando) return;
+    if (alvo === gestorAtual) return;
     setSalvando(true);
     setErroLocal(null);
     try {
-      const { gestor } = await salvarGestor(conta.accountId, sel);
+      const { gestor } = await salvarGestor(conta.accountId, alvo);
       setGestorAtual(gestor);
       setSel(gestor);
       setSalvo(true);
+      setConfirmandoPausa(false);
       setTimeout(() => setSalvo(false), 2500);
     } catch (e) {
       setErroLocal((e as Error).message);
@@ -241,29 +291,80 @@ function LinhaConta({ conta, ordem, onAnalisar }: {
               ⚠ gestor {gestorAtual === PAUSADO ? "= PAUSADO, mas a conta segue ATIVA" : "definido, mas a conta está PAUSADA"} — ajuste a flag no import/Console se preciso.
             </p>
           )}
+          {/* ⚠️ COR DE ÊNFASE, NUNCA VERMELHO: nada está quebrado — o campo tem dono.
+              Vermelho gasto onde não há falha é vermelho que ninguém lê quando houver. */}
+          {daPlanilha && (
+            <p className="ml-8 mt-1 text-[11px]" style={{ color: TEMA.ouroTexto }}>
+              {msgGestorDaPlanilha(daPlanilha.aba)}
+            </p>
+          )}
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
           {salvo && <span className="text-[12px] font-medium" style={{ color: GREEN }}>✓ salvo</span>}
-          {erroLocal && <span className="max-w-[180px] text-[12px]" style={{ color: RED }}>{erroLocal}</span>}
-          <select
-            value={sel}
-            onChange={(e) => setSel(e.target.value)}
-            disabled={salvando}
-            className="rounded-xl px-3 py-2 text-sm outline-none disabled:opacity-50"
-            style={{ background: INK, color: TEMA.texto, border: `1px solid ${LINE}` }}
-          >
-            {opcoes.map((g) => <option key={g} value={g}>{g}</option>)}
-          </select>
-          {mudou && (
-            <button
-              onClick={salvar}
-              disabled={salvando}
-              className="rounded-full px-4 py-1.5 text-[12px] font-semibold transition-opacity disabled:opacity-40"
-              style={{ background: YELLOW, color: TEMA.textoSobreDestaque }}
-            >
-              {salvando ? "Salvando…" : "Salvar"}
-            </button>
+          {erroLocal && <span className="max-w-[240px] text-[12px]" style={{ color: RED }}>{erroLocal}</span>}
+
+          {daPlanilha ? (
+            /* ⚠️ A ÚNICA AÇÃO QUE SOBRA: ESTACIONAR. Não é conveniência — é a única
+               decisão operacional que a planilha NÃO consegue expressar, porque não
+               existe aba PAUSADO e nunca vai existir (a planilha é a carteira de quem
+               está rodando). Sem isto, nenhuma conta conciliada poderia sair de operação
+               por ninguém: a planilha não tem como dizer e a tela estaria travada.
+               O ciclo fecha sozinho — estacionou, cai no balde, o sync deixa de governar,
+               a marca sai na execução seguinte e a conta volta a ser editável aqui.
+               ⚠️ DOIS CLIQUES, porque estacionar tira a conta de rankings, médias e
+               alertas. Um clique só para uma ação que muda o número de outras telas é
+               fácil demais de dar sem querer. */
+            confirmandoPausa ? (
+              <>
+                <button
+                  onClick={() => salvar(PAUSADO)}
+                  disabled={salvando}
+                  className="rounded-full px-3 py-1.5 text-[12px] font-semibold transition-opacity disabled:opacity-40"
+                  style={{ background: YELLOW, color: TEMA.textoSobreDestaque }}
+                >
+                  {salvando ? "Estacionando…" : "Confirmar"}
+                </button>
+                <button
+                  onClick={() => setConfirmandoPausa(false)}
+                  className="rounded-full px-3 py-1.5 text-[12px] transition-opacity"
+                  style={{ color: MUTED }}
+                >
+                  cancelar
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setConfirmandoPausa(true)}
+                className="rounded-full px-3 py-1.5 text-[12px] transition-[filter] hover:brightness-125"
+                style={{ background: TEMA.chip, color: MUTED, border: `1px solid ${LINE}` }}
+                title="Tirar de operação. É a única mudança de gestor que a planilha não consegue expressar."
+              >
+                Estacionar
+              </button>
+            )
+          ) : (
+            <>
+              <select
+                value={sel}
+                onChange={(e) => setSel(e.target.value)}
+                disabled={salvando}
+                className="rounded-xl px-3 py-2 text-sm outline-none disabled:opacity-50"
+                style={{ background: INK, color: TEMA.texto, border: `1px solid ${LINE}` }}
+              >
+                {opcoes.map((g) => <option key={g} value={g}>{g}</option>)}
+              </select>
+              {mudou && (
+                <button
+                  onClick={() => salvar()}
+                  disabled={salvando}
+                  className="rounded-full px-4 py-1.5 text-[12px] font-semibold transition-opacity disabled:opacity-40"
+                  style={{ background: YELLOW, color: TEMA.textoSobreDestaque }}
+                >
+                  {salvando ? "Salvando…" : "Salvar"}
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>

@@ -35,6 +35,13 @@ export async function salvarGestor(accountId: string, gestor: string): Promise<{
     body: JSON.stringify({ accountId, gestor }),
   });
   const j = await r.json();
+  // ⚠️ O 409 CARREGA `detalhe`, e ele é a metade que importa: explica a CORRIDA — a tela
+  // carregou antes de a conciliação marcar a conta, e o clique veio depois. Sem isso, a
+  // pessoa lê "o gestor vem da planilha" numa tela que acabou de lhe oferecer o seletor,
+  // e conclui que a tela quebrou. Mesmo defeito do veredito que morre tarde demais.
+  if (r.status === 409 && j?.erro) {
+    throw new Error(j.detalhe ? `${j.erro} ${j.detalhe}` : j.erro);
+  }
   if (!r.ok || !j.ok) throw new Error(j?.erro || `Erro ${r.status}`);
   atualizarContaNoCache(accountId, {
     gestor: j.gestor as string,

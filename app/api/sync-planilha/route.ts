@@ -159,6 +159,7 @@ export async function GET(req: Request) {
       pausado: !!x.pausado,
       planilha: (x.planilha as ContaNoPainel["planilha"]) ?? null,
       temHistoricoGestor: Array.isArray(x.gestorHistorico),
+      gestorDaPlanilha: (x.gestorDaPlanilha as ContaNoPainel["gestorDaPlanilha"]) ?? null,
     };
   });
 
@@ -239,6 +240,40 @@ export async function GET(req: Request) {
     }
   }
 
+  // ---------------------------------------------------------------------
+  // AS MARCAS DE GOVERNO — quem a /carteira deixa de editar
+  // ---------------------------------------------------------------------
+  // ⚠️ VÃO JUNTO COM `aplicar=1`, e não atrás de flag própria. A marca não é uma
+  // decisão: é a consequência publicada da regra que o conciliador já aplicou. Separá-la
+  // criaria um estado em que a planilha governa o gestor e a tela não sabe disso — que é
+  // exatamente a divergência silenciosa que o campo existe para fechar.
+  //
+  // 🛑 A REMOÇÃO É A ÚNICA PARTE COM TETO. Escrever marca só FECHA permissão de escrita;
+  // remover ABRE. Por isso a assimetria: `entram` sempre passa, `saem` acima do teto
+  // espera uma pessoa. Ver TETO_REMOCAO_MARCA em lib/conciliaPlanilha.ts.
+  if (aplicarCampos) {
+    for (const m of plano.marcas.entram) {
+      const alvo = docs.get(m.accountId);
+      // Conta que ainda vai ser CRIADA não tem doc: a marca dela entra no payload da
+      // criação, logo abaixo. Escrever aqui criaria um documento pela metade.
+      if (!alvo) continue;
+      gravacoes.push({
+        docId: alvo.id,
+        dados: { gestorDaPlanilha: { aba: m.aba, em: leitura.lidaEm } },
+      });
+    }
+    if (!plano.marcas.bloqueadaPorTeto) {
+      for (const m of plano.marcas.saem) {
+        const alvo = docs.get(m.accountId);
+        if (!alvo) continue;
+        // `null` e não FieldValue.delete(): o campo continua existindo com valor nulo,
+        // então `typeof x === "object"` na conferência distingue "removida" de "nunca
+        // teve" — a mesma régua de conferir presença, não valor.
+        gravacoes.push({ docId: alvo.id, dados: { gestorDaPlanilha: null } });
+      }
+    }
+  }
+
   if (aplicarCriacao) {
     for (const c of plano.criacoes) {
       // ⚠️ `cliente` VEM DA PLANILHA SÓ AQUI, e a distinção é real: na criação não existe
@@ -258,6 +293,10 @@ export async function GET(req: Request) {
           origemCadastro: "planilha",
           cadastradaPor: por,
           cadastradaEm: agoraISO,
+          // Nasce governada: veio da planilha e o gestor dela É a aba. No mesmo
+          // documento, para não existir instante em que a conta existe e a tela acha
+          // que pode editar o gestor dela.
+          gestorDaPlanilha: { aba: c.aba, em: leitura.lidaEm },
         },
       });
     }
@@ -288,11 +327,22 @@ export async function GET(req: Request) {
     const ids = [...new Set(gravacoes.map((g) => g.docId))];
     const lidos = await Promise.all(ids.slice(0, 30).map((id) => col.doc(id).get()));
     const comBloco = lidos.filter((d) => d.exists && typeof d.data()?.planilha === "object" && d.data()?.planilha).length;
+    // ⚠️ A CONTAGEM QUE IMPORTA É A DA COLEÇÃO INTEIRA, não a da amostra: o número de
+    // contas governadas é o que decide quantas pessoas perdem o seletor na /carteira.
+    // Ele tem que bater com `marcas` — se divergir, a guarda do balde não entrou.
+    const todos = await col.get();
+    const governadasNoBanco = todos.docs.filter((d) => {
+      const g = d.data()?.gestorDaPlanilha;
+      return g && typeof g === "object";
+    }).length;
     conferencia = {
       mensagem: "lido de volta do Firestore, por PRESENÇA do campo — não é o objeto em memória",
       documentosConferidos: lidos.length,
       deUmTotalDe: ids.length,
       comBlocoPlanilha: comBloco,
+      governadasNoBanco,
+      // A régua: governadas = contas na planilha MENOS as do balde PAUSADO.
+      esperado: plano.atualizacoes.length + plano.inalteradas - plano.sugestoesGestor.length,
     };
   }
 
@@ -320,8 +370,12 @@ export async function GET(req: Request) {
       pendencias: plano.pendencias.length,
       foraDeOperacao: plano.foraDeOperacao.length,
       semLinhaNaPlanilha: plano.semLinhaNaPlanilha.length,
+      marcasEntram: plano.marcas.entram.length,
+      marcasSaem: plano.marcas.saem.length,
+      marcasInalteradas: plano.marcas.inalteradas,
       gravadas,
     },
+    marcas: plano.marcas,
     conferencia,
     atualizacoes: plano.atualizacoes.map((a) => ({ accountId: a.accountId, cliente: a.cliente, campos: a.campos })),
     trocasGestor: plano.trocasGestor,

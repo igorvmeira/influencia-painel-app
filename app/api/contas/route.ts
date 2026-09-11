@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { Timestamp } from "firebase-admin/firestore";
 import { getDb, getAuthAdmin } from "@/lib/firebaseAdmin";
 import { getContas, invalidarCacheContas } from "@/lib/data";
-import { ehGestorValido } from "@/lib/gestores";
+import { ehGestorValido, podeEditarGestorNaTela, msgGestorDaPlanilha } from "@/lib/gestores";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -89,6 +89,29 @@ export async function POST(req: Request) {
     const data = snap.data() ?? {};
     const gestorAtual = (data.gestor as string) ?? "";
 
+    // ⚠️⚠️ O CAMPO TEM OUTRO DONO — e esconder o controle na tela NÃO é proteção.
+    // Esta checagem é de graça: a transação já leu o documento para empilhar o
+    // histórico, então o `gestorDaPlanilha` já está aqui na mão.
+    //
+    // ⚠️ `409`, NÃO `403`. A pessoa TEM permissão — ela administra a carteira. O que
+    // não é dela é este campo, nesta conta. Um 403 mandaria a tela desenhar "acesso
+    // negado", que é outra conversa e faria alguém pedir acesso que já tem.
+    const marca = (data.gestorDaPlanilha as { aba: string; em: string } | null | undefined) ?? null;
+    if (!podeEditarGestorNaTela(!!marca, gestor)) {
+      return {
+        recusado: true as const,
+        // A mensagem cobre a CORRIDA REAL: a tela carregou antes de a conciliação
+        // marcar esta conta, e o clique veio depois. Sem isso, a pessoa lê "não
+        // permitido" numa tela que acabou de lhe oferecer o botão.
+        erro: msgGestorDaPlanilha(marca!.aba),
+        detalhe:
+          "Se o seletor apareceu para você, esta conta passou a ser conciliada depois que "
+          + "a tela carregou — recarregue para ver o estado atual.",
+        aba: marca!.aba,
+        gestor: gestorAtual,
+      };
+    }
+
     // No-op: escolher o gestor que já está gravado não empilha histórico nem carimba.
     if (gestorAtual === gestor) {
       return { gestor, anterior: gestorAtual, por: sessao.email, em: agora.toDate().toISOString(), semMudanca: true };
@@ -108,6 +131,11 @@ export async function POST(req: Request) {
     );
     return { gestor, anterior: gestorAtual, por: sessao.email, em: agora.toDate().toISOString() };
   });
+
+  // Recusa não invalida cache nem grava nada — a transação saiu sem escrever.
+  if ("recusado" in resultado && resultado.recusado) {
+    return NextResponse.json({ ok: false, ...resultado }, { status: 409 });
+  }
 
   invalidarCacheContas(); // best-effort (ver comentário em lib/data.ts)
   return NextResponse.json({ ok: true, ...resultado });

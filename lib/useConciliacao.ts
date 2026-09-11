@@ -41,13 +41,27 @@ export interface RespostaConciliacao {
     pendencias: number;
     foraDeOperacao: number;
     semLinhaNaPlanilha: number;
+    marcasEntram: number;
+    marcasSaem: number;
+    marcasInalteradas: number;
     gravadas: number;
+  };
+  /** Quem a /carteira deixa (ou volta) a editar. Ver `marcas` em lib/conciliaPlanilha. */
+  marcas: {
+    entram: { accountId: string; cliente: string; aba: string }[];
+    saem: { accountId: string; cliente: string; abaAnterior: string; motivo: string }[];
+    inalteradas: number;
+    bloqueadaPorTeto: boolean;
   };
   conferencia: {
     mensagem: string;
     documentosConferidos: number;
     deUmTotalDe: number;
     comBlocoPlanilha: number;
+    /** Contas governadas contadas na coleção INTEIRA, não na amostra. */
+    governadasNoBanco: number;
+    /** Contas na planilha menos as do balde PAUSADO. Tem que bater. */
+    esperado: number;
   } | null;
   atualizacoes: { accountId: string; cliente: string; campos: string[] }[];
   trocasGestor: TrocaGestor[];

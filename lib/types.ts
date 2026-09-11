@@ -99,6 +99,28 @@ export interface ContaMap {
   gestorHistorico?: EntradaGestor[]; // append-only, mais recente primeiro (teto defensivo)
   gestorEditadoEm?: string;          // carimbo: houve edição pela tela (import passa a pular gestor)
   gestorEditadoPor?: string;         // e-mail de quem fez a última edição
+  /**
+   * ⚠️⚠️ O SYNC DA PLANILHA GOVERNA O GESTOR DESTA CONTA — e enquanto isto existir, a
+   * `/carteira` não edita o campo `gestor` dela (exceto para PAUSADO, ver abaixo).
+   *
+   * 🛑 **NÃO É "esta conta está na planilha".** São coisas diferentes e a diferença tem
+   * dono: em 10/09/2026 são **74** contas na planilha e **72** governadas. As duas de
+   * fora — DRA. ANA PAULA e TRAJETO — estão no balde `gestor: PAUSADO`, onde a guarda
+   * do conciliador já impede a planilha de escrever. Marcá-las travaria as duas pontas
+   * ao mesmo tempo: a planilha não pode escrever e a tela também não poderia. **Ninguém
+   * conseguiria mudar**, e o `data/README.md` manda reativá-las justamente pela tela.
+   *
+   * ⚠️ A EXCEÇÃO: `→ PAUSADO` continua permitido mesmo em conta governada. Estacionar é
+   * a única decisão operacional que a planilha NÃO consegue expressar — não existe aba
+   * PAUSADO. Sem a exceção, nenhuma conta conciliada poderia ser tirada de operação.
+   * E o ciclo fecha sozinho: estacionou → cai no balde → o sync deixa de governar → a
+   * marca sai na execução seguinte → volta a ser editável.
+   *
+   * ⚠️ COMO ELA SAI: por EVIDÊNCIA, nunca por prazo — ver `marcas` em
+   * `lib/conciliaPlanilha.ts`. `em` é quando a planilha foi lida, não um prazo de
+   * validade: marca velha significa "o cron parou", e nesse caso ela FICA.
+   */
+  gestorDaPlanilha?: { aba: string; em: string } | null;
 }
 
 /** Métrica de uma conta em um único dia (granularidade do sync diário). */
