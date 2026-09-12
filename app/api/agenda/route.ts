@@ -6,6 +6,9 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs"; // crypto (JWT) e firebase-admin
 export const maxDuration = 60;
 
+/** Envs que esta rota lê. Ver `lib/envs.ts`; a conferência é `scripts/audita-envs.js`. */
+const ENVS_AGENDA = { obrigatorias: ["GOOGLE_CALENDAR_ID"] } as const;
+
 // Janela padrão e teto de resultados (fácil de ajustar aqui no topo).
 const DIAS_JANELA = 15;
 const MAX_RESULTS = 250;

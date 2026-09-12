@@ -23,6 +23,16 @@
  */
 import crypto from "crypto";
 
+/**
+ * Envs que este módulo lê.
+ * ⚠️ AS DUAS TINHAM UM CONSUMIDOR SÓ até 10/09/2026 — ver a régua da "env com sorte"
+ * no CLAUDE.md. O `sync-planilha` é o primeiro CRON a depender delas.
+ */
+export const ENVS_GOOGLE = {
+  obrigatorias: ["GOOGLE_SERVICE_ACCOUNT_EMAIL", "GOOGLE_PRIVATE_KEY"],
+} as const;
+
+
 /** Agenda: leitura de eventos. Consumido por `lib/googleAgenda.ts`. */
 export const ESCOPO_AGENDA = "https://www.googleapis.com/auth/calendar.readonly";
 

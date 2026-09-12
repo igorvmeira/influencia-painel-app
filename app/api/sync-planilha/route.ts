@@ -5,7 +5,36 @@ import { lerPlanilhaGerencial } from "@/lib/planilhaGerencial";
 import { conciliar, type ContaNoPainel, type Sonda, type PlanoConciliacao } from "@/lib/conciliaPlanilha";
 import { sondarIdentidade } from "@/lib/descobrirContas";
 import { MOEDA_ACEITA, MSG_RESTRITO, LOTE_SONDA } from "@/lib/filaContas";
+import { ENVS_META } from "@/lib/descobrirContas";
+import { ENVS_GOOGLE } from "@/lib/googleAuth";
+import { ENVS_PLANILHA } from "@/lib/planilhaGerencial";
+import { ENVS_FIREBASE_ADMIN } from "@/lib/firebaseAdmin";
+import { comporEnvs, conferirEnvs } from "@/lib/envs";
 import type { EntradaGestor } from "@/lib/types";
+
+/**
+ * As envs que ESTA rota lê diretamente.
+ *
+ * ⚠️ `FILA_EMAILS_PERMITIDOS` é OPCIONAL aqui de propósito, e a distinção importa: o
+ * CRON entra por `CRON_SECRET` e funciona sem ela. Exigi-la faria uma env que só serve
+ * à porta HUMANA derrubar a automação — conferência que reprova ambiente funcionando é
+ * a primeira a ser desligada.
+ * 🕳️ O que ela custa: vazia, a tela recusa TODO MUNDO com o texto de "acesso restrito",
+ * que descreve uma regra e não uma configuração faltando. É dívida conhecida, não
+ * descuido: o dia em que alguém disser "perdi o acesso à /conciliacao", a primeira
+ * coisa a olhar é esta env.
+ */
+const ENVS_ROTA = {
+  obrigatorias: ["CRON_SECRET"],
+  opcionais: ["FILA_EMAILS_PERMITIDOS"],
+} as const;
+
+/**
+ * Tudo o que esta rota alcança — a maior lista do projeto, 8 envs, e SEIS delas entram
+ * por transitividade, em módulo que a rota importa sem saber que ele lê env nenhuma.
+ * COMPOSTO dos módulos, nunca à mão: ver o porquê em `lib/envs.ts`.
+ */
+const ENVS = comporEnvs(ENVS_ROTA, ENVS_FIREBASE_ADMIN, ENVS_GOOGLE, ENVS_META, ENVS_PLANILHA);
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -111,6 +140,15 @@ function historicoComTroca(
 
 // =========================================================================
 export async function GET(req: Request) {
+  // ⚠️ TODAS DE UMA VEZ, e ANTES de qualquer coisa. Em 12/09/2026 esta rota subiu sem
+  // `PLANILHA_GERENCIAL_ID`, parou na primeira ausente, e a falha só apareceu no dia
+  // seguinte — dois 502 às 13:05, com 21s entre eles (o retry do workflow). Se houvesse
+  // uma segunda faltando, seriam mais 24 horas para descobrir a próxima.
+  const falta = conferirEnvs(ENVS);
+  if (falta) {
+    return NextResponse.json({ ok: false, erro: falta.mensagem, faltando: falta.faltando }, { status: 503 });
+  }
+
   const quem = await identificar(req);
   if (quem.tipo === "negado") return quem.resposta;
 

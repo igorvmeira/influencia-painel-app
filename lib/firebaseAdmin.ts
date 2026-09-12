@@ -2,6 +2,10 @@ import { cert, getApps, initializeApp, App, ServiceAccount } from "firebase-admi
 import { getFirestore, Firestore } from "firebase-admin/firestore";
 import { getAuth, Auth } from "firebase-admin/auth";
 
+/** Envs que este módulo lê. Ver `lib/envs.ts`. */
+export const ENVS_FIREBASE_ADMIN = { obrigatorias: ["FIREBASE_SERVICE_ACCOUNT_BASE64"] } as const;
+
+
 let db: Firestore | null = null;
 
 // Aceita a chave colada de qualquer jeito: com aspas em volta, com \n literal,

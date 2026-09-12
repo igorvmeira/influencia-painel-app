@@ -5,7 +5,16 @@ import { buscarDiario, buscarLimiteConta, buscarDiarioPorConjunto, somarPorGrupo
 import { ContaMap, GrupoDia, MetricaDiaria } from "@/lib/types";
 import { COL_AGREGADAS, COL_CONJUNTOS, RETENCAO_DIAS, cutoffRetencao, mesclarDias, mesclarGrupos } from "@/lib/agregadas";
 import { checarCronSecret } from "@/lib/cronAuth";
-import { descobrirContas } from "@/lib/descobrirContas";
+import { descobrirContas, ENVS_META } from "@/lib/descobrirContas";
+import { ENVS_FIREBASE_ADMIN } from "@/lib/firebaseAdmin";
+import { ENVS_CRON } from "@/lib/cronAuth";
+import { comporEnvs, conferirEnvs } from "@/lib/envs";
+
+/**
+ * Tudo o que esta rota alcança. COMPOSTO dos módulos, nunca listado à mão — ver o
+ * porquê em `lib/envs.ts`. `node scripts/audita-envs.js` reprova se divergir do real.
+ */
+const ENVS = comporEnvs(ENVS_CRON, ENVS_FIREBASE_ADMIN, ENVS_META);
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -160,6 +169,12 @@ function conferir(
 export async function GET(req: Request) {
   const bloqueio = checarCronSecret(req);
   if (bloqueio) return bloqueio;
+
+  // ⚠️ TODAS DE UMA VEZ, na primeira linha. Parar na primeira ausente transforma uma
+  // configuração incompleta numa FILA de descobertas, uma por dia de cron — foi o que
+  // custou um dia em 12/09/2026 com o PLANILHA_GERENCIAL_ID.
+  const falta = conferirEnvs(ENVS);
+  if (falta) return NextResponse.json({ ok: false, erro: falta.mensagem, faltando: falta.faltando }, { status: 503 });
 
   const url = new URL(req.url);
   const db = getDb();

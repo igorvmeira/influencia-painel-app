@@ -3,7 +3,8 @@
 Painel que puxa os resultados do Meta Ads por gestor e por cliente (gasto, leads de
 formulário B2B, conversas de WhatsApp B2C e CPL), com comparação contra o período
 anterior. Frontend em Next.js (Vercel), dados no Firebase Firestore, atualização
-automática via Vercel Cron.
+automática por GitHub Actions (ver "Automação" — o cron da Vercel NÃO é usado, e há
+motivo escrito).
 
 Sobe e renderiza com dados de exemplo antes de plugar o Meta — dá pra fazer o deploy
 primeiro e ligar o token depois.
@@ -11,7 +12,8 @@ primeiro e ligar o token depois.
 ## Stack
 - Next.js 14 (App Router) na Vercel
 - Firebase Firestore (de-para de contas + números processados)
-- Vercel Cron chamando `/api/sync-meta` (Meta Marketing API → Firestore)
+- GitHub Actions chamando `/api/sync-meta` (Meta Marketing API → Firestore) — **não** o
+  cron da Vercel; ver "Automação" para o porquê
 
 ## 1. Rodar local
 ```bash
@@ -230,16 +232,70 @@ Esse erro vem da `FIREBASE_PRIVATE_KEY` com quebras de linha erradas. O código 
 normaliza, então cole a `private_key` exatamente como aparece no `.json`. Se ainda
 reclamar, use `FIREBASE_SERVICE_ACCOUNT_BASE64` (o JSON inteiro em base64, numa linha).
 
-## Automação (rodar sozinho) — requer plano Vercel Pro
-Por padrão este projeto vem compatível com o plano grátis (Hobby): `vercel.json` vazio
-(`{}`) e `maxDuration = 60` na rota. Nesse modo, o sync é disparado manualmente — ver
-"Como chamar as rotas internas".
+## Automação — GitHub Actions, e NÃO o cron da Vercel
 
-Para o sync rodar sozinho todo dia, faça o upgrade para o Pro e então:
-1. No `vercel.json`, coloque:
-   `{ "crons": [ { "path": "/api/sync-meta", "schedule": "0 9 * * *" } ] }`
-2. Em `app/api/sync-meta/route.ts`, troque `maxDuration = 60` por `maxDuration = 300`
-   (o Hobby limita a 60s; o Pro permite 300s, necessário para o pull semanal por gestor).
+> ⚠️ **ESTA SEÇÃO DIZIA O CONTRÁRIO até 12/09/2026**, e o que ela mandava fazer é
+> exatamente o que foi decidido NÃO fazer. Ela instruía: "para o sync rodar sozinho,
+> faça upgrade para o Pro, ponha `crons` no `vercel.json` e suba o `maxDuration` para
+> 300". O projeto **está no Pro desde setembro/2026**, e mesmo assim a resposta é não.
+> Documento que manda fazer o que a equipe decidiu evitar é pior que documento ausente.
+
+Os três syncs rodam por **GitHub Actions**, em `.github/workflows/`:
+
+| workflow | horário (UTC) | o que faz |
+|---|---|---|
+| `sync-meta.yml` | `0 9` | LAÇO de blocos: `?offset=N&limite=10` até `proximoOffset` vir null |
+| `sync-comercial.yml` | `30 9` | uma chamada |
+| `sync-planilha.yml` | `40 9` | uma chamada, só os campos de `planilha.*` |
+
+O `vercel.json` é `{}` de propósito. **Não ponha `crons` nele.**
+
+### Por que NÃO migrar para o cron da Vercel
+
+O Pro destrava o cron nativo, e ele parece upgrade. **É menos do que já existe aqui**, em
+quatro eixos — e o quarto é o que decide:
+
+| | GitHub Actions | cron da Vercel |
+|---|---|---|
+| falha visível, com e-mail | **sim** | a doc de cron não descreve notificação |
+| retry | sim, 1 tentativa extra após 20s | não |
+| retenção de log | ~90 dias | **1 dia** no Pro (medido em 12/09/2026) |
+| **asserção sobre o CORPO da resposta** | **sim** | **não há onde pôr** |
+
+🔑 **A quarta é a que fecha, e é específica deste projeto.** Os workflows não checam
+"respondeu 200" — eles **leem o JSON e reprovam o job**: o `sync-comercial` derruba se
+`conferencia.coerencia.tudoCoerente` quebrar; o `sync-planilha` derruba se o detector de
+coluna perder uma âncora, ou se gravar e não achar o campo na leitura de volta.
+
+**Cron da Vercel é dispara-e-esquece.** Um `200` com o detector cego por dentro passaria —
+e é exatamente o modo de falha que aquelas guardas existem para pegar. Trocar o agendador
+apagaria a camada de conferência junto com ele.
+
+⚠️ **E o `sync-meta` nem poderia migrar sem reescrita.** Ele é um LAÇO de 13–14 chamadas
+paginadas (~100s de relógio, medido nos logs de 11/09/2026); o cron da Vercel dispara
+**uma** requisição. Caberia numa invocação só apenas com `maxDuration` bem acima do atual —
+ou seja, reescrever o sync para resolver um problema que não existe.
+
+**Se um dia migrar mesmo assim**, a pergunta a responder ANTES é "como eu fico sabendo que
+falhou?". Hoje a resposta é um e-mail que já funciona — foi assim que a falta do
+`PLANILHA_GERENCIAL_ID` apareceu em 12/09/2026.
+
+### `maxDuration`: 60 fica, e o ganho disponível é DESCER
+
+Medido em 12/09/2026, em produção: `sync-planilha` **5,5s** ponta a ponta com rede;
+`sync-meta` **7–13s por bloco**; `comercial/backfill` ~25s. **Nada chega perto de 60.**
+A régua da casa vale aqui: *não desenhe em volta de um teto que você não mediu*.
+
+Duas pendências anotadas, nenhuma urgente:
+
+- 📌 **Descer o teto das rotas de LEITURA DE TELA** (`/api/contas`, `/api/painel`,
+  `/api/orientacoes`) de 60s para ~15s. As 17 rotas estão em 60 por cópia, não por
+  decisão, e um Firestore pendurado segura a função um minuto inteiro antes de devolver
+  erro — uma tela quer falhar rápido. **Não feito agora porque mexe em rota que a tela
+  usa e não há urgência.**
+- 📌 **`comercial/backfill`, se um dia apertar: LOTE MAIOR, não mais tempo.** Ele está em
+  ~25s de 60 com 400 ids por chamada; 800 ids ainda cabem. Subir o `maxDuration` trataria
+  o sintoma e deixaria a chamada mais longa e mais cara de repetir quando falhasse.
 
 ## Próximos passos
 - **Login (fase 2)**: Firebase Auth + leitura por usuário; liberar leitura na

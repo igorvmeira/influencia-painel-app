@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 
+/** Envs que este módulo lê. Ver `lib/envs.ts` para o porquê de a declaração morar aqui. */
+export const ENVS_CRON = { obrigatorias: ["CRON_SECRET"] } as const;
+
+
 // Autenticação das rotas internas (sync/cargas/diagnóstico) por CRON_SECRET.
 // FALHA FECHADO: se a env não existir/estiver vazia, NÃO autoriza — responde 500 e
 // a rota não executa nada (antes, sem a env, a rota ficava aberta a qualquer um).

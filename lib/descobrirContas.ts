@@ -19,6 +19,17 @@ import { CandidataFila, FilaContas, Ignorada, LOTE_SONDA, STATUS_ROTULO, bare } 
 import { COL_AGREGADAS } from "./agregadas";
 import { COL_LIMITES, COL_SISTEMA, DOC_FILA, DOC_IGNORADAS, DOC_REMOVIDAS } from "./colecoes";
 
+/**
+ * Envs que este módulo lê.
+ * ⚠️ `META_API_VERSION` é OPCIONAL — há `|| "v21.0"` no código. Exigi-la reprovaria
+ * ambiente saudável, e conferência que falha no caso normal é a primeira a ser desligada.
+ */
+export const ENVS_META = {
+  obrigatorias: ["META_ACCESS_TOKEN"],
+  opcionais: ["META_API_VERSION"],
+} as const;
+
+
 const API = process.env.META_API_VERSION || "v21.0";
 const TOKEN = process.env.META_ACCESS_TOKEN || "";
 

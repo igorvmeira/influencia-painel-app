@@ -1,5 +1,12 @@
 import { ContaMap, Criativo, GrupoDia, MetricaConjunto, MetricaDiaria } from "./types";
 
+/** Envs que este módulo lê — as mesmas do `lib/descobrirContas.ts`, ver `ENVS_META` lá. */
+export const ENVS_META_SYNC = {
+  obrigatorias: ["META_ACCESS_TOKEN"],
+  opcionais: ["META_API_VERSION"],
+} as const;
+
+
 const API = process.env.META_API_VERSION || "v21.0";
 const TOKEN = process.env.META_ACCESS_TOKEN || "";
 

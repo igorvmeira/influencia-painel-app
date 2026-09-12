@@ -178,6 +178,32 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   apagamento que desfaça: a única resposta é ROTACIONAR, e dizer isso na hora. Esconder
   para não parecer descuidado transforma um erro de dez minutos numa credencial viva
   circulando por tempo indeterminado.
+  ✅ **DECISÃO DO IGOR (12/09/2026): a `GOOGLE_PRIVATE_KEY` NÃO será rotacionada.**
+  Risco aceito, registrado, **assunto encerrado — não levantar de novo.** Fica ao lado
+  da decisão do `?key=` na querystring: o código aceita, a casa usa header, e a exceção
+  vive escrita em vez de ser relitigada a cada revisão. A régua acima continua valendo
+  inteira para a PRÓXIMA credencial; o que está decidido é este caso, não o princípio.
+- 🛑🛑 **ENV COM UM CONSUMIDOR SÓ, E ESSE CONSUMIDOR SENDO TELA QUE NINGUÉM ABRE, NÃO É
+  ENV TESTADA — É ENV COM SORTE.** Ela aparece no painel da Vercel, tem valor, e nunca
+  foi exercitada. **O primeiro cron que depender dela descobre por você**, às 6h40 da
+  manhã, sozinho.
+  Caso real (12/09/2026). `GOOGLE_SERVICE_ACCOUNT_EMAIL` e `GOOGLE_PRIVATE_KEY` existiam
+  desde a integração da Agenda e tinham **uma** consumidora: `/api/agenda`. Só que a
+  `/reunioes` está **escondida do menu desde 05/08/2026** (decisão do Roberto) — ninguém
+  abre aquela tela há mais de um mês. Quando o `sync-planilha` entrou, ele virou **o
+  primeiro CRON a depender da conta de serviço do Google**, e as duas envs passaram de
+  "presentes" a "críticas" sem ninguém decidir isso.
+  🔑 **Por que escapa:** o inventário diz que a env é ANTIGA, e antigo soa como testado.
+  A pergunta certa não é "desde quando ela existe", é **"quando foi a última vez que
+  alguém executou o código que a lê?"**. Env com consumidor único herda a frequência de
+  uso daquele consumidor — e tela escondida tem frequência zero.
+  ⚠️ **A régua: ao ligar um consumidor NOVO a uma env existente, conte os consumidores
+  ANTIGOS e pergunte se algum deles roda.** Se a resposta for "só uma tela, e ela está
+  escondida", trate a env como nova: confira em produção antes do primeiro cron, não
+  depois. Custa uma chamada em prévia.
+  🕳️ E o mesmo raciocínio vale para ROTAÇÃO de credencial: girar uma chave cujo único
+  consumidor visível é uma tela morta não dá sinal nenhum se você atualizar só um lado —
+  o cron quebra, a tela não reclama, e os dois eventos não parecem relacionados.
 - Só use o prefixo `NEXT_PUBLIC_` para config **não secreta** do cliente (ex.: chaves públicas
   do Firebase client). Deixe claro para o usuário o que é secreto e o que é público.
 - Sempre que criar/precisar de uma env, **diga exatamente qual variável adicionar na Vercel**

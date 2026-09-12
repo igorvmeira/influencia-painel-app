@@ -8,6 +8,20 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+/**
+ * ⚠️ NÃO EXPORTE: route file do Next só aceita os exports que ele conhece (GET, POST,
+ * dynamic, runtime, maxDuration…). Exportar daqui reprova no `next build` — e o
+ * `tsc --noEmit` PASSA, então só o build acusa. O `scripts/audita-envs.js` lê o texto
+ * do arquivo, não o módulo, então a declaração local serve igual.
+ */
+/**
+ * Envs que esta rota lê direto.
+ * ⚠️ O módulo de IA é DESLIGÁVEL por env e nasce off — sem `ANTHROPIC_API_KEY` ele
+ * simplesmente não existe para o cliente, e isso não é defeito. Por isso as duas são
+ * opcionais: exigi-las reprovaria a instalação padrão.
+ */
+const ENVS_IA = { obrigatorias: [], opcionais: ["ANTHROPIC_API_KEY", "IA_EMAILS_PERMITIDOS"] } as const;
+
 const MODELO = "claude-sonnet-4-6";
 const MAX_TOKENS = 1024;        // teto de saída (segura custo)
 const MAX_MENSAGENS = 10;       // teto de histórico da conversa enviado

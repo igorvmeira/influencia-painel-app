@@ -59,6 +59,12 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+/** Envs que esta rota lê direto (as mesmas do `lib/descobrirContas.ts`). */
+const ENVS_DIAG = {
+  obrigatorias: ["META_ACCESS_TOKEN"],
+  opcionais: ["META_API_VERSION"],
+} as const;
+
 // Mesmas envs que o sync já usa (não cria env nova).
 const API = process.env.META_API_VERSION || "v21.0";
 const TOKEN = process.env.META_ACCESS_TOKEN || "";

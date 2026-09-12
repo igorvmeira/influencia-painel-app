@@ -32,6 +32,10 @@ import { obterAccessToken, ESCOPO_PLANILHA_LEITURA } from "./googleAuth";
 import { GESTORES } from "./gestores";
 import { interpretarSituacao, ROTULOS_ACEITOS, type Situacao } from "./situacaoPlanilha";
 
+/** Envs que este módulo lê. Ver `lib/envs.ts`. */
+export const ENVS_PLANILHA = { obrigatorias: ["PLANILHA_GERENCIAL_ID"] } as const;
+
+
 /** Faixa lida por aba. Larga de propósito: a planilha cresce e ninguém avisa. */
 const FAIXA = "A1:AZ2000";
 

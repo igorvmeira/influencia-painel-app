@@ -1,3 +1,10 @@
+
+/** Envs que este módulo lê. Ver `lib/envs.ts`. */
+export const ENVS_XMAX = {
+  obrigatorias: ["XMAX_BASE_URL", "XMAX_API_KEY_GLOBAL"],
+  opcionais: ["XMAX_QUEUE_ID"],
+} as const;
+
 // Domínio do Xmax (CRM do comercial). Constantes e helpers que sobrevivem ao
 // endpoint de diagnóstico que os originou. A rota /api/diag-xmax foi REMOVIDA em
 // 20/08/2026 — este arquivo é o que sobrou dela, e é permanente.

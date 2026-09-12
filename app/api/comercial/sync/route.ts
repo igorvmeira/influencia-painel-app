@@ -33,6 +33,13 @@ import {
   OportunidadeGravada,
 } from "@/lib/comercial";
 import { montarAgregado } from "@/lib/comercialAgregado";
+import { ENVS_XMAX } from "@/lib/xmax";
+import { ENVS_FIREBASE_ADMIN } from "@/lib/firebaseAdmin";
+import { ENVS_CRON } from "@/lib/cronAuth";
+import { comporEnvs, conferirEnvs } from "@/lib/envs";
+
+/** Tudo o que esta rota alcança. Composto, nunca à mão — ver `lib/envs.ts`. */
+const ENVS = comporEnvs(ENVS_CRON, ENVS_FIREBASE_ADMIN, ENVS_XMAX);
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -92,6 +99,9 @@ const REFERENCIA_NIVEIS: Record<number, number> = { 1: 91, 2: 231, 3: 40, 4: 22,
 export async function GET(req: Request) {
   const bloqueio = checarCronSecret(req);
   if (bloqueio) return bloqueio;
+
+  const falta = conferirEnvs(ENVS);
+  if (falta) return NextResponse.json({ ok: false, erro: falta.mensagem, faltando: falta.faltando }, { status: 503 });
 
   const cfg = lerConfigXmax();
   if ("faltando" in cfg) {

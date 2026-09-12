@@ -12,6 +12,19 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+/**
+ * ⚠️ NÃO EXPORTE: route file do Next só aceita os exports que ele conhece (GET, POST,
+ * dynamic, runtime, maxDuration…). Exportar daqui reprova no `next build` — e o
+ * `tsc --noEmit` PASSA, então só o build acusa. O `scripts/audita-envs.js` lê o texto
+ * do arquivo, não o módulo, então a declaração local serve igual.
+ */
+/**
+ * Envs que esta rota lê direto.
+ * ⚠️ OPCIONAL: a tela FALHA FECHADO sem ela (vazia = ninguém entra), que é o desenho.
+ * Torná-la obrigatória faria a rota 503 num estado que é deliberado.
+ */
+const ENVS_FILA = { obrigatorias: [], opcionais: ["FILA_EMAILS_PERMITIDOS"] } as const;
+
 // Orçamento da busca sob demanda ("procurar agora"). Maior que o do sync porque
 // aqui existe uma pessoa esperando na tela, e nada mais divide a chamada.
 const DESCOBERTA_MS = 8000;
