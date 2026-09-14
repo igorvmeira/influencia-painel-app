@@ -24,8 +24,15 @@ export function atualizarContaNoCache(accountId: string, patch: Partial<ContaMap
 }
 
 // Salva o gestor de uma conta (POST /api/contas). Autor vem do token no servidor.
-// Retorna o gestor gravado e já atualiza o cache de sessão.
-export async function salvarGestor(accountId: string, gestor: string): Promise<{ gestor: string }> {
+// Retorna o gestor E a flag `pausado` que o servidor gravou (estacionar grava os dois) e
+// já atualiza o cache de sessão.
+//
+// ⚠️ `pausado: null` = o servidor não disse. A tela NÃO deduz a flag do gestor: a regra
+// mora em `pausadoPara`, no servidor, e uma resposta sem o campo (deploy antigo ainda
+// respondendo) mantém o que a tela já mostrava em vez de inventar.
+export async function salvarGestor(
+  accountId: string, gestor: string
+): Promise<{ gestor: string; pausado: boolean | null }> {
   const usuario = auth?.currentUser;
   if (!usuario) throw new Error("Sessão expirada. Faça login novamente.");
   const token = await usuario.getIdToken();
@@ -43,12 +50,14 @@ export async function salvarGestor(accountId: string, gestor: string): Promise<{
     throw new Error(j.detalhe ? `${j.erro} ${j.detalhe}` : j.erro);
   }
   if (!r.ok || !j.ok) throw new Error(j?.erro || `Erro ${r.status}`);
+  const pausado = typeof j.pausado === "boolean" ? (j.pausado as boolean) : null;
   atualizarContaNoCache(accountId, {
     gestor: j.gestor as string,
+    ...(pausado !== null ? { pausado } : {}),
     gestorEditadoPor: (j.por as string) ?? undefined,
     gestorEditadoEm: (j.em as string) ?? undefined,
   });
-  return { gestor: j.gestor as string };
+  return { gestor: j.gestor as string, pausado };
 }
 
 export function useContas(): { contas: ContaMap[] | null; erro: string | null } {

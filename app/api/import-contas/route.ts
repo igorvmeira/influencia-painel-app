@@ -38,7 +38,14 @@ function payloadDe(c: ContaFonte) {
   };
 }
 
-// Conta cujo gestor foi editado pela tela /carteira: import NÃO mexe no campo gestor.
+// Conta cujo gestor foi editado pela tela /carteira: import NÃO mexe no campo gestor —
+// NEM na flag `pausado`.
+//
+// ⚠️ A flag entrou na trava em 14/09/2026, quando estacionar pela tela passou a gravar
+// `pausado` junto do gestor (ver `pausadoPara` em lib/gestores.ts). Sem isto, a próxima
+// execução do import leria `"pausado": false` no JSON e desfaria o estacionamento pela
+// metade: gestor PAUSADO (travado) e conta de volta aos rankings. Era exatamente o caso
+// de Hotel Oscar e CAMPEZZA, as duas únicas contas travadas naquele dia.
 function gestorTravado(existente: Record<string, unknown>): boolean {
   return !!existente.gestorEditadoEm;
 }
@@ -89,7 +96,8 @@ function camposQueMudam(existente: Record<string, unknown>, c: ContaFonte): stri
     if (k === "gestor" && travado) continue; // gestor editado na tela: import ignora
     if ((existente[k] ?? "") !== alvo[k]) campos.push(k);
   }
-  if (!!existente.pausado !== alvo.pausado) campos.push("pausado");
+  // Travada pela tela: a flag é da tela, como o gestor (ver `gestorTravado`).
+  if (!travado && !!existente.pausado !== alvo.pausado) campos.push("pausado");
   if (existente.ativo !== true) campos.push("ativo");
   return campos;
 }
@@ -172,7 +180,10 @@ export async function GET(req: Request) {
       // Atualiza o doc existente (qualquer que seja o docId dele). Se o gestor está
       // travado pela tela, remove-o do payload para o merge não sobrescrevê-lo.
       const dados = payloadDe(c) as ReturnType<typeof payloadDe> & { gestorHistorico?: unknown[] };
-      if (travado) delete (dados as { gestor?: string }).gestor;
+      if (travado) {
+        delete (dados as { gestor?: string }).gestor;
+        delete (dados as { pausado?: boolean }).pausado; // a flag também é da tela
+      }
 
       // TROCA DE GESTOR pelo JSON: registra no histórico datado (append-only).
       // Só quando o gestor REALMENTE muda e a conta não está travada pela tela.
@@ -280,7 +291,7 @@ export async function GET(req: Request) {
     carimbadas: {
       mensagem: (carimbadasDivergentes.length + carimbadasConcordantes.length) === 0
         ? "Nenhuma conta carimbada — o import gerencia o gestor de todas."
-        : `${carimbadasDivergentes.length + carimbadasConcordantes.length} conta(s) com gestor TRAVADO pela tela /carteira. `
+        : `${carimbadasDivergentes.length + carimbadasConcordantes.length} conta(s) com gestor e pausado TRAVADOS pela tela /carteira. `
           + "Para devolvê-las ao controle do JSON, apague gestorEditadoEm e gestorEditadoPor no Console do Firebase.",
       // JSON discorda: a troca pedida no JSON NÃO será aplicada.
       divergentes: carimbadasDivergentes,

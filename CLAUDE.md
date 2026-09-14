@@ -931,6 +931,37 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
 - Nunca suba a etapa 2 antes de confirmar a 1 — senão a tela lê dados incompletos.
 - A fonte granular original permanece intacta como auditoria; o agregado é derivado e
   reconstruível.
+- 🛑🛑 **NÚMERO DE MÊS FECHADO QUE MUDA DEPOIS DO FECHAMENTO NÃO É BUG DE TELA — É O
+  DESENHO. Enquanto o gasto for atribuído ao gestor ATUAL da conta, qualquer troca de
+  gestor reescreve o passado inteiro dela.**
+  Caso real (14/09/2026). Hotel Oscar e CAMPEZZA foram estacionadas pela `/carteira` em
+  08/09 (gestor → PAUSADO). As telas somam o gasto de TODOS os meses ao gestor que a conta
+  tem HOJE (`montarPainel` agrupa por `conta.gestor`; o `gestorHistorico` só vira selo de
+  troca na `/gestores`), então no instante do clique julho e agosto do LUCAS e do JOÃO
+  PEDRO mudaram. **O agosto do LUCAS na tela foi de CPL R$ 20,74 para R$ 21,36** (1.549 →
+  1.474 conversões) por causa do estacionamento de duas contas, e **a tela não avisa
+  isso** — nem na hora do clique, nem depois, para quem abre agosto. A ordem do selo de
+  agosto não mudou (WEDER em 1º nas duas leituras); o número do LUCAS mudou. Em aberto:
+  se a bonificação de agosto foi fechada antes ou depois de 08/09 (pergunta ao Thiago).
+  📌 **O "antes" foi RECONSTRUÍDO** com os dados de 14/09, atribuindo as duas contas ao
+  gestor anterior — não é foto do que a tela mostrava em 07/09. E nem essa reconstrução é
+  a atribuição certa: a Hotel Oscar foi do LUCAS até 27/07 e do JOÃO PEDRO depois, e
+  nenhuma tela jamais repartiu o gasto de uma conta por data.
+  🔑 **Por que não é bug de tela:** todas as telas fazem a mesma conta e fazem certo sobre
+  o que o dado diz. O defeito é o dado não guardar QUANDO a conta foi de quem. Consertar
+  na tela (esconder, avisar, congelar o mês) trata o sintoma; o passado continua sendo
+  reescrito a cada troca.
+  ⚠️ **A régua: número que depende de "de quem é" precisa da DATA em que foi de quem.** A
+  saída com data resolve — e ela vale para TODA troca de gestor, não só para saída de
+  cliente: estacionar, desestacionar, mover a linha de aba na planilha, trocar pela tela.
+  Até ela existir, a `/carteira` avisa antes do clique (`avisoTrocaGestor` em
+  `lib/gestores.ts`) e ninguém deve tratar mês fechado na tela como registro imutável.
+  🔑 **E o que PARECIA proteger e não protegia.** A pergunta antes do conserto do
+  estacionar foi "gravar `pausado` some com o gasto de todos os meses — não é melhor
+  esperar a saída com data e deixar estacionar só trocando o gestor?". Medido, **quem
+  reescreve o mês do gestor é a troca do gestor**, que o estacionar já fazia; gravar
+  `pausado` junto só mudou ~0,5% do total da carteira. Esperar teria preservado a coisa
+  errada — e só a medição separou as duas.
 
 ## Módulo de IA (premium, opcional)
 - Assistente de IA entra como **módulo premium**, **desligável por env** (off por padrão).

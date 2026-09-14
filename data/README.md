@@ -235,9 +235,11 @@ de anúncio.
 - **Idempotente**: rodar de novo faz merge, não duplica.
 - **Prévia por padrão**; só grava com `&aplicar=1`.
 - Conta cujo gestor foi editado pela tela `/carteira` recebe carimbo
-  (`gestorEditadoEm`) e o import passa a **pular o campo `gestor`** dela. Para voltar
-  a seguir este arquivo, apague `gestorEditadoEm` e `gestorEditadoPor` no Console do
-  Firebase.
+  (`gestorEditadoEm`) e o import passa a **pular os campos `gestor` e `pausado`** dela.
+  A flag entrou na trava em 14/09/2026, quando estacionar pela tela passou a gravar
+  `pausado: true` junto do gestor — sem isso o import desfaria o estacionamento pela
+  metade. Para voltar a seguir este arquivo, apague `gestorEditadoEm` e
+  `gestorEditadoPor` no Console do Firebase.
 
 ## O que `pausado` significa (regra da carteira)
 
@@ -254,6 +256,21 @@ de Monitoramento da agência. São perguntas diferentes, e misturá-las quebra o
 
 O teste é sempre **gasto > 0 no período**, consultado dia a dia — nunca
 `account_status`, que descreve o cadastro e não o comportamento.
+
+### Estacionar pela tela também pausa (desde 14/09/2026)
+
+Estacionar pela `/carteira` (`gestor: "PAUSADO"`) passou a gravar **`pausado: true`
+junto**, e escolher um gestor de verdade grava `pausado: false`. É DECISÃO OPERACIONAL de
+quem toca a carteira, não o teste de veiculação — por isso vale mesmo com gasto, como a
+exceção abaixo. Antes, a tela gravava só o gestor: Hotel Oscar e CAMPEZZA, estacionadas
+em 08/09, ficaram em rankings, médias e alertas sob um "gestor" chamado PAUSADO até o
+alinhamento de 14/09. (Nenhuma das duas gastava desde 13/08 e 01/09, respectivamente —
+a régua de veiculação chegaria ao mesmo lugar.)
+
+⚠️ **Estacionar e desestacionar reescrevem o passado.** As telas atribuem o gasto de
+todos os meses ao gestor ATUAL, então a conta sai (ou entra) de todos os meses de uma
+vez, inclusive fechados. A `/carteira` avisa antes do clique; a régua está no CLAUDE.md
+(*Mudanças estruturais em dados*).
 
 ### A exceção: saída confirmada
 

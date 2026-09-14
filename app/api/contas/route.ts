@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { Timestamp } from "firebase-admin/firestore";
 import { getDb, getAuthAdmin } from "@/lib/firebaseAdmin";
 import { getContas, invalidarCacheContas } from "@/lib/data";
-import { ehGestorValido, podeEditarGestorNaTela, msgGestorDaPlanilha } from "@/lib/gestores";
+import { ehGestorValido, podeEditarGestorNaTela, msgGestorDaPlanilha, pausadoPara } from "@/lib/gestores";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -113,8 +113,9 @@ export async function POST(req: Request) {
     }
 
     // No-op: escolher o gestor que já está gravado não empilha histórico nem carimba.
+    // Devolve a flag COMO ESTÁ gravada — não alinha nada aqui: o no-op continua no-op.
     if (gestorAtual === gestor) {
-      return { gestor, anterior: gestorAtual, por: sessao.email, em: agora.toDate().toISOString(), semMudanca: true };
+      return { gestor, pausado: !!data.pausado, anterior: gestorAtual, por: sessao.email, em: agora.toDate().toISOString(), semMudanca: true };
     }
 
     const historicoAnterior = Array.isArray(data.gestorHistorico) ? (data.gestorHistorico as unknown[]) : null;
@@ -124,12 +125,17 @@ export async function POST(req: Request) {
     // Mais recente primeiro; corta no teto defensivo.
     const novoHistorico = [entrada, ...base].slice(0, MAX_HISTORICO_GESTOR);
 
+    // ⚠️ ESTACIONAR GRAVA OS DOIS CAMPOS, na mesma transação. Até 14/09/2026 gravava só o
+    // gestor, e a conta continuava em rankings, médias e alertas sob um "gestor" chamado
+    // PAUSADO — enquanto a /carteira afirmava que estacionar tirava de lá. A regra mora em
+    // `pausadoPara` (lib/gestores.ts); a tela recebe a flag pronta na resposta.
+    const pausado = pausadoPara(gestor);
     tx.set(
       ref,
-      { gestor, gestorHistorico: novoHistorico, gestorEditadoEm: agora, gestorEditadoPor: sessao.email },
-      { merge: true } // não apaga outros campos da conta (cliente, nicho, pausado…)
+      { gestor, pausado, gestorHistorico: novoHistorico, gestorEditadoEm: agora, gestorEditadoPor: sessao.email },
+      { merge: true } // não apaga outros campos da conta (cliente, nicho…)
     );
-    return { gestor, anterior: gestorAtual, por: sessao.email, em: agora.toDate().toISOString() };
+    return { gestor, pausado, anterior: gestorAtual, por: sessao.email, em: agora.toDate().toISOString() };
   });
 
   // Recusa não invalida cache nem grava nada — a transação saiu sem escrever.

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { ContaMap } from "@/lib/types";
 import { useContas, salvarGestor } from "@/lib/useContas";
-import { OPCOES_GESTOR, PAUSADO, msgGestorDaPlanilha } from "@/lib/gestores";
+import { OPCOES_GESTOR, PAUSADO, msgGestorDaPlanilha, avisoTrocaGestor } from "@/lib/gestores";
 import { TEMA } from "@/lib/brand";
 import Modal from "./Modal";
 import AnaliseConta from "./AnaliseConta";
@@ -89,7 +89,7 @@ export default function Carteira() {
         <h1 className="text-lg font-semibold text-brand-ink">Carteira de Contas</h1>
         <p className="text-[13px]" style={{ color: MUTED }}>
           Contas ATIVAS por gestor. Edite o responsável; o histórico é datado e nada é apagado.
-          O status (ativa/pausada) é só leitura aqui.
+          Estacionar (gestor PAUSADO) pausa a conta; escolher um gestor a reativa.
         </p>
       </div>
 
@@ -210,9 +210,14 @@ function LinhaConta({ conta, ordem, onAnalisar }: {
   /** Segundo clique do "Estacionar" — ver o porquê dos dois cliques no controle. */
   const [confirmandoPausa, setConfirmandoPausa] = useState(false);
 
-  const pausada = !!conta.pausado;
+  // Flag "viva", pelo mesmo motivo do gestor: estacionar pela tela grava os DOIS campos
+  // (ver `pausadoPara` em lib/gestores.ts). Lendo só a prop, a linha acabaria de
+  // estacionar e acusaria "gestor = PAUSADO, mas a conta segue ATIVA" — o aviso de
+  // divergência apontando para o próprio conserto.
+  const [pausada, setPausada] = useState(!!conta.pausado);
   // Divergência: o campo gestor diz PAUSADO mas a flag não (ou vice-versa). A flag é o
-  // que REALMENTE controla rankings/alertas — por isso o aviso não é cosmético.
+  // que REALMENTE controla rankings/alertas — por isso o aviso não é cosmético. Desde
+  // 14/09/2026 a tela não produz mais essa combinação; ela só chega pelo import ou Console.
   const divergente = (gestorAtual === PAUSADO) !== pausada;
   const mudou = sel !== gestorAtual;
 
@@ -233,14 +238,28 @@ function LinhaConta({ conta, ordem, onAnalisar }: {
    */
   const daPlanilha = conta.gestorDaPlanilha ?? null;
 
+  /**
+   * O aviso ANTES do clique — pronto de lib/gestores.ts, nunca escrito aqui. A tela não
+   * conhece a consequência de uma troca; ela desenha o texto que recebe.
+   *
+   * Aparece em dois momentos, que são os dois "entre" desta linha: com a seleção
+   * pendente (escolheu no seletor, ainda não salvou) e no segundo clique do Estacionar.
+   * ⚠️ O select + Salvar já são dois gestos; o aviso mora entre eles, então não há
+   * clique a mais para a troca do dia a dia — só leitura no meio do caminho.
+   */
+  const aviso = daPlanilha
+    ? (confirmandoPausa ? avisoTrocaGestor(gestorAtual, PAUSADO) : null)
+    : (mudou ? avisoTrocaGestor(gestorAtual, sel) : null);
+
   async function salvar(alvo: string = sel) {
     if (salvando) return;
     if (alvo === gestorAtual) return;
     setSalvando(true);
     setErroLocal(null);
     try {
-      const { gestor } = await salvarGestor(conta.accountId, alvo);
+      const { gestor, pausado } = await salvarGestor(conta.accountId, alvo);
       setGestorAtual(gestor);
+      if (pausado !== null) setPausada(pausado);
       setSel(gestor);
       setSalvo(true);
       setConfirmandoPausa(false);
@@ -298,6 +317,13 @@ function LinhaConta({ conta, ordem, onAnalisar }: {
               {msgGestorDaPlanilha(daPlanilha.aba)}
             </p>
           )}
+          {/* O aviso da troca, ANTES do clique. Cor de ênfase, nunca vermelho: nada está
+              quebrado — há uma consequência que precisa ser lida antes de salvar. */}
+          {aviso && (
+            <p className="ml-8 mt-1 max-w-2xl text-[11px]" style={{ color: TEMA.ouroTexto }} role="status">
+              ⚠ {aviso}
+            </p>
+          )}
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
@@ -313,8 +339,10 @@ function LinhaConta({ conta, ordem, onAnalisar }: {
                O ciclo fecha sozinho — estacionou, cai no balde, o sync deixa de governar,
                a marca sai na execução seguinte e a conta volta a ser editável aqui.
                ⚠️ DOIS CLIQUES, porque estacionar tira a conta de rankings, médias e
-               alertas. Um clique só para uma ação que muda o número de outras telas é
-               fácil demais de dar sem querer. */
+               alertas — de verdade desde 14/09/2026, quando a rota passou a gravar
+               `pausado` junto do gestor (antes, só esta frase afirmava isso). Um clique só
+               para uma ação que muda o número de outras telas, inclusive meses fechados, é
+               fácil demais de dar sem querer; o aviso entre os dois diz o que muda. */
             confirmandoPausa ? (
               <>
                 <button
