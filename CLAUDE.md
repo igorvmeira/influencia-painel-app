@@ -758,6 +758,49 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   **confira no emitido** (`tsc --outDir` num diretório temporário e `grep` no `.js`), não
   no fonte. Vale para qualquer geração de código que atravesse uma camada de escape:
   shell, template, `JSON.parse`, `sed`.
+- 🛑🛑 **CONFERÊNCIA AUTOMÁTICA HERDA OS PONTOS CEGOS DE QUEM A ESCREVEU — E A COBERTURA
+  DELA PARECE TOTAL PORQUE ELA NÃO SABE O QUE NÃO VÊ.** A mais cara da semana, e a que
+  fecha a família: nas outras, a régua olhava o lugar errado ou concluía errado sobre o que
+  olhou. Aqui ela **nem sabia que o lugar existia**.
+  Caso real (12–14/09/2026). O `scripts/audita-envs.js` nasceu para garantir que cada
+  módulo declara as envs que lê, e reconhecia dois padrões: `process.env.X` e
+  `process.env["X"]`. O projeto inteiro tem **um** acesso num terceiro padrão —
+  desestruturação, `const { A, B, C } = process.env` — e ele é **a credencial do Firebase
+  Admin, que derruba tudo**. O auditor não viu, disse "ok", eu declarei o Firebase como
+  "BASE64 obrigatório", e **os três crons devolveram `503` a partir de 13/09 com o Firebase
+  funcionando**. Os dados pararam em 12/09.
+  🔑 **E o "ok" tinha cara de censo.** *"21 envs usadas, todas no .env.example"* tem
+  denominador e parece a população inteira — era a população que o auditor ENXERGAVA. Eu
+  confirmei em 12/09 que o `.env.example` estava completo, e a confirmação valia em relação
+  ao que o auditor via, não ao que o código lê. É o filtro herdado de outro propósito, só
+  que morando dentro da própria ferramenta de conferência.
+  🧪 **Reproduzido com o auditor de 12/09 tirado do git:** diante da declaração exata que
+  causou o incidente, ele respondeu **"Tudo certo."** O novo reprovou em quatro linhas.
+  ⚠️ **O que salvou foi a produção quebrar, não o auditor melhorar.** Ninguém achou o ponto
+  cego revisando a ferramenta: ele apareceu num `503` numa prévia chamada por outro motivo.
+  🔧 **A régua tem três partes:**
+  1. **A conferência precisa dizer onde a cobertura dela ACABA.** O auditor agora conta todo
+     acesso a `process.env` e reprova quando algum não é explicado por um padrão que ele
+     reconhece. Não é cobertura total — é saber declarar o que não vê. "Tudo certo" passa a
+     querer dizer "certo dentro do que eu leio, e eu leio todos".
+  2. **Cada padrão é visto reprovando um defeito PLANTADO antes de ser confiado — e o
+     plantio só conta se a mensagem CITAR o que foi plantado.** No teste, o auditor antigo
+     também deu "REPROVADO" em dois dos três plantios — por um motivo sem relação (não
+     entendia o formato novo de declaração). Nenhuma linha dele mencionava o defeito.
+     **Vermelho pelo motivo errado é tão cego quanto verde**, e mais perigoso, porque parece
+     que o teste funcionou.
+  3. **Teste local verde não prova produção verde quando o código tem mais de um caminho.**
+     O `.env.local` autentica pelo BASE64; a produção, pelo trio. A checagem, o auditor e os
+     meus testes concordaram entre si — e os três mediam o caminho LOCAL. Antes de confiar
+     num verde local: *este código aceita mais de uma forma, e por qual delas a produção
+     passa?* É a irmã da "env com sorte": ambiente que chega ao mesmo resultado por outro
+     caminho não testa o caminho da produção.
+  📌 **E a correção, para o exemplo não entrar errado:** em 14/09 eu disse que o
+  `.env.example` "só documentava o BASE64". **Não era verdade** — o trio estava lá como
+  opção B, comentada, desde antes. O "completo" de 12/09 acertou **por coincidência**: o
+  auditor nunca viu o trio para perguntar por ele. O dano veio da DECLARAÇÃO que o auditor
+  cego aprovou. **Acertar sem ter olhado não é conferência — é sorte com carimbo**, e o
+  carimbo é o que faz ninguém olhar de novo.
 - ⚠️ **ATUALIZAR A CONFERÊNCIA É PARTE DA MUDANÇA, NÃO ETAPA POSTERIOR.** Conferência que
   não acompanha a regra vira ruído (acusa o que está certo) ou falso negativo (aprova o que
   está errado) — e nos dois casos ela para de valer justamente quando mais precisaria.
