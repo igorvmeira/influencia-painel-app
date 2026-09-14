@@ -54,6 +54,38 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
 - Cadastro fechado por padrão: usuários criados manualmente no console do Firebase.
 - Revisar as **regras do Firestore** (`firestore.rules`): mesmo com tudo passando pelo
   servidor, regras abertas permitem contornar os endpoints e escrever direto no banco.
+- 🛑🛑 **IDENTIDADE COMPARTILHADA TORNA O REGISTRO DE AUTORIA UM CAMPO QUE PARECE
+  AUDITORIA E NÃO É — e isso é pior que não ter, porque quem lê confia.**
+  Caso real (14/09/2026). Duas trocas de gestor (CAFÉ JEQUITINHONHA e COPYNORTE → MATHEUS)
+  apareceram no `gestorHistorico` com `por: "igorvmeira@gmail.com"`, e o dono da conta não
+  reconheceu ter clicado. Não foi o cron (não rodou naquele dia, e não consegue aplicar
+  troca) nem eu (conferido no histórico da sessão). O caminho de código era o mapeado: porta
+  "pessoa", ID token + allowlist, dois cliques na `/conciliacao` (log da Vercel: 12:45:44 e
+  12:45:58 UTC). **O que não estava mapeado era a identidade: o Firebase Auth deste painel
+  tem UMA conta de login, compartilhada com a agência.**
+  **Enquanto for assim, três coisas que o sistema afirma são falsas:**
+  · o `por` do `gestorHistorico` e o `cadastradaPor` do cadastro identificam a CONTA, não a
+    pessoa;
+  · a lista de e-mails permitidos (`FILA_EMAILS_PERMITIDOS`) não restringe ninguém — quem
+    tem a senha passa;
+  · a `/conciliacao` (e a `/fila-contas`, com a mesma frase) diz que a tela fica "com quem
+    responde pela carteira", e hoje isso não é verdade.
+  ⚠️ **A consequência de desenho.** A troca de gestor exige clique humano JUSTAMENTE porque o
+  histórico é append-only: registro errado não se desfaz, então alguém precisa responder por
+  ele. Essa guarda depende de saber QUEM clicou, e hoje não sabe. **Ela continua valendo** —
+  impede o cron de aplicar — **mas protege menos do que o desenho supunha:** separa máquina
+  de gente, não gente de gente.
+  🔑 **Por que escapou:** o código estava certo em todas as camadas — token verificado no
+  servidor, autor tirado do token e nunca do corpo, allowlist conferida. A premissa que
+  ninguém mediu morava FORA do código: quantas pessoas existem atrás de cada login. Um
+  `listUsers()` responde isso em um segundo.
+  🔧 **A régua: antes de desenhar permissão ou auditoria por identidade, conte as contas de
+  login e pergunte quantas pessoas usam cada uma.** Se for mais de uma, o campo de autoria
+  não vai para tela nem relatório como "quem fez", e a allowlist não é descrita como
+  restrição.
+  📌 **Decisão do Igor (14/09/2026):** contas por pessoa, troca de senha e encerramento das
+  sessões ainda nesta semana. Quando estiver feito, esta seção vira histórico — e o que foi
+  gravado ANTES continua identificando só a conta: autoria não se reconstrói para trás.
 
 ## Identidade visual
 - Base padrão: **tema dark premium**, mas a **cor é ajustável por cliente**.
@@ -74,6 +106,10 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   **Corolário prático:** a mensagem do 403 vira **constante compartilhada** entre a rota e a
   tela, porque é o TEXTO que decide o desenho; textos duplicados divergem, e no dia em que
   divergirem o bloqueio volta a se parecer com pane, sem ninguém ter mexido no CSS.
+  📌 **Correção do exemplo (14/09/2026):** os "8 gestores" e as "7 pessoas por dia"
+  pressupunham contas de login individuais, e elas não existem — o painel tem um login só,
+  compartilhado (ver *Login*). Hoje ninguém recebe esse 403. A régua de cor continua certa;
+  o que o exemplo descrevia era o desenho, não o uso real.
 - Números em tabelas e KPIs com `tabular-nums` (evita as colunas "dançarem").
 - Ao trocar a identidade de um cliente, peça uma **auditoria de cores "chumbadas"** fora dos
   tokens — é isso que mantém o starter realmente reutilizável.
