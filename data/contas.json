@@ -2,937 +2,703 @@
   {
     "accountId": "act_1208288030135728",
     "cliente": "PLIQ",
-    "gestor": "ANDRÉ",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1923893677912522",
     "cliente": "WELL",
-    "gestor": "WEDER",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_358502495857953",
     "cliente": "SOLUÇÃO EMPRESAS",
-    "gestor": "WEDER",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_2057134961683901",
     "cliente": "DRA. ANA PAULA",
-    "gestor": "PAUSADO",
     "tipo": "",
-    "nicho": "Odontologia",
-    "pausado": true
+    "nicho": "Odontologia"
   },
   {
     "accountId": "act_1626408402154846",
     "cliente": "MEGA NET",
-    "gestor": "WEDER",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1004781690939605",
     "cliente": "JETFIBER",
-    "gestor": "WEDER",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_425113569647633",
     "cliente": "HIPERCG",
-    "gestor": "DANIEL",
     "tipo": "",
-    "nicho": "Loja de Equipamentos de Moto",
-    "pausado": false
+    "nicho": "Loja de Equipamentos de Moto"
   },
   {
     "accountId": "act_3343879795698237",
     "cliente": "VOX SETE LAGOAS",
-    "gestor": "VINÍCIUS",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_755919241540463",
     "cliente": "VOX MONTES CLAROS",
-    "gestor": "VINÍCIUS",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_325509991869940",
     "cliente": "VOX VITÓRIA DA CONQUISTA",
-    "gestor": "VINÍCIUS",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_535806937963970",
     "cliente": "VOX ITAPETINGA",
-    "gestor": "VINÍCIUS",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_990791790266829",
     "cliente": "KZ CONEXÕES",
-    "gestor": "JOÃO PEDRO",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1649200399490007",
     "cliente": "UNIFIQUE",
-    "gestor": "JOÃO PEDRO",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1239380251649918",
     "cliente": "NORTE CONEXÃO",
-    "gestor": "JOÃO PEDRO",
     "tipo": "B2B",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1220757691928493",
     "cliente": "ER TELECOM",
-    "gestor": "ANDRÉ",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_950182572681439",
     "cliente": "AZM",
-    "gestor": "WEDER",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1826856318002728",
     "cliente": "MINAS ONLINE",
-    "gestor": "WEDER",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_795243809081299",
     "cliente": "PAIM INTERNET",
-    "gestor": "WEDER",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_2622092654889646",
     "cliente": "TRAJETO",
-    "gestor": "PAUSADO",
     "tipo": "",
-    "nicho": "",
-    "pausado": true
+    "nicho": ""
   },
   {
     "accountId": "act_399858847975633",
     "cliente": "PLANET TELECOM",
-    "gestor": "DANIEL",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1389467714612017",
     "cliente": "Hotel Oscar",
-    "gestor": "JOÃO PEDRO",
     "tipo": "B2C",
-    "nicho": "Hotel",
-    "pausado": false
+    "nicho": "Hotel"
   },
   {
     "accountId": "act_612219675509973",
     "cliente": "BL FIBRA",
-    "gestor": "WEDER",
     "tipo": "B2B/B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_25425826590367592",
     "cliente": "Ricardo Alckmin",
-    "gestor": "PAUSADO",
     "tipo": "B2B",
-    "nicho": "Propaganda",
-    "pausado": true
+    "nicho": "Propaganda"
   },
   {
     "accountId": "act_1313209170491744",
     "cliente": "NETCOM",
-    "gestor": "DANIEL",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1444062963724677",
     "cliente": "YNOVA NET",
-    "gestor": "WEDER",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1425370447642306",
     "cliente": "IETE NOIVAS",
-    "gestor": "PAUSADO",
     "tipo": "B2C",
-    "nicho": "Aluguel de roupas",
-    "pausado": true
+    "nicho": "Aluguel de roupas"
   },
   {
     "accountId": "act_154424816245025",
     "cliente": "PLAYIP",
-    "gestor": "JOÃO PEDRO",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_4207788105944374",
     "cliente": "DRA. MARIA FERNANDA",
-    "gestor": "ANDRÉ",
     "tipo": "B2C",
-    "nicho": "Dentista",
-    "pausado": false
+    "nicho": "Dentista"
   },
   {
     "accountId": "act_382942743051251",
     "cliente": "INFLUENCIA",
-    "gestor": "LUCAS",
     "tipo": "B2B",
-    "nicho": "Agência (própria)",
-    "pausado": false
+    "nicho": "Agência (própria)"
   },
   {
     "accountId": "act_372654114513069",
     "cliente": "AW ONLINE",
-    "gestor": "MATHEUS",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_3086074951611911",
     "cliente": "DEXTEL",
-    "gestor": "PAUSADO",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": true
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_574288147121143",
     "cliente": "ALTERNATIVA (PUBLICIDADE)",
-    "gestor": "PAUSADO",
     "tipo": "B2B",
-    "nicho": "Propaganda",
-    "pausado": true
+    "nicho": "Propaganda"
   },
   {
     "accountId": "act_984903389080313",
     "cliente": "ILHA CONECT (PROVEDOR)",
-    "gestor": "PAUSADO",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": true
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1084294475850359",
     "cliente": "ITAOL",
-    "gestor": "PAUSADO",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": true
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1099212031030356",
     "cliente": "CONSTRUMINAS FERRO E AÇO",
-    "gestor": "JOÃO PEDRO",
     "tipo": "B2C",
-    "nicho": "Ferragens",
-    "pausado": false
+    "nicho": "Ferragens"
   },
   {
     "accountId": "act_3540374812862284",
     "cliente": "GRUPO CONESUL",
-    "gestor": "VINÍCIUS",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_805774430778528",
     "cliente": "GNA",
-    "gestor": "VINÍCIUS",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_828216221837818",
     "cliente": "NORTELINE",
-    "gestor": "ANDRÉ",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_662142634881699",
     "cliente": "NEXT",
-    "gestor": "LUCAS",
     "tipo": "B2B",
-    "nicho": "Consultoria",
-    "pausado": false
+    "nicho": "Consultoria"
   },
   {
     "accountId": "act_856834882178627",
     "cliente": "NETFÁCIL",
-    "gestor": "ISMAIL",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_787079525698543",
     "cliente": "RODA MINEIRA",
-    "gestor": "MATHEUS",
     "tipo": "B2C",
-    "nicho": "Restaurante",
-    "pausado": false
+    "nicho": "Restaurante"
   },
   {
     "accountId": "act_609220030867311",
     "cliente": "NEX TELECOM",
-    "gestor": "VINÍCIUS",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_232199732730201",
     "cliente": "VTL TELECOM",
-    "gestor": "PAUSADO",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": true
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_2775914335882809",
     "cliente": "ARP TELECOM",
-    "gestor": "ANDRÉ",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_952855809491449",
     "cliente": "MOTEL OASIS",
-    "gestor": "JOÃO PEDRO",
     "tipo": "B2C",
-    "nicho": "Motel",
-    "pausado": false
+    "nicho": "Motel"
   },
   {
     "accountId": "act_963483641445277",
     "cliente": "MIO TELECOM",
-    "gestor": "JOÃO PEDRO",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_272135675231139",
     "cliente": "AURA (LOUNGE BAR)",
-    "gestor": "JOÃO PEDRO",
     "tipo": "B2C",
-    "nicho": "Lounge Bar",
-    "pausado": false
+    "nicho": "Lounge Bar"
   },
   {
     "accountId": "act_201426789569969",
     "cliente": "DIQUALI - BOC (ODONTOLOGIA)",
-    "gestor": "PAUSADO",
     "tipo": "",
-    "nicho": "Odonto/Saúde",
-    "pausado": true
+    "nicho": "Odonto/Saúde"
   },
   {
     "accountId": "act_313868494444325",
     "cliente": "MONTAÇO",
-    "gestor": "DANIEL",
     "tipo": "B2C",
-    "nicho": "Ferragens",
-    "pausado": false
+    "nicho": "Ferragens"
   },
   {
     "accountId": "act_208064045585758",
     "cliente": "MULTILINK (PROVEDOR)",
-    "gestor": "PAUSADO",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": true
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_593066599501100",
     "cliente": "TELCOM",
-    "gestor": "WEDER",
     "tipo": "B2C",
-    "nicho": "Agência (própria)",
-    "pausado": false
+    "nicho": "Agência (própria)"
   },
   {
     "accountId": "act_1342356503063454",
     "cliente": "CDL",
-    "gestor": "VINÍCIUS",
     "tipo": "B2C",
-    "nicho": "Associação",
-    "pausado": false
+    "nicho": "Associação"
   },
   {
     "accountId": "act_1406903296909080",
     "cliente": "JP CONSTRUTORA",
-    "gestor": "JOÃO PEDRO",
     "tipo": "B2C",
-    "nicho": "Construtora",
-    "pausado": false
+    "nicho": "Construtora"
   },
   {
     "accountId": "act_640604454939758",
     "cliente": "IFALEI",
-    "gestor": "ISMAIL",
     "tipo": "B2B",
-    "nicho": "Telefonia/Consultoria B2B",
-    "pausado": false
+    "nicho": "Telefonia/Consultoria B2B"
   },
   {
     "accountId": "act_7203891913008791",
     "cliente": "MOTEL NU PARAÍSO",
-    "gestor": "JOÃO PEDRO",
     "tipo": "B2C",
-    "nicho": "Motel",
-    "pausado": false
+    "nicho": "Motel"
   },
   {
     "accountId": "act_901220705012452",
     "cliente": "CAMPEZZA",
-    "gestor": "LUCAS",
     "tipo": "B2C",
-    "nicho": "Equipamentos",
-    "pausado": false
+    "nicho": "Equipamentos"
   },
   {
     "accountId": "act_464778022765105",
     "cliente": "TURANO (CONSTRUTORA)",
-    "gestor": "PAUSADO",
     "tipo": "B2C",
-    "nicho": "Construtora",
-    "pausado": true
+    "nicho": "Construtora"
   },
   {
     "accountId": "act_1040367470846107",
     "cliente": "SN NET",
-    "gestor": "LUCAS",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_487888250698890",
     "cliente": "NORTELINE",
-    "gestor": "PAUSADO",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": true
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1258872095312487",
     "cliente": "DUFIBRA",
-    "gestor": "ANDRÉ",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1628400517945718",
     "cliente": "DR FRANCISCO",
-    "gestor": "PAUSADO",
     "tipo": "",
-    "nicho": "Odonto/Saúde",
-    "pausado": true
+    "nicho": "Odonto/Saúde"
   },
   {
     "accountId": "act_1321889532494546",
     "cliente": "JS FIBRA",
-    "gestor": "PAUSADO",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": true
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_467779389026591",
     "cliente": "BV TELECOM",
-    "gestor": "LUCAS",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_575138771730030",
     "cliente": "TEK TELECOM",
-    "gestor": "DANIEL",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_2484886715043431",
     "cliente": "DUBAI SUITES (HOTELARIA)",
-    "gestor": "PAUSADO",
     "tipo": "",
-    "nicho": "Hotel",
-    "pausado": true
+    "nicho": "Hotel"
   },
   {
     "accountId": "act_1148378723627218",
     "cliente": "INTERNITRO",
-    "gestor": "DANIEL",
     "tipo": "B2B",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1987779961633909",
     "cliente": "BORA FIBRA",
-    "gestor": "PAUSADO",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": true
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_436154116204389",
     "cliente": "VELOX NET",
-    "gestor": "VINÍCIUS",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_9516009518443928",
     "cliente": "VIEIRA E BRANT",
-    "gestor": "PAUSADO",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": true
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1837483150389186",
     "cliente": "BRASTURBO",
-    "gestor": "DANIEL",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_570867842438179",
     "cliente": "STARTX",
-    "gestor": "PAUSADO",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": true
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1014818350796748",
     "cliente": "VIA DUPLA",
-    "gestor": "JOÃO PEDRO",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_664259909734837",
     "cliente": "DIQUALI - B. MINAS (ODONTOLOGIA)",
-    "gestor": "PAUSADO",
     "tipo": "",
-    "nicho": "Odonto/Saúde",
-    "pausado": true
+    "nicho": "Odonto/Saúde"
   },
   {
     "accountId": "act_1427561475356780",
     "cliente": "PRO3 ACADEMIA",
-    "gestor": "ANDRÉ",
     "tipo": "B2C",
-    "nicho": "Academia SP",
-    "pausado": false
+    "nicho": "Academia SP"
   },
   {
     "accountId": "act_1254298646370970",
     "cliente": "E-UP",
-    "gestor": "DANIEL",
     "tipo": "B2B",
-    "nicho": "B2B",
-    "pausado": false
+    "nicho": "B2B"
   },
   {
     "accountId": "act_1687506165298657",
     "cliente": "AMSTERDAM",
-    "gestor": "VINÍCIUS",
     "tipo": "B2C",
-    "nicho": "Hotel",
-    "pausado": false
+    "nicho": "Hotel"
   },
   {
     "accountId": "act_602747946019033",
     "cliente": "BRASTURBO (PROVEDOR)",
-    "gestor": "PAUSADO",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": true
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1381711309605032",
     "cliente": "STARNET (PROVEDOR)",
-    "gestor": "PAUSADO",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": true
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1264456648257931",
     "cliente": "CONEXÃO NET",
-    "gestor": "VINÍCIUS",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1802460987815168",
     "cliente": "CAFÉ JEQUITINHONHA",
-    "gestor": "ANDRÉ",
     "tipo": "B2B/B2C",
-    "nicho": "Venda de produtos",
-    "pausado": false
+    "nicho": "Venda de produtos"
   },
   {
     "accountId": "act_2531966620504959",
     "cliente": "ÚNICA NETWORK (PROVEDOR)",
-    "gestor": "PAUSADO",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": true
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1159315306118897",
     "cliente": "XMAX",
-    "gestor": "PAUSADO",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": true
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_786098394310499",
     "cliente": "SOS TELECOM",
-    "gestor": "DANIEL",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_23977671391934007",
     "cliente": "SHOPPING DO  9",
-    "gestor": "PAUSADO",
     "tipo": "",
-    "nicho": "Outros",
-    "pausado": true
+    "nicho": "Outros"
   },
   {
     "accountId": "act_1495895208494616",
     "cliente": "FIBRACOM (PROVEDOR)",
-    "gestor": "PAUSADO",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": true
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1986526208850223",
     "cliente": "ADA",
-    "gestor": "PAUSADO",
     "tipo": "",
-    "nicho": "Locação de Máquinas",
-    "pausado": true
+    "nicho": "Locação de Máquinas"
   },
   {
     "accountId": "act_3638399999623928",
     "cliente": "LINK 10",
-    "gestor": "PAUSADO",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": true
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1260395262058555",
     "cliente": "Dr. Samuel",
-    "gestor": "ANDRÉ",
     "tipo": "B2C",
-    "nicho": "Odonto/Saúde",
-    "pausado": false
+    "nicho": "Odonto/Saúde"
   },
   {
     "accountId": "act_1806079820282103",
     "cliente": "YNOVA NET (PROVEDOR)",
-    "gestor": "PAUSADO",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": true
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1164653018911640",
     "cliente": "MB INTERNET",
-    "gestor": "PAUSADO",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": true
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1145473760827134",
     "cliente": "TAC NET",
-    "gestor": "ANDRÉ",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1365081134865029",
     "cliente": "Proserv",
-    "gestor": "PAUSADO",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": true
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_2039747960174765",
     "cliente": "INOVARE (CORRETORA)",
-    "gestor": "PAUSADO",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": true
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1393102138999847",
     "cliente": "Mega Feirão",
-    "gestor": "PAUSADO",
     "tipo": "",
-    "nicho": "Outros",
-    "pausado": true
+    "nicho": "Outros"
   },
   {
     "accountId": "act_903952362216751",
     "cliente": "Wizard",
-    "gestor": "PAUSADO",
     "tipo": "",
-    "nicho": "Educação",
-    "pausado": true
+    "nicho": "Educação"
   },
   {
     "accountId": "act_1416963989917448",
     "cliente": "ELTEC",
-    "gestor": "WEDER",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1899656697583453",
     "cliente": "COPYNORTE",
-    "gestor": "JOÃO PEDRO",
     "tipo": "B2C",
-    "nicho": "Locação de Equipamentos",
-    "pausado": false
+    "nicho": "Locação de Equipamentos"
   },
   {
     "accountId": "act_1440128040893971",
     "cliente": "OBBU",
-    "gestor": "JOÃO PEDRO",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1666070498074676",
     "cliente": "Líder",
-    "gestor": "ISMAIL",
     "tipo": "B2B",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1960831434539683",
     "cliente": "HELLO NET",
-    "gestor": "VINÍCIUS",
     "tipo": "B2B/B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_867337326356334",
     "cliente": "EHC",
-    "gestor": "PAUSADO",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": true
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1432314361973993",
     "cliente": "SPEEDNET",
-    "gestor": "DANIEL",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1324792096179119",
     "cliente": "OctorLink",
-    "gestor": "ANDRÉ",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1578265566212508",
     "cliente": "Drogaria Madri",
-    "gestor": "ANDRÉ",
     "tipo": "",
-    "nicho": "Farmácia",
-    "pausado": false
+    "nicho": "Farmácia"
   },
   {
     "accountId": "act_1916349755671879",
     "cliente": "IBNET",
-    "gestor": "ANDRÉ",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_2581016248962449",
     "cliente": "APOLLO",
-    "gestor": "DANIEL",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_649154454012324",
     "cliente": "Netmania",
-    "gestor": "DANIEL",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1159912575356979",
     "cliente": "ARP Rental",
-    "gestor": "ISMAIL",
     "tipo": "",
-    "nicho": "Locação de Máquinas",
-    "pausado": false
+    "nicho": "Locação de Máquinas"
   },
   {
     "accountId": "act_1141344530820205",
     "cliente": "CIRCULA NET",
-    "gestor": "ISMAIL",
     "tipo": "B2B/B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1841331226592258",
     "cliente": "ISP4",
-    "gestor": "ISMAIL",
     "tipo": "",
-    "nicho": "Consultoria Provedor",
-    "pausado": false
+    "nicho": "Consultoria Provedor"
   },
   {
     "accountId": "act_2030710527729327",
     "cliente": "Guará Net",
-    "gestor": "PAUSADO",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": true
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_830495511608627",
     "cliente": "NetSystem",
-    "gestor": "PAUSADO",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": true
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_1972951736630632",
     "cliente": "Omega",
-    "gestor": "PAUSADO",
     "tipo": "",
-    "nicho": "",
-    "pausado": true
+    "nicho": ""
   },
   {
     "accountId": "act_1670450540519360",
     "cliente": "Zay Sushi",
-    "gestor": "PAUSADO",
     "tipo": "",
-    "nicho": "Comida Japonesa",
-    "pausado": true
+    "nicho": "Comida Japonesa"
   },
   {
     "accountId": "act_1282472920705306",
     "cliente": "Blue3",
-    "gestor": "WEDER",
     "tipo": "",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   },
   {
     "accountId": "act_2646643012379367",
     "cliente": "BAUMAN",
-    "gestor": "ANDRÉ",
     "tipo": "",
-    "nicho": "",
-    "pausado": false
+    "nicho": ""
   },
   {
     "accountId": "act_4087305634716987",
     "cliente": "FIV5 TELECOM",
-    "gestor": "VINÍCIUS",
     "tipo": "B2C",
-    "nicho": "Provedor (ISP)",
-    "pausado": false
+    "nicho": "Provedor (ISP)"
   }
 ]

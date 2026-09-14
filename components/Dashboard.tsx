@@ -592,9 +592,14 @@ export default function Dashboard(
               const ativo = p === periodo;
               // Intervalo real da janela (ancorado no último dia COM DADO), ex.: "21–27/07".
               // O modo Mês já tem rótulo próprio (data.periodoLabel) — não duplica aqui.
+              // ⚠️ Exceção do Mês: quando a janela é o mês INTEIRO (dia 1º, o mês novo ainda
+              // sem dia completo), o botão ganha a faixa. Sem ela, "Mês" aceso sobre números
+              // de setembro no dia 1º de outubro é lido como outubro.
               const faixa = p === "Personalizado"
                 ? jmCustom?.labelAtual ?? null
-                : p !== "Mês" ? intervalos[p as PeriodoDia] : null;
+                : p === "Mês"
+                  ? (jmMes?.mesCompleto ? jmMes.labelAtual : null)
+                  : intervalos[p as PeriodoDia];
               return (
                 <button
                   key={p}

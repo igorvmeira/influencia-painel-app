@@ -173,38 +173,41 @@ Por isso: o prefixo é descartado, a chave é o TEXTO, e o cru é gravado junto.
 desconhecido vira pendência com o texto exato — nunca um balde "outro", onde um typo
 mora para sempre.
 
-### 🛑 PENDÊNCIA DE DECISÃO: /carteira e a planilha disputam o mesmo campo
+### ✅ Quem escreve o gestor e o `pausado` — decidido e fechado
 
-A trava `gestorEditadoEm` existia para proteger a edição manual da `/carteira` contra o
-`data/contas.json`. **Ela não perde o assunto quando o JSON perder o campo `gestor` — ela
-TROCA de assunto**, porque a planilha passa a ser o segundo escritor do mesmo campo.
+Até setembro/2026 o gestor tinha **três** escritores (o `data/contas.json`, a `/carteira` e,
+com o sync, a planilha) e o `pausado` tinha dois (o JSON e a tela). Duas origens para o
+mesmo campo divergem sem ninguém ver. Como ficou:
 
-Medido em 10/09/2026: **74 contas estão na planilha e no painel**. Editar o gestor de
-qualquer uma delas pela `/carteira` funcionaria, e a conciliação do dia seguinte
-reverteria — em silêncio, porque a tela não avisa que aquele campo tem dono.
+| campo | quem escreve | desde |
+|---|---|---|
+| `gestor` de conta com linha na planilha | a planilha, pela `/conciliacao` (a `/carteira` só estaciona) | 11/09/2026 |
+| `gestor` das outras contas | a `/carteira` | sempre |
+| `pausado` | estacionar/desestacionar na `/carteira` | 14/09/2026 |
+| `gestor` e `pausado` pelo `data/contas.json` | **ninguém — o JSON perdeu os dois campos** | 14/09/2026 (cutover) |
 
-As outras **47** (39 no balde PAUSADO + 8 sem linha na planilha) continuam sob a
-`/carteira`, e para elas a edição manual é a única forma.
+Com o cutover, a trava `gestorEditadoEm` perdeu o assunto: ela existia para o import não
+sobrescrever edição da tela, e o import não escreve mais esses campos. O campo continua
+nos documentos como carimbo de "editado por".
 
-Três saídas, e a decisão é de quem toca a carteira:
-1. a planilha ganha sempre, e a `/carteira` **avisa no momento da edição** que aquela
-   conta é conciliada e a mudança vale até amanhã;
-2. a trava fica, com o assunto novo escrito — edição manual congela o gestor daquela
-   conta e a conciliação a reporta como divergente em vez de sobrescrever;
-3. a `/carteira` deixa de editar gestor das 74, e quem quiser trocar move a linha de aba.
-
-**Enquanto isso não for decidido, a trava FICA e o `contas.json` mantém o campo `gestor`.**
-Tirar a trava agora desestacionaria duas contas: o JSON diz JOÃO PEDRO para o
-`act_1389467714612017` (Hotel Oscar) e LUCAS para o `act_901220705012452` (CAMPEZZA),
-enquanto o Firestore diz PAUSADO nas duas — **é a trava que as segura hoje**.
+🔑 **Por que o cutover subiu de prioridade** (14/09/2026): medido naquele dia, rodar o
+import antigo com `aplicar=1` devolveria CAFÉ JEQUITINHONHA ao ANDRÉ e COPYNORTE ao JOÃO
+PEDRO — desfazendo trocas da planilha do mesmo dia e gravando a volta no
+`gestorHistorico`, que é append-only. Uma trava provisória segurou o caso por algumas
+horas; o cutover tirou a arma, em vez de travá-la.
 
 ## `contas.json` — o de-para oficial da carteira
 
-Lista oficial das contas de anúncio. É a **fonte da verdade** consumida por
-`/api/import-contas`, que grava na coleção `contas` do Firestore.
+Lista oficial das contas de anúncio: **nome, tipo e nicho**. É consumida por
+`/api/import-contas`, que grava esses campos na coleção `contas` do Firestore.
 
-Campos: `accountId` (chave única, formato `act_...`), `cliente`, `gestor`, `tipo`,
-`nicho`, `pausado`.
+Campos: `accountId` (chave única, formato `act_...`), `cliente`, `tipo`, `nicho`.
+
+⚠️ **Sem `gestor` e sem `pausado` desde o cutover de 14/09/2026** (ver a tabela de quem
+escreve cada campo, acima). Linha que traga um dos dois faz o import **recusar** o
+`aplicar` — ignorar em silêncio deixaria a pessoa convencida de que trocou o gestor por
+aqui. E o import **não cria conta**: linha sem conta no banco sai em `naoCadastradas`, e o
+cadastro é pela `/fila-contas` (colando o accountId) ou pela `/conciliacao`.
 
 Regras que o import respeita:
 
@@ -233,15 +236,13 @@ concordam — quem diverge é a **Meta**, que chama a conta de "JETSUCESSO". Val
 padrão da casa: o campo `cliente` guarda o **nome comercial**, não o rótulo da conta
 de anúncio.
 - **Não destrutivo**: conta que sai da lista NÃO é apagada; vira "órfã" no relatório
-  e o painel a mantém. Para tirar de operação, use `pausado: true`.
+  e o painel a mantém. Para tirar de operação, **estacione pela `/carteira`**.
 - **Idempotente**: rodar de novo faz merge, não duplica.
 - **Prévia por padrão**; só grava com `&aplicar=1`.
-- Conta cujo gestor foi editado pela tela `/carteira` recebe carimbo
-  (`gestorEditadoEm`) e o import passa a **pular os campos `gestor` e `pausado`** dela.
-  A flag entrou na trava em 14/09/2026, quando estacionar pela tela passou a gravar
-  `pausado: true` junto do gestor — sem isso o import desfaria o estacionamento pela
-  metade. Para voltar a seguir este arquivo, apague `gestorEditadoEm` e
-  `gestorEditadoPor` no Console do Firebase.
+- O carimbo `gestorEditadoEm` (conta editada pela `/carteira`) **não trava mais nada**
+  desde o cutover de 14/09/2026. Ele existia para o import pular `gestor` e `pausado`
+  daquela conta, e o import não escreve mais esses campos. Continua nos documentos como
+  registro de "editado por".
 
 ## O que `pausado` significa (regra da carteira)
 
@@ -250,7 +251,8 @@ de anúncio.
 A carteira do painel responde **"quem está rodando"**. Quem é **cliente** é a planilha
 de Monitoramento da agência. São perguntas diferentes, e misturá-las quebra os números:
 
-- Cliente com contrato ativo mas **sem veiculação** fica `pausado: true`. Ativa, ela
+- Cliente com contrato ativo mas **sem veiculação** fica `pausado: true` — desde 14/09/2026,
+  estacionando pela `/carteira` (o JSON não carrega mais o campo). Ativa, ela
   entraria zerada, contaria na carteira do gestor e puxaria o **CPL de carteira** dele
   para baixo sem representar trabalho nenhum.
 - Conta que a agência diz que **saiu** mas **ainda está gastando** fica ATIVA. Pausá-la

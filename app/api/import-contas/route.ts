@@ -9,8 +9,20 @@ export const maxDuration = 60;
 
 const LOTE = 450; // abaixo do limite de 500 operações por batch do Firestore
 
-// Lista oficial da carteira. Preencha data/contas.json e rode esta rota de novo
-// sempre que a carteira mudar (idempotente e não-destrutiva).
+// Lista oficial da carteira: NOME, TIPO e NICHO de cada conta de anúncio. Rode esta rota
+// sempre que o data/contas.json mudar (idempotente e não-destrutiva).
+//
+// 🛑 DESDE O CUTOVER DE 14/09/2026 O IMPORT NÃO CUIDA DE `gestor` NEM DE `pausado`.
+// Os dois campos tinham duas origens — o JSON e a planilha/tela — e duas origens para o
+// mesmo campo divergem sem ninguém ver. Medido naquele dia: rodar o import antigo com
+// `aplicar=1` devolveria CAFÉ JEQUITINHONHA ao ANDRÉ e COPYNORTE ao JOÃO PEDRO, desfazendo
+// trocas da planilha e gravando a volta no `gestorHistorico`, que é append-only. Hoje o
+// gestor vem da planilha (/conciliacao) ou da /carteira, e `pausado` vem de estacionar na
+// /carteira. As travas que protegiam esses campos DAQUI (`gestorEditadoEm`, e a marca
+// `gestorDaPlanilha`) deixaram de ter assunto neste arquivo e saíram junto.
+//
+// ⚠️ E O IMPORT NÃO CRIA CONTA. Criar exige gestor, e ele não está mais aqui. Conta que
+// está no JSON e não no banco sai em `naoCadastradas`, com o caminho escrito.
 //
 // ESCOPO: o painel cobre APENAS Meta Ads. Cliente que anuncia só no Google Ads não
 // entra aqui — não é conta faltando, é fora de escopo (ex.: LAVE MAIS EXPRESS,
@@ -19,81 +31,30 @@ const LOTE = 450; // abaixo do limite de 500 operações por batch do Firestore
 interface ContaFonte {
   accountId: string;
   cliente: string;
-  gestor: string;
-  tipo: string;
+  tipo?: string;
   nicho?: string;
-  pausado?: boolean;
 }
+
+/**
+ * Campos que o JSON NÃO pode mais trazer.
+ *
+ * ⚠️ Linha no formato antigo — colada de um commit velho, de outra branch, de um print —
+ * faria alguém achar que trocou gestor ou pausou uma conta por aqui, e o import ignoraria
+ * em silêncio. Ignorar calado é o pior dos três desfechos: a pessoa sai convencida de que
+ * fez. Por isso o `aplicar` é RECUSADO enquanto houver uma linha assim, e a prévia lista
+ * quais são.
+ */
+const CAMPOS_FORA_DO_ESCOPO = ["gestor", "pausado"] as const;
 
 // Campos gravados no de-para (merge — não apaga outros campos existentes).
 function payloadDe(c: ContaFonte) {
   return {
     accountId: c.accountId,
     cliente: c.cliente ?? "",
-    gestor: c.gestor ?? "",
     tipo: c.tipo ?? "",
     nicho: c.nicho ?? "",
-    pausado: !!c.pausado, // sem o campo na fonte => false
     ativo: true,
   };
-}
-
-// Conta cujo gestor foi editado pela tela /carteira: import NÃO mexe no campo gestor —
-// NEM na flag `pausado`.
-//
-// ⚠️ A flag entrou na trava em 14/09/2026, quando estacionar pela tela passou a gravar
-// `pausado` junto do gestor (ver `pausadoPara` em lib/gestores.ts). Sem isto, a próxima
-// execução do import leria `"pausado": false` no JSON e desfaria o estacionamento pela
-// metade: gestor PAUSADO (travado) e conta de volta aos rankings. Era exatamente o caso
-// de Hotel Oscar e CAMPEZZA, as duas únicas contas travadas naquele dia.
-function gestorTravado(existente: Record<string, unknown>): boolean {
-  return !!existente.gestorEditadoEm;
-}
-
-// Conta cujo gestor é GOVERNADO pela planilha de Monitoramento (marca `gestorDaPlanilha`,
-// gravada pela conciliação): o import NÃO mexe no campo gestor nem empilha histórico.
-//
-// 🛑 TRAVA PROVISÓRIA ATÉ O CUTOVER (14/09/2026). Enquanto o `data/contas.json` tiver o
-// campo `gestor`, ele é uma cópia antiga do que a planilha passou a mandar — e o import é
-// uma arma carregada. Medido em 14/09: rodar com `aplicar=1` devolveria CAFÉ JEQUITINHONHA
-// ao ANDRÉ e COPYNORTE ao JOÃO PEDRO, desfazendo as trocas da planilha do mesmo dia e
-// gravando a volta no `gestorHistorico`, que é append-only. A trava sai junto com o campo
-// `gestor` do JSON, no cutover.
-//
-// ⚠️ O que ela NÃO cobre: conta que DEIXA de ser governada (a linha saiu da planilha e a
-// conciliação removeu a marca) volta a receber o gestor do JSON, que pode estar velho. É o
-// resto que só o cutover fecha.
-//
-// `pausado` NÃO entra nesta trava: a planilha não governa a flag (ver
-// `CHAVES_QUE_O_SYNC_PODE_TOCAR` em lib/conciliaPlanilha.ts).
-function abaQueGoverna(existente: Record<string, unknown>): string | null {
-  const m = existente.gestorDaPlanilha as { aba?: unknown } | null | undefined;
-  return m && typeof m.aba === "string" && m.aba ? m.aba : null;
-}
-
-// Teto defensivo do histórico — mesmo valor usado no POST /api/contas.
-const MAX_HISTORICO_GESTOR = 50;
-
-// Registro datado da troca de gestor, no MESMO formato que a tela /carteira grava
-// (EntradaGestor em lib/types.ts). Antes, só a tela registrava: troca feita pelo JSON
-// passava sem deixar rastro, e como a carteira é atualizada pelo JSON justamente para
-// não carimbar contas, na prática o histórico não via quase nada. Isso fechava a porta
-// da detecção de "conta trocou de gestor no meio do mês" na Análise de Gestores.
-//
-// IMPORTANTE: registrar histórico NÃO carimba a conta. `gestorEditadoEm` continua
-// sendo escrito apenas pela tela — é ele que faz o import parar de gerenciar o gestor.
-// Aqui só se acrescenta ao histórico; o import segue mandando no campo `gestor`.
-function historicoComTroca(
-  existente: Record<string, unknown> | null,
-  gestorAtual: string,
-  gestorNovo: string,
-  agoraISO: string
-): unknown[] {
-  const anterior = Array.isArray(existente?.gestorHistorico) ? (existente!.gestorHistorico as unknown[]) : null;
-  // 1ª vez: semeia o dono atual como "desde sempre" (desde: null), igual ao POST.
-  const base = anterior ?? [{ gestor: gestorAtual, desde: null, por: "sistema", em: agoraISO }];
-  const entrada = { gestor: gestorNovo, desde: agoraISO, por: "import-contas", em: agoraISO };
-  return [entrada, ...base].slice(0, MAX_HISTORICO_GESTOR);
 }
 
 // Timestamp do Firestore (ou ISO) → "DD/MM" para o relatório da prévia.
@@ -112,15 +73,9 @@ function dataBR(v: unknown): string {
 function camposQueMudam(existente: Record<string, unknown>, c: ContaFonte): string[] {
   const alvo = payloadDe(c);
   const campos: string[] = [];
-  const travado = gestorTravado(existente);
-  // Governada pela planilha: o gestor é dela (trava provisória, ver `abaQueGoverna`).
-  const governada = abaQueGoverna(existente) !== null;
-  for (const k of ["cliente", "gestor", "tipo", "nicho"] as const) {
-    if (k === "gestor" && (travado || governada)) continue; // gestor com outro dono: import ignora
+  for (const k of ["cliente", "tipo", "nicho"] as const) {
     if ((existente[k] ?? "") !== alvo[k]) campos.push(k);
   }
-  // Travada pela tela: a flag é da tela, como o gestor (ver `gestorTravado`).
-  if (!travado && !!existente.pausado !== alvo.pausado) campos.push("pausado");
   if (existente.ativo !== true) campos.push("ativo");
   return campos;
 }
@@ -136,7 +91,27 @@ export async function GET(req: Request) {
   const aplicar = url.searchParams.get("aplicar") === "1";
 
   // Fonte oficial (ignora itens sem accountId).
-  const itens = (fonte as ContaFonte[]).filter((c) => c && c.accountId);
+  const brutos = (fonte as unknown as Record<string, unknown>[]).filter((c) => c && c.accountId);
+  const itens = brutos as unknown as ContaFonte[];
+
+  // Linhas no formato antigo — ver `CAMPOS_FORA_DO_ESCOPO`.
+  const foraDoEscopo = brutos
+    .filter((c) => CAMPOS_FORA_DO_ESCOPO.some((k) => k in c))
+    .map((c) => ({
+      accountId: String(c.accountId),
+      cliente: String(c.cliente ?? ""),
+      campos: CAMPOS_FORA_DO_ESCOPO.filter((k) => k in c),
+    }));
+  if (aplicar && foraDoEscopo.length) {
+    return NextResponse.json({
+      ok: false,
+      erro: `${foraDoEscopo.length} linha(s) do data/contas.json ainda trazem gestor ou pausado. `
+        + "O import não cuida mais desses campos desde 14/09/2026 — o gestor vem da planilha ou da "
+        + "/carteira, e pausado vem de estacionar na /carteira. Tire os campos das linhas e rode de novo.",
+      foraDoEscopo,
+    }, { status: 409 });
+  }
+
   const col = db.collection("contas");
 
   // De-para atual. Indexa PELO CAMPO accountId (não assume o formato do docId).
@@ -150,97 +125,26 @@ export async function GET(req: Request) {
 
   const idsFonte = new Set(itens.map((c) => c.accountId));
 
-  const criadas: { accountId: string; cliente: string; gestor: string }[] = [];
+  const naoCadastradas: { accountId: string; cliente: string }[] = [];
   const atualizadas: { accountId: string; cliente: string; campos: string[] }[] = [];
   const inalteradas: { accountId: string; cliente: string }[] = [];
-  // Contas CARIMBADAS pela tela /carteira (gestorEditadoEm presente): o import não
-  // gerencia mais o campo `gestor` delas. Separadas em duas listas porque o risco é
-  // diferente — ver o comentário no laço abaixo.
-  type Carimbada = { accountId: string; cliente: string; gestorJson: string; gestorTela: string; por: string; em: string };
-  const carimbadasDivergentes: Carimbada[] = []; // JSON discorda: a troca NÃO será aplicada
-  const carimbadasConcordantes: Carimbada[] = []; // JSON concorda hoje, mas a trava existe
-  // Contas GOVERNADAS pela planilha (marca gestorDaPlanilha, sem trava da tela): o import
-  // não mexe no gestor delas. As divergentes são exatamente as trocas que o JSON antigo
-  // desfaria — por isso aparecem com nome, e não só em número.
-  type Governada = { accountId: string; cliente: string; gestorJson: string; gestorPainel: string; aba: string };
-  const governadasDivergentes: Governada[] = [];
-  let governadasConcordantes = 0;
-  // Trocas de gestor que serão REGISTRADAS no gestorHistorico (append-only).
-  const trocasGestor: { accountId: string; cliente: string; de: string; para: string; primeiroRegistro: boolean }[] = [];
-  // Instante único desta execução — todas as entradas do histórico levam a mesma data.
-  const agoraISO = new Date().toISOString();
   // Fila de gravações (aplicada só no modo aplicar).
   const gravacoes: { docId: string; dados: Record<string, unknown> }[] = [];
 
   for (const c of itens) {
     const existente = porAccountId.get(c.accountId);
     if (!existente) {
-      criadas.push({ accountId: c.accountId, cliente: c.cliente ?? "", gestor: c.gestor ?? "" });
-      // Novo doc mantém o mesmo esquema atual: docId = accountId.
-      gravacoes.push({ docId: c.accountId, dados: payloadDe(c) });
+      // Não cria: ver o cabeçalho. Vai para a lista com o caminho escrito.
+      naoCadastradas.push({ accountId: c.accountId, cliente: c.cliente ?? "" });
       continue;
     }
-
-    // TODA conta carimbada entra no relatório — não só as divergentes.
-    // Motivo: a versão anterior só listava quando o JSON discordava, então uma conta
-    // carimbada cujo JSON por acaso CONCORDA sumia do relatório e a trava ficava
-    // invisível. O efeito é traiçoeiro: quem depois trocar o gestor dela no JSON vê o
-    // import reportar sucesso e a troca simplesmente não acontecer.
-    const travado = gestorTravado(existente.data);
-    const gestorTela = (existente.data.gestor as string) ?? "";
-    // Governada pela planilha. A travada pela tela já tem lista própria logo abaixo; aqui
-    // entram as outras, e o gestor delas sai do payload (ver `abaQueGoverna`).
-    const aba = travado ? null : abaQueGoverna(existente.data);
-    if (aba) {
-      if (gestorTela !== (c.gestor ?? "")) {
-        governadasDivergentes.push({ accountId: c.accountId, cliente: c.cliente ?? "", gestorJson: c.gestor ?? "", gestorPainel: gestorTela, aba });
-      } else {
-        governadasConcordantes += 1;
-      }
-    }
-    if (travado) {
-      const reg = {
-        accountId: c.accountId,
-        cliente: c.cliente ?? "",
-        gestorJson: c.gestor ?? "",
-        gestorTela,
-        por: (existente.data.gestorEditadoPor as string) ?? "",
-        em: dataBR(existente.data.gestorEditadoEm),
-      };
-      if (gestorTela !== (c.gestor ?? "")) carimbadasDivergentes.push(reg);
-      else carimbadasConcordantes.push(reg);
-    }
-
     const campos = camposQueMudam(existente.data, c);
     if (campos.length === 0) {
       inalteradas.push({ accountId: c.accountId, cliente: c.cliente ?? "" });
     } else {
       atualizadas.push({ accountId: c.accountId, cliente: c.cliente ?? "", campos });
-      // Atualiza o doc existente (qualquer que seja o docId dele). Se o gestor está
-      // travado pela tela, remove-o do payload para o merge não sobrescrevê-lo.
-      const dados = payloadDe(c) as ReturnType<typeof payloadDe> & { gestorHistorico?: unknown[] };
-      if (travado) {
-        delete (dados as { gestor?: string }).gestor;
-        delete (dados as { pausado?: boolean }).pausado; // a flag também é da tela
-      }
-      if (aba) delete (dados as { gestor?: string }).gestor; // o gestor é da planilha
-
-      // TROCA DE GESTOR pelo JSON: registra no histórico datado (append-only).
-      // Só quando o gestor REALMENTE muda e a conta não está travada pela tela.
-      if (!travado && campos.includes("gestor")) {
-        const de = gestorTela;
-        const para = c.gestor ?? "";
-        dados.gestorHistorico = historicoComTroca(existente.data, de, para, agoraISO);
-        trocasGestor.push({
-          accountId: c.accountId,
-          cliente: c.cliente ?? "",
-          de,
-          para,
-          primeiroRegistro: !Array.isArray(existente.data.gestorHistorico),
-        });
-      }
-
-      gravacoes.push({ docId: existente.id, dados });
+      // Atualiza o doc existente (qualquer que seja o docId dele).
+      gravacoes.push({ docId: existente.id, dados: payloadDe(c) });
     }
   }
 
@@ -268,8 +172,8 @@ export async function GET(req: Request) {
       gestor: (data.gestor as string) ?? null,
       por: (data.cadastradaPor as string) ?? null,
       em: dataBR(data.cadastradaEm),
-      // Já reconciliada = a linha foi colada no data/contas.json. A partir daí o
-      // import volta a gerenciar a conta normalmente; a marca só fica como origem.
+      // Já reconciliada = a linha foi colada no data/contas.json. A partir daí o import
+      // passa a cuidar do nome, tipo e nicho dela; a marca só fica como origem.
       noJson: naFonte(data),
     }));
   const foraDoJson = cadastradasPelaTela.filter((c) => !c.noJson);
@@ -280,7 +184,7 @@ export async function GET(req: Request) {
     .filter((data) => !naFonte(data) && data.origemCadastro !== "tela")
     .map((data) => ({ accountId: (data.accountId as string) ?? null, cliente: (data.cliente as string) ?? null }));
 
-  // MODO APLICAR: grava criadas + atualizadas (merge). Inalteradas não geram escrita.
+  // MODO APLICAR: grava só as atualizadas (merge). Inalteradas não geram escrita.
   let gravadas = 0;
   if (aplicar && gravacoes.length) {
     for (let i = 0; i < gravacoes.length; i += LOTE) {
@@ -296,31 +200,39 @@ export async function GET(req: Request) {
   return NextResponse.json({
     ok: true,
     modo: aplicar ? "aplicar" : "previa",
+    // O que este import cuida, dito na resposta — quem lê o relatório não lê o código.
+    escopo: "Desde 14/09/2026 o import cuida só de cliente, tipo e nicho. Gestor vem da planilha "
+      + "(/conciliacao) ou da /carteira; pausado vem de estacionar na /carteira. Ele não cria conta.",
     totalNaFonte: itens.length,
     totalNoDePara: snap.size,
     resumo: {
-      criadas: criadas.length,
       atualizadas: atualizadas.length,
       inalteradas: inalteradas.length,
+      naoCadastradas: naoCadastradas.length,
       orfas: orfas.length,
-      // Contas cujo gestor o import NÃO gerencia (carimbadas pela tela /carteira).
-      carimbadas: carimbadasDivergentes.length + carimbadasConcordantes.length,
-      carimbadasDivergentes: carimbadasDivergentes.length,
-      carimbadasConcordantes: carimbadasConcordantes.length,
-      // Contas cujo gestor é da planilha: o import não o toca (trava provisória até o
-      // cutover). `DivergentesDoJson` = trocas da planilha que um import sem trava desfaria.
-      governadasPelaPlanilha: governadasDivergentes.length + governadasConcordantes,
-      governadasDivergentesDoJson: governadasDivergentes.length,
-      // Trocas que entram no gestorHistorico. Só REGISTRO: não carimba a conta,
-      // o import continua mandando no campo `gestor` dela.
-      trocasDeGestor: trocasGestor.length,
       // Contas nascidas na tela /fila-contas. `foraDoJson` é o número que importa:
       // é o tamanho da divergência entre o data/contas.json e o Firestore.
       cadastradasPelaTela: cadastradasPelaTela.length,
       cadastradasPelaTelaForaDoJson: foraDoJson.length,
+      // Linhas no formato antigo. Maior que zero = o aplicar é recusado.
+      linhasForaDoEscopo: foraDoEscopo.length,
       gravadas: aplicar ? gravadas : 0,
     },
-    // SEÇÃO OBRIGATÓRIA — nunca some, nem quando é zero. Ver o comentário no laço.
+    // SEÇÃO OBRIGATÓRIA — nunca some, nem quando é zero.
+    naoCadastradas: {
+      mensagem: naoCadastradas.length === 0
+        ? "Toda linha do data/contas.json já existe no banco."
+        : `${naoCadastradas.length} linha(s) do data/contas.json não existem no banco, e o import não cria conta. `
+          + "Cadastre pela /fila-contas (ou pela /conciliacao, se a conta estiver na planilha) — lá entra o gestor.",
+      contas: naoCadastradas,
+    },
+    foraDoEscopo: {
+      mensagem: foraDoEscopo.length === 0
+        ? "Nenhuma linha traz gestor ou pausado."
+        : `${foraDoEscopo.length} linha(s) ainda trazem gestor ou pausado — o aplicar é recusado até elas saírem.`,
+      linhas: foraDoEscopo,
+    },
+    // SEÇÃO OBRIGATÓRIA — nunca some, nem quando é zero. Ver o comentário acima.
     cadastradasPelaTela: {
       mensagem: cadastradasPelaTela.length === 0
         ? "Zero contas cadastradas pela tela — o data/contas.json é a lista inteira da carteira."
@@ -332,37 +244,6 @@ export async function GET(req: Request) {
               + "(o botão 'copiar linha do JSON' está na própria tela) e rode este import de novo."),
       contas: cadastradasPelaTela,
     },
-    carimbadas: {
-      mensagem: (carimbadasDivergentes.length + carimbadasConcordantes.length) === 0
-        ? "Nenhuma conta carimbada — o import gerencia o gestor de todas."
-        : `${carimbadasDivergentes.length + carimbadasConcordantes.length} conta(s) com gestor e pausado TRAVADOS pela tela /carteira. `
-          + "Para devolvê-las ao controle do JSON, apague gestorEditadoEm e gestorEditadoPor no Console do Firebase.",
-      // JSON discorda: a troca pedida no JSON NÃO será aplicada.
-      divergentes: carimbadasDivergentes,
-      // JSON concorda HOJE — mas a trava existe e uma troca futura pelo JSON seria
-      // ignorada em silêncio. Esta lista existe justamente para a trava não sumir.
-      concordantes: carimbadasConcordantes,
-    },
-    // TRAVA PROVISÓRIA ATÉ O CUTOVER — ver `abaQueGoverna`. A seção aparece sempre: vazia
-    // ela diz que nenhuma troca da planilha está em risco; sumir esconderia a trava.
-    governadasPelaPlanilha: {
-      mensagem: (governadasDivergentes.length + governadasConcordantes) === 0
-        ? "Nenhuma conta governada pela planilha — o import gerencia o gestor de todas as não travadas."
-        : `${governadasDivergentes.length + governadasConcordantes} conta(s) com o gestor governado pela planilha de Monitoramento: `
-          + "o import NÃO mexe no gestor delas nem grava histórico. "
-          + (governadasDivergentes.length === 0
-            ? "O data/contas.json concorda com todas hoje."
-            : `${governadasDivergentes.length} diverge(m) do data/contas.json — sem esta trava, o import desfaria a troca feita na planilha.`),
-      divergentes: governadasDivergentes,
-    },
-    trocasDeGestor: {
-      mensagem: trocasGestor.length
-        ? `${trocasGestor.length} troca(s) de gestor ${aplicar ? "registrada(s)" : "serão registradas"} no histórico (gestorHistorico).`
-        : "Nenhuma troca de gestor nesta execução.",
-      registradoEm: agoraISO,
-      contas: trocasGestor,
-    },
-    criadas,
     atualizadas,
     inalteradas,
     orfas,

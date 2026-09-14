@@ -10,9 +10,9 @@
 //
 // ⚠️ Desde 14/09/2026 a TELA grava os dois juntos (ver `pausadoPara`). Antes, estacionar
 // pela /carteira gravava só o gestor, e a conta continuava nos rankings sob um "gestor"
-// chamado PAUSADO — Hotel Oscar e CAMPEZZA ficaram assim de 08/09 a 14/09/2026. Hoje a
-// divergência entre os dois só nasce do `data/contas.json` (import) ou do Console, e a
-// /carteira continua sinalizando quando acontece.
+// chamado PAUSADO — Hotel Oscar e CAMPEZZA ficaram assim de 08/09 a 14/09/2026. No mesmo
+// dia o `data/contas.json` perdeu os dois campos (cutover), então a divergência entre eles
+// hoje só nasce de edição manual no Console — e a /carteira continua sinalizando.
 export const PAUSADO = "PAUSADO";
 
 // Os 8 gestores reais (ordem alfabética, para o dropdown).
@@ -78,9 +78,10 @@ export function podeEditarGestorNaTela(
  * deixava a /carteira afirmando uma coisa ("estacionar tira de rankings") e o Dashboard
  * fazendo outra. Escolher um gestor de verdade é o inverso: desestaciona, a conta volta.
  *
- * ⚠️ Vale para a TELA, não para o import. O `data/contas.json` segue a régua de
- * veiculação (`pausado` = não veicula, ver data/README.md) — por isso o import deixa de
- * tocar a flag das contas travadas pela tela: quem é dono do gestor é dono da flag.
+ * ⚠️ Desde o cutover de 14/09/2026 esta é a ÚNICA origem da flag: o `data/contas.json`
+ * perdeu o campo, e o import recusa linha que o traga. A régua de QUANDO estacionar
+ * (`pausado` = não veicula, com a exceção de saída confirmada) continua no data/README.md —
+ * quem a aplica agora é quem clica.
  */
 export function pausadoPara(gestor: string): boolean {
   return gestor === PAUSADO;

@@ -57,7 +57,8 @@ export interface Reuniao {
 //
 //  · gravado pela TELA `/carteira` (`por` = e-mail de alguém): a pessoa clicou naquele
 //    instante. `desde` é o momento da troca. É fato.
-//  · gravado por ROTINA (`por` = "import-contas", "sync-planilha"): ninguém viu a troca
+//  · gravado por ROTINA (`por` = "sync-planilha"; e "import-contas" até o cutover de
+//    14/09/2026, quando o import deixou de cuidar do gestor): ninguém viu a troca
 //    acontecer. A rotina comparou o valor de hoje com o de ontem e concluiu que mudou
 //    **em algum momento entre as duas leituras**. `desde` guarda o fim dessa janela —
 //    ou seja, o instante MAIS TARDIO em que a troca pode ter ocorrido.

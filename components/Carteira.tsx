@@ -217,7 +217,7 @@ function LinhaConta({ conta, ordem, onAnalisar }: {
   const [pausada, setPausada] = useState(!!conta.pausado);
   // Divergência: o campo gestor diz PAUSADO mas a flag não (ou vice-versa). A flag é o
   // que REALMENTE controla rankings/alertas — por isso o aviso não é cosmético. Desde
-  // 14/09/2026 a tela não produz mais essa combinação; ela só chega pelo import ou Console.
+  // 14/09/2026 nem a tela nem o import produzem essa combinação; ela só chega pelo Console.
   const divergente = (gestorAtual === PAUSADO) !== pausada;
   const mudou = sel !== gestorAtual;
 
@@ -307,7 +307,7 @@ function LinhaConta({ conta, ordem, onAnalisar }: {
           </p>
           {divergente && (
             <p className="ml-8 mt-1 text-[11px]" style={{ color: AMBER }}>
-              ⚠ gestor {gestorAtual === PAUSADO ? "= PAUSADO, mas a conta segue ATIVA" : "definido, mas a conta está PAUSADA"} — ajuste a flag no import/Console se preciso.
+              ⚠ gestor {gestorAtual === PAUSADO ? "= PAUSADO, mas a conta segue ATIVA" : "definido, mas a conta está PAUSADA"} — ajuste pelo Console do Firebase (o import não mexe mais nesses campos).
             </p>
           )}
           {/* ⚠️ COR DE ÊNFASE, NUNCA VERMELHO: nada está quebrado — o campo tem dono.

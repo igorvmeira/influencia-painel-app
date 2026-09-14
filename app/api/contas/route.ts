@@ -46,11 +46,10 @@ export async function GET(req: Request) {
 //   em `gestorHistorico` um registro { gestor, desde, por, em } — append-only, nunca apaga.
 // - Na 1ª edição de uma conta, SEMEIA o registro inicial: o gestor atual como dono
 //   "desde sempre" (desde: null). Sem backfill em massa — só quando a conta é editada.
-// - Carimba `gestorEditadoEm`/`gestorEditadoPor`. A partir daí o /api/import-contas PULA
-//   o campo gestor desta conta.
-//   ATENÇÃO: o carimbo é IRREVERSÍVEL pela ferramenta. Para a conta voltar a seguir o
-//   gestor do JSON do import, é preciso APAGAR MANUALMENTE os campos gestorEditadoEm e
-//   gestorEditadoPor no Console do Firebase (Firestore > contas > doc da conta).
+// - Carimba `gestorEditadoEm`/`gestorEditadoPor` — hoje só o carimbo de "editado por" que a
+//   /carteira mostra. Até o cutover de 14/09/2026 ele também TRAVAVA o import (que pulava
+//   gestor e pausado da conta); desde então o import não cuida desses campos, e o carimbo
+//   não trava mais nada.
 export async function POST(req: Request) {
   const sessao = await autenticar(req);
   if (!sessao) return NextResponse.json({ ok: false, erro: "não autenticado" }, { status: 401 });

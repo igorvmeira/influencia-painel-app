@@ -486,7 +486,7 @@ function CardCandidata({ c, nichos, tipos, nomesExistentes, aoDecidir, aoErrar }
   }
 
   async function copiar() {
-    const linha = linhaJson({ accountId: c.accountId, cliente: cliente.trim(), gestor, nicho, tipo });
+    const linha = linhaJson({ accountId: c.accountId, cliente: cliente.trim(), nicho, tipo });
     try {
       await navigator.clipboard.writeText(linha);
       setCopiado(true);
@@ -717,14 +717,14 @@ function CardCandidata({ c, nichos, tipos, nomesExistentes, aoDecidir, aoErrar }
                 quiser o git como histórico da carteira cola esta linha lá. */}
             <button
               onClick={copiar}
-              disabled={!cliente.trim() || !gestor}
+              disabled={!cliente.trim()}
               className="ml-auto rounded-full px-3 py-2 text-[12px] transition hover:bg-brand-hover disabled:opacity-50"
               // ⚠️ `bordaForte`, não `borda`. É BOTÃO — e o jeito de deixá-lo
               // secundário é o TEXTO em `muted` (5,92:1), não apagar o contorno:
               // em `borda` (1,23:1) o limite some e o botão vira texto solto,
               // exatamente o defeito das opções do seletor de semáforo.
               style={{ color: MUTED, border: `1px solid ${TEMA.bordaForte}` }}
-              title="Para manter o data/contas.json completo no git. Preencha nome e gestor antes."
+              title="Para manter o data/contas.json completo no git (só nome, tipo e nicho — o gestor não vai para o arquivo). Preencha o nome antes."
             >
               {copiado ? "✓ copiado" : "Copiar linha do JSON"}
             </button>

@@ -80,7 +80,7 @@ export interface ContaNoPainel {
    *
    * ⚠️ NÃO USE `gestorEditadoEm` PARA ISTO — eu usei, e estava errado. Aquele carimbo diz
    * que alguém editou pela tela `/carteira`; o histórico pode existir sem ele (o
-   * `import-contas` grava histórico sem carimbar) e o carimbo pode existir com o
+   * `import-contas` gravava histórico sem carimbar, até o cutover de 14/09/2026) e o carimbo pode existir com o
    * histórico já semeado. São dois fatos diferentes sobre a mesma conta, e só um
    * responde "preciso semear?".
    */

@@ -25,9 +25,15 @@ export interface JanelaMes {
   Dprev: number;                      // dias comparáveis no mês anterior
   offsetsAtual: number[];            // dia 1..D do mês corrente → offset (série)
   offsetsAnterior: (number | null)[]; // dia 1..D do mês anterior → offset (fantasma)
-  labelAtual: string;                 // "Julho (1–7)"
+  labelAtual: string;                 // "Julho (1–7)" — ou "Julho (mês completo)", ver `mesCompleto`
   labelAnterior: string;              // "Junho (1–7)"
   parcial: boolean;                   // algum intervalo entra antes do início do histórico
+  /**
+   * Só `janelaMes`: a janela cobre o mês INTEIRO (a âncora é o último dia dele). Acontece
+   * no dia 1º: o dia 1 ainda está incompleto e sai dos dados, então o "Mês" mostra o mês
+   * anterior. Quem abre precisa ler na hora que está vendo o mês passado, fechado.
+   */
+  mesCompleto?: boolean;
 }
 
 // Âncora (dia mais recente) e menor data, dos registros das contas informadas.
@@ -99,7 +105,11 @@ export function janelaMes(daily: MetricaDiaria[], contas: ContaMap[]): JanelaMes
   }
 
   const mAnt = ((m - 1) % 12 + 12) % 12;
-  const labelAtual = `${MESES[m]} (1–${D})`;
+  // Janela cobrindo o mês INTEIRO: o rótulo diz isso com todas as letras. No dia 1º o "Mês"
+  // mostra o mês anterior (o dia 1 ainda está incompleto e saiu dos dados), e "Setembro
+  // (1–30)" num botão chamado "Mês" seria lido como o mês corrente.
+  const mesCompleto = D === new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  const labelAtual = mesCompleto ? `${MESES[m]} (mês completo)` : `${MESES[m]} (1–${D})`;
   const labelAnterior = `${MESES[mAnt]} (1–${Dprev})`;
 
   const espec: EspecJanela = {
@@ -114,7 +124,7 @@ export function janelaMes(daily: MetricaDiaria[], contas: ContaMap[]): JanelaMes
   // Parcial: mês corrente OU anterior começa antes do primeiro dado (ex.: abril/02).
   const parcial = primeiroAtualMs < minMs || primeiroAntMs < minMs;
 
-  return { espec, ancoraMs, D, Dprev, offsetsAtual, offsetsAnterior, labelAtual, labelAnterior, parcial };
+  return { espec, ancoraMs, D, Dprev, offsetsAtual, offsetsAnterior, labelAtual, labelAnterior, parcial, mesCompleto };
 }
 
 // ===========================================================================

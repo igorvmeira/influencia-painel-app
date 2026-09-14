@@ -374,7 +374,9 @@ export async function POST(req: Request) {
   const cand = (fila?.candidatas ?? []).find((c: CandidataFila) => c.accountId === accountId);
   if (!cand) {
     return NextResponse.json(
-      { ok: false, erro: "esta conta não está na fila descoberta — cadastre pelo data/contas.json" },
+      // ⚠️ Até o cutover de 14/09/2026 esta mensagem mandava "cadastrar pelo data/contas.json".
+      // O import não cria conta desde então — a porta certa é o cadastro por accountId.
+      { ok: false, erro: "esta conta não está na fila descoberta — cadastre colando o accountId nesta tela (ou pela /conciliacao, se ela estiver na planilha)" },
       { status: 400 }
     );
   }

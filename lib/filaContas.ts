@@ -273,14 +273,17 @@ export function classificarFalhaSonda(codigo: number | null, subcodigo: number |
  * Firestore com `origemCadastro: "tela"`, e o JSON deixa de ser a lista inteira.
  * A divergência é DECLARADA — o relatório do import mostra essas contas sempre —,
  * mas quem quiser o git como histórico da carteira cola esta linha lá.
+ *
+ * ⚠️ SEM `gestor` (e sem `pausado`) desde o cutover de 14/09/2026: o JSON guarda só nome,
+ * tipo e nicho, e o import RECUSA o aplicar se uma linha trouxer um dos dois — ver
+ * `CAMPOS_FORA_DO_ESCOPO` em app/api/import-contas/route.ts.
  */
 export function linhaJson(c: {
-  accountId: string; cliente: string; gestor: string; nicho?: string; tipo?: string;
+  accountId: string; cliente: string; nicho?: string; tipo?: string;
 }): string {
   const campos: Record<string, unknown> = {
     accountId: c.accountId,
     cliente: c.cliente,
-    gestor: c.gestor,
   };
   if (c.nicho) campos.nicho = c.nicho;
   if (c.tipo) campos.tipo = c.tipo;
