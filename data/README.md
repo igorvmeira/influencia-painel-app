@@ -87,7 +87,9 @@ relatório, nunca escrita.
 Sem essa guarda, as duas únicas trocas que a regra produzia em 10/09/2026 eram
 DRA. ANA PAULA e TRAJETO — as duas estacionadas de propósito, com o motivo escrito
 nesta página ("reativar quando voltar a veicular"). A regra desfaria exatamente as
-decisões que este arquivo registra.
+decisões que este arquivo registra. *(Medido em 14/09/2026: as duas já veiculavam de
+novo desde 17/08 e 25/08 — o gatilho escrito disparou e a decisão está pendente; ver a
+tabela de exceções.)*
 
 ### O que o cron aplica e o que exige uma pessoa
 
@@ -280,15 +282,22 @@ manter isso no CPL de carteira do gestor credita a ele um resultado que não é 
 O motivo fica registrado ao lado, sempre.
 
 Sem esse registro a próxima pessoa lê "veicula → ativa", vê uma conta pausada
-gastando e "corrige" achando que é erro. Por isso os casos concretos ficam escritos:
+gastando e "corrige" achando que é erro. Por isso os casos concretos ficam escritos —
+**e cada afirmação sobre o dado leva a data em que foi medida.** A versão anterior desta
+tabela dizia "nunca veiculou" (TRAJETO, escrito em 06/08) e "zero há 104 dias" (DRA. ANA
+PAULA, escrito em 14/08) sem data ao lado. A DRA. ANA PAULA voltou a gastar três dias
+depois, e a tabela passou um mês afirmando o contrário do banco. A régua está no
+CLAUDE.md, junto de *afirmação sobre dado vivo se calcula*.
 
-| conta | estado | por quê |
-|---|---|---|
-| ZAY SUSHI `act_1670450540519360` | pausada | zero em 120 dias, embora a agência liste o cliente como ativo (07/08/2026) |
-| GUARÁ NET `act_2030710527729327` | pausada | idem — reconferido em 14/08: segue **nenhum dia com gasto** em 120 dias |
-| TRAJETO `act_2622092654889646` | pausada | criada em 17/07, `ACTIVE`, **nunca veiculou** |
-| DRA. ANA PAULA `act_2057134961683901` | pausada | cadastrada já pausada: último gasto em **02/05/2026**, zero há 104 dias |
-| **JS FIBRA** `act_1321889532494546` | **pausada pela EXCEÇÃO** | a agência **confirmou a saída em 14/08/2026** e a conta **continuava gastando** (R$ 2.112,17 nos últimos 30 dias, com registro do próprio dia 14/08). Não é erro: é a exceção acima. |
+| conta | estado | medido em | o que o dado diz | leitura |
+|---|---|---|---|---|
+| ZAY SUSHI `act_1670450540519360` | pausada | 14/09/2026 | **nenhum dia com gasto** no painel desde o início do histórico (02/04/2026); consulta direta à Meta: R$ 0 em 365 dias | pausada pela régua de veiculação. ⚠ A planilha registra ROAS para ela — o gasto pode estar numa conta que o painel não lê (pergunta ao Roberto pendente) |
+| GUARÁ NET `act_2030710527729327` | pausada | 14/09/2026 | idem: nenhum dia com gasto desde 02/04/2026; R$ 0 em 365 dias na Meta | idem — a planilha registra CPL para ela; mesma pergunta pendente |
+| TRAJETO `act_2622092654889646` | pausada | 14/09/2026 | **gastou todos os 21 dias de 25/08 a 14/09** — R$ 489,61 em 30 dias | ⚠ **a justificativa deixou de valer.** Pela régua deveria estar ATIVA, e não há saída confirmada registrada. Decisão pendente (ver *Pendências de cadastro*) |
+| DRA. ANA PAULA `act_2057134961683901` | pausada | 14/09/2026 | **gastou todos os 29 dias de 17/08 a 14/09** — R$ 829,91 em 30 dias | ⚠ **idem** — o gatilho "reativar quando voltar a veicular" disparou em 17/08 e ninguém viu |
+| **JS FIBRA** `act_1321889532494546` | **pausada pela EXCEÇÃO** | 14/09/2026 | continua gastando: R$ 6.742,77 em 30 dias, com gasto em 14/09 | exceção vigente: a agência confirmou a saída em 14/08/2026 (na época, R$ 2.112,17 em 30 dias). Não é erro |
+
+Os números vêm de `metricasDiarias` (histórico completo, sync de 14/09/2026 às 15:48 UTC).
 
 ## Antes de cadastrar uma conta nova
 
@@ -584,8 +593,8 @@ o motivo e o gatilho para revisar:
 |---|---|---|---|
 | NEXA TELECOM | `act_3943992782574535` | **Dois motivos independentes.** (1) **Bloqueio da Meta**, confirmado pela agência — `account_status` 3 (UNSETTLED) e veiculação interrompida em 03/08. (2) **Moeda ARS** (fuso Buenos Aires): o painel não converte moeda, então ela contaminaria totais, CPL e ranking. ⚠ Não é o caso de "entraria zerada" — a conta tem 20 dias de veiculação; o problema é a escala dos números. | Só cadastrar quando os **dois** forem resolvidos: bloqueio liberado **e** decisão sobre como o painel trata moeda estrangeira (hoje: não trata). |
 | SOLUÇÃO (2ª conta) | `act_974158976372768` | ⚠ **Os números da SOLUÇÃO no painel estão INCOMPLETOS.** A agência confirmou (14/08/2026) que o cliente roda em **duas** contas; só a `act_358502495857953` ("Solução Empresas") é acessível e foi cadastrada. Esta segue **bloqueada** (`#200 ... NOT grant ads_management`), então o gasto e as conversões dela **não entram no painel** — e nada na tela indica que falta metade. Ao ler os números desse cliente, some mentalmente o que não está aqui. | Cadastrar quando sair a parceria de Business Manager. Aí os números do cliente passam a ser completos. |
-| DRA. ANA PAULA | `act_2057134961683901` | Cadastrada já **pausada** (regra `pausado` = não veicula): último gasto em **02/05/2026**, zero nos últimos 104 dias. Entrou pausada para não diluir o CPL de carteira do ISMAIL com uma conta parada. | Reativar quando voltar a veicular — `pausado: false` **e `gestor: "ISMAIL"`**, que é a dona. ⚠ Como ela nasceu pausada, o `gestorHistorico` NÃO tem o ISMAIL registrado; este é o único lugar onde a titularidade está escrita. |
-| TRAJETO | `act_2622092654889646` | Cadastrada e **pausada**. Conta criada em 17/07/2026, `account_status` ACTIVE, mas **gasto zero em 120 dias** — nunca veiculou. Ativa, entraria zerada e puxaria o CPL de carteira do gestor para baixo. Está também com **nicho vazio**: a planilha diz "Provedor" e a Meta chama a conta de "CA 01 - TRAJETO MÓVEIS". | **Dois gatilhos independentes.** (1) Reativar (`pausado: false` + `gestor: VINÍCIUS`) quando começar a veicular — confira por **gasto > 0 no período**, não por `account_status`. (2) Preencher o nicho quando a agência disser o ramo. |
+| DRA. ANA PAULA | `act_2057134961683901` | Cadastrada já **pausada** (regra `pausado` = não veicula): último gasto em **02/05/2026**, zero nos últimos 104 dias — *escrito em 14/08/2026*. Entrou pausada para não diluir o CPL de carteira do ISMAIL com uma conta parada. | ⚠ **GATILHO DISPARADO em 17/08/2026** — *medido em 14/09/2026*: gastou todos os dias desde então, R$ 829,91 em 30 dias. Reativar = `pausado: false` **e `gestor: "ISMAIL"`**, que é a dona. **Decisão pendente.** ⚠ Como ela nasceu pausada, o `gestorHistorico` NÃO tem o ISMAIL registrado; este é o único lugar onde a titularidade está escrita. ⚠ E reativar reescreve o passado: o gasto já medido (R$ 422,35 em agosto) entra inteiro no agosto fechado do ISMAIL. |
+| TRAJETO | `act_2622092654889646` | Cadastrada e **pausada**. Conta criada em 17/07/2026, `account_status` ACTIVE, mas **gasto zero em 120 dias** — nunca veiculou — *escrito em 06/08/2026*. Ativa, entraria zerada e puxaria o CPL de carteira do gestor para baixo. Está também com **nicho vazio**: a planilha diz "Provedor" e a Meta chama a conta de "CA 01 - TRAJETO MÓVEIS" (*nicho não reconferido em 14/09*). | **Dois gatilhos independentes.** (1) ⚠ **DISPARADO em 25/08/2026** — *medido em 14/09/2026*: gastou todos os dias desde então, R$ 489,61 em 30 dias. Reativar = `pausado: false` + `gestor: VINÍCIUS`. **Decisão pendente**; reativar leva os R$ 201,97 de agosto para o agosto fechado do VINÍCIUS. (2) Preencher o nicho quando a agência disser o ramo. |
 
 ## A camada que não aparece num print lado a lado
 

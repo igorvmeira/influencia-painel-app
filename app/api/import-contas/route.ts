@@ -50,6 +50,27 @@ function gestorTravado(existente: Record<string, unknown>): boolean {
   return !!existente.gestorEditadoEm;
 }
 
+// Conta cujo gestor é GOVERNADO pela planilha de Monitoramento (marca `gestorDaPlanilha`,
+// gravada pela conciliação): o import NÃO mexe no campo gestor nem empilha histórico.
+//
+// 🛑 TRAVA PROVISÓRIA ATÉ O CUTOVER (14/09/2026). Enquanto o `data/contas.json` tiver o
+// campo `gestor`, ele é uma cópia antiga do que a planilha passou a mandar — e o import é
+// uma arma carregada. Medido em 14/09: rodar com `aplicar=1` devolveria CAFÉ JEQUITINHONHA
+// ao ANDRÉ e COPYNORTE ao JOÃO PEDRO, desfazendo as trocas da planilha do mesmo dia e
+// gravando a volta no `gestorHistorico`, que é append-only. A trava sai junto com o campo
+// `gestor` do JSON, no cutover.
+//
+// ⚠️ O que ela NÃO cobre: conta que DEIXA de ser governada (a linha saiu da planilha e a
+// conciliação removeu a marca) volta a receber o gestor do JSON, que pode estar velho. É o
+// resto que só o cutover fecha.
+//
+// `pausado` NÃO entra nesta trava: a planilha não governa a flag (ver
+// `CHAVES_QUE_O_SYNC_PODE_TOCAR` em lib/conciliaPlanilha.ts).
+function abaQueGoverna(existente: Record<string, unknown>): string | null {
+  const m = existente.gestorDaPlanilha as { aba?: unknown } | null | undefined;
+  return m && typeof m.aba === "string" && m.aba ? m.aba : null;
+}
+
 // Teto defensivo do histórico — mesmo valor usado no POST /api/contas.
 const MAX_HISTORICO_GESTOR = 50;
 
@@ -92,8 +113,10 @@ function camposQueMudam(existente: Record<string, unknown>, c: ContaFonte): stri
   const alvo = payloadDe(c);
   const campos: string[] = [];
   const travado = gestorTravado(existente);
+  // Governada pela planilha: o gestor é dela (trava provisória, ver `abaQueGoverna`).
+  const governada = abaQueGoverna(existente) !== null;
   for (const k of ["cliente", "gestor", "tipo", "nicho"] as const) {
-    if (k === "gestor" && travado) continue; // gestor editado na tela: import ignora
+    if (k === "gestor" && (travado || governada)) continue; // gestor com outro dono: import ignora
     if ((existente[k] ?? "") !== alvo[k]) campos.push(k);
   }
   // Travada pela tela: a flag é da tela, como o gestor (ver `gestorTravado`).
@@ -136,6 +159,12 @@ export async function GET(req: Request) {
   type Carimbada = { accountId: string; cliente: string; gestorJson: string; gestorTela: string; por: string; em: string };
   const carimbadasDivergentes: Carimbada[] = []; // JSON discorda: a troca NÃO será aplicada
   const carimbadasConcordantes: Carimbada[] = []; // JSON concorda hoje, mas a trava existe
+  // Contas GOVERNADAS pela planilha (marca gestorDaPlanilha, sem trava da tela): o import
+  // não mexe no gestor delas. As divergentes são exatamente as trocas que o JSON antigo
+  // desfaria — por isso aparecem com nome, e não só em número.
+  type Governada = { accountId: string; cliente: string; gestorJson: string; gestorPainel: string; aba: string };
+  const governadasDivergentes: Governada[] = [];
+  let governadasConcordantes = 0;
   // Trocas de gestor que serão REGISTRADAS no gestorHistorico (append-only).
   const trocasGestor: { accountId: string; cliente: string; de: string; para: string; primeiroRegistro: boolean }[] = [];
   // Instante único desta execução — todas as entradas do histórico levam a mesma data.
@@ -159,6 +188,16 @@ export async function GET(req: Request) {
     // import reportar sucesso e a troca simplesmente não acontecer.
     const travado = gestorTravado(existente.data);
     const gestorTela = (existente.data.gestor as string) ?? "";
+    // Governada pela planilha. A travada pela tela já tem lista própria logo abaixo; aqui
+    // entram as outras, e o gestor delas sai do payload (ver `abaQueGoverna`).
+    const aba = travado ? null : abaQueGoverna(existente.data);
+    if (aba) {
+      if (gestorTela !== (c.gestor ?? "")) {
+        governadasDivergentes.push({ accountId: c.accountId, cliente: c.cliente ?? "", gestorJson: c.gestor ?? "", gestorPainel: gestorTela, aba });
+      } else {
+        governadasConcordantes += 1;
+      }
+    }
     if (travado) {
       const reg = {
         accountId: c.accountId,
@@ -184,6 +223,7 @@ export async function GET(req: Request) {
         delete (dados as { gestor?: string }).gestor;
         delete (dados as { pausado?: boolean }).pausado; // a flag também é da tela
       }
+      if (aba) delete (dados as { gestor?: string }).gestor; // o gestor é da planilha
 
       // TROCA DE GESTOR pelo JSON: registra no histórico datado (append-only).
       // Só quando o gestor REALMENTE muda e a conta não está travada pela tela.
@@ -267,6 +307,10 @@ export async function GET(req: Request) {
       carimbadas: carimbadasDivergentes.length + carimbadasConcordantes.length,
       carimbadasDivergentes: carimbadasDivergentes.length,
       carimbadasConcordantes: carimbadasConcordantes.length,
+      // Contas cujo gestor é da planilha: o import não o toca (trava provisória até o
+      // cutover). `DivergentesDoJson` = trocas da planilha que um import sem trava desfaria.
+      governadasPelaPlanilha: governadasDivergentes.length + governadasConcordantes,
+      governadasDivergentesDoJson: governadasDivergentes.length,
       // Trocas que entram no gestorHistorico. Só REGISTRO: não carimba a conta,
       // o import continua mandando no campo `gestor` dela.
       trocasDeGestor: trocasGestor.length,
@@ -298,6 +342,18 @@ export async function GET(req: Request) {
       // JSON concorda HOJE — mas a trava existe e uma troca futura pelo JSON seria
       // ignorada em silêncio. Esta lista existe justamente para a trava não sumir.
       concordantes: carimbadasConcordantes,
+    },
+    // TRAVA PROVISÓRIA ATÉ O CUTOVER — ver `abaQueGoverna`. A seção aparece sempre: vazia
+    // ela diz que nenhuma troca da planilha está em risco; sumir esconderia a trava.
+    governadasPelaPlanilha: {
+      mensagem: (governadasDivergentes.length + governadasConcordantes) === 0
+        ? "Nenhuma conta governada pela planilha — o import gerencia o gestor de todas as não travadas."
+        : `${governadasDivergentes.length + governadasConcordantes} conta(s) com o gestor governado pela planilha de Monitoramento: `
+          + "o import NÃO mexe no gestor delas nem grava histórico. "
+          + (governadasDivergentes.length === 0
+            ? "O data/contas.json concorda com todas hoje."
+            : `${governadasDivergentes.length} diverge(m) do data/contas.json — sem esta trava, o import desfaria a troca feita na planilha.`),
+      divergentes: governadasDivergentes,
     },
     trocasDeGestor: {
       mensagem: trocasGestor.length

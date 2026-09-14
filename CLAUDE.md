@@ -574,6 +574,23 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   **A régua: se a frase cita um número, uma direção ou uma comparação, ela é derivada do
   dado — nunca literal.** Vale para o texto de apoio tanto quanto para o número: o texto
   envelhece pior, porque ninguém confere prosa.
+  🛑 **E VALE PARA DOCUMENTO: AFIRMAÇÃO SOBRE DADO VIVO EM DOCUMENTO PRECISA DE DATA DE
+  MEDIÇÃO AO LADO — senão vira mentira com aparência de registro.** Na tela a saída é
+  calcular; no documento não há como, então a frase carrega QUANDO foi verdade.
+  Caso real (14/09/2026). A tabela de exceções do `data/README.md` justificava duas contas
+  pausadas com "nunca veiculou" (TRAJETO, escrito em 06/08) e "zero há 104 dias" (DRA. ANA
+  PAULA, escrito em 14/08). A DRA. ANA PAULA voltou a gastar em **17/08** — três dias
+  depois — e a TRAJETO em **25/08**. Em 14/09 as duas somavam R$ 1.319,52 em 30 dias,
+  pausadas, e o documento seguia afirmando o contrário do banco. Ninguém reviu porque
+  documento de regra é lido como REGISTRO, e registro não se confere.
+  🔑 **Por que a data resolve e o cuidado não:** "zero há 104 dias" soa mais preciso que
+  "zero, medido em 14/08", e é o contrário — a contagem de dias é relativa a um HOJE que o
+  leitor não sabe qual é. Com a data, a frase continua verdadeira para sempre (era zero
+  naquele dia), e quem lê sabe que precisa remedir.
+  ⚠️ **A régua: estado se escreve com "medido em DD/MM/AAAA"; justificativa que depende do
+  estado diz o gatilho que a invalida.** E gatilho escrito em documento não dispara
+  sozinho: a pendência da DRA. ANA PAULA dizia "reativar quando voltar a veicular", o
+  gatilho disparou em 17/08 e ninguém viu. Quando importa, o gatilho vira conferência.
 - ⚠️ **EXPLICAÇÃO PARCIAL NÃO VAI PARA A TELA — dizer O QUE acontece sem inventar o PORQUÊ
   é melhor que uma causa plausível não verificada.** Causa plausível ENCERRA a
   investigação: ninguém procura o motivo de uma coisa que já foi "entendida".
