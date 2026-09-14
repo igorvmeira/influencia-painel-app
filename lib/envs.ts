@@ -28,30 +28,56 @@
 export type EnvObrigatoria = string;
 
 /**
- * Env OPCIONAL: o código tem default e funciona sem ela.
+ * UMA ENTRE VÁRIAS FORMAS DE CONFIGURAR A MESMA COISA — vale se UM grupo estiver inteiro.
  *
- * ⚠️ Existe porque tratar opcional como obrigatória reprova ambiente saudável — e
- * conferência que falha no caso NORMAL é a primeira a ser desligada. `META_API_VERSION`
- * é o caso: `lib/meta.ts` e `lib/descobrirContas.ts` fazem `|| "v21.0"`, então ela
- * ausente é o estado esperado, não defeito.
+ * 🛑🛑 EXISTE POR CAUSA DE UM INCIDENTE (13–14/09/2026). A `lib/firebaseAdmin.ts` aceita a
+ * credencial de DUAS formas: `FIREBASE_SERVICE_ACCOUNT_BASE64`, ou o trio
+ * `FIREBASE_PROJECT_ID` + `FIREBASE_CLIENT_EMAIL` + `FIREBASE_PRIVATE_KEY`. A primeira
+ * versão desta conferência só conhecia "obrigatória" e "opcional", e o Firebase foi
+ * declarado como "BASE64 obrigatória" — verdade no `.env.local`, onde só existe o BASE64,
+ * e mentira em produção, onde só existe o trio. Os três crons passaram a devolver `503`
+ * com o Firebase funcionando perfeitamente, e os dados pararam em 12/09.
+ *
+ * ⚠️ Nem obrigatória nem opcional descreve isto. Marcar as quatro como opcionais aceitaria
+ * ambiente sem credencial NENHUMA; marcar qualquer uma como obrigatória reprova um dos dois
+ * ambientes que funcionam. É um terceiro tipo, e ele precisa existir com nome próprio.
+ */
+export interface AlternativaEnv {
+  /** Nome humano, para a mensagem: "credencial do Firebase Admin". */
+  nome: string;
+  /** Cada grupo é uma forma COMPLETA de configurar. Basta um grupo inteiro preenchido. */
+  grupos: readonly (readonly string[])[];
+}
+
+/**
+ * ⚠️ OPCIONAL: o código tem default e funciona sem ela. Existe porque tratar opcional como
+ * obrigatória reprova ambiente saudável — e conferência que falha no caso NORMAL é a
+ * primeira a ser desligada. `META_API_VERSION` é o caso: há `|| "v21.0"` no código.
  */
 export interface Envs {
   obrigatorias: readonly EnvObrigatoria[];
   opcionais?: readonly string[];
+  umaDas?: readonly AlternativaEnv[];
 }
 
 /** Junta as declarações de vários módulos, sem repetir nome. */
-export function comporEnvs(...grupos: Envs[]): Envs {
+export function comporEnvs(...declaracoes: Envs[]): Envs {
   const obrigatorias = new Set<string>();
   const opcionais = new Set<string>();
-  for (const g of grupos) {
-    for (const e of g.obrigatorias) obrigatorias.add(e);
-    for (const e of g.opcionais ?? []) opcionais.add(e);
+  const umaDas = new Map<string, AlternativaEnv>();
+  for (const d of declaracoes) {
+    for (const e of d.obrigatorias) obrigatorias.add(e);
+    for (const e of d.opcionais ?? []) opcionais.add(e);
+    for (const a of d.umaDas ?? []) umaDas.set(a.nome, a);
   }
   // ⚠️ Obrigatória em UM módulo e opcional em outro vale como OBRIGATÓRIA: quem tem
   // default não quebra sem ela, mas quem não tem, quebra. O lado estrito é o que vale.
   for (const e of obrigatorias) opcionais.delete(e);
-  return { obrigatorias: [...obrigatorias].sort(), opcionais: [...opcionais].sort() };
+  return {
+    obrigatorias: [...obrigatorias].sort(),
+    opcionais: [...opcionais].sort(),
+    umaDas: [...umaDas.values()],
+  };
 }
 
 export interface FaltaEnv {
@@ -61,19 +87,25 @@ export interface FaltaEnv {
 }
 
 /**
- * Devolve TODAS as obrigatórias ausentes, ou `null` quando está tudo lá.
- *
  * ⚠️ VAZIA CONTA COMO AUSENTE. `FILA_EMAILS_PERMITIDOS=""` na Vercel não é "configurada
- * com lista vazia": é o mesmo efeito de não existir, e o silêncio seria pior porque a
- * env APARECE no painel. Falha fechado — a mesma regra do `lib/cronAuth.ts`.
+ * com lista vazia": é o mesmo efeito de não existir, e o silêncio seria pior porque a env
+ * APARECE no painel. Falha fechado — a mesma regra do `lib/cronAuth.ts`.
  */
+const preenchida = (nome: string): boolean => !!(process.env[nome] ?? "").trim();
+
+/** Devolve TUDO o que falta de uma vez, ou `null` quando está tudo lá. */
 export function conferirEnvs(envs: Envs): FaltaEnv | null {
-  const faltando = envs.obrigatorias.filter((nome) => !(process.env[nome] ?? "").trim());
+  const faltando: string[] = envs.obrigatorias.filter((nome) => !preenchida(nome));
+  for (const alt of envs.umaDas ?? []) {
+    if (!alt.grupos.some((grupo) => grupo.every(preenchida))) {
+      faltando.push(`${alt.nome} (uma destas formas: ${alt.grupos.map((g) => g.join(" + ")).join("  OU  ")})`);
+    }
+  }
   if (!faltando.length) return null;
   return {
     faltando,
     mensagem:
-      `Faltam ${faltando.length} variável(is) de ambiente: ${faltando.join(", ")}. ` +
+      `Faltam ${faltando.length} configuração(ões) de ambiente: ${faltando.join("; ")}. ` +
       `Adicione na Vercel e faça REDEPLOY — env nova só vale em build novo.`,
   };
 }

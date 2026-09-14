@@ -2,15 +2,22 @@
 /**
  * AUDITA AS DECLARAÇÕES DE ENV — o que cada módulo DIZ que lê contra o que ele LÊ.
  *
- * ⚠️⚠️ SEM ISTO, AS DECLARAÇÕES SÃO PROMESSA. O desenho novo põe um `ENVS_*` ao lado do
+ * ⚠️⚠️ SEM ISTO, AS DECLARAÇÕES SÃO PROMESSA. O desenho põe um `ENVS_*` ao lado do
  * `process.env` em cada módulo, e a rota compõe. Isso só é melhor que uma lista central
- * enquanto as duas coisas andarem juntas — e nada no `tsc` liga uma à outra: acrescentar
- * um `process.env.X` e esquecer da declaração compila, passa no build, e volta a produzir
- * exatamente a falha que o desenho veio evitar (a rota jura que conferiu tudo e não
- * conferiu o novo).
+ * enquanto as duas coisas andarem juntas — e nada no `tsc` liga uma à outra.
  *
- * ⚠️ E ELE CONFERE A ROTA TAMBÉM, não só os módulos: uma rota de cron que importa um
- * módulo com env e não compõe o `ENVS_*` dele passaria a checagem com a lista incompleta.
+ * 🛑🛑 E ELE TEVE UM PONTO CEGO QUE CUSTOU DOIS DIAS DE DADOS (13–14/09/2026). A primeira
+ * versão só reconhecia `process.env.X` e `process.env["X"]`. A `lib/firebaseAdmin.ts` lê o
+ * trio de credenciais por DESESTRUTURAÇÃO — `const { A, B, C } = process.env` —, o ÚNICO
+ * caso desse padrão no projeto inteiro. O auditor não viu, disse "ok", o `.env.example` foi
+ * declarado "completo", e a declaração errada derrubou os três crons em produção.
+ * **Conferência automática herda os pontos cegos de quem a escreveu, e a cobertura dela
+ * parece total porque ela não sabe o que não vê.**
+ *
+ * 🔑 POR ISSO A VERIFICAÇÃO 0: ele CONTA todo acesso a `process.env` e reprova quando algum
+ * não é explicado por um padrão que ele sabe ler. Não é cobertura total — é o auditor
+ * sabendo dizer onde a cobertura dele ACABA. E cada padrão reconhecido foi visto reprovando
+ * um defeito plantado antes de ser confiado.
  *
  * Sai com código 1 se reprovar. Rodar: `node scripts/audita-envs.js`
  */
@@ -22,14 +29,21 @@ const RAIZ = path.resolve(__dirname, "..");
 /**
  * ⚠️ AS ROTAS QUE PRECISAM CONFERIR ENV SÃO AS DE CRON, e a régua é o ATRASO DA
  * DESCOBERTA, não a importância da rota. Numa tela, env ausente aparece para uma pessoa
- * em segundos e ela avisa. Num cron, aparece amanhã de manhã — e só se alguém ler o
- * e-mail. Foi assim que o `PLANILHA_GERENCIAL_ID` custou um dia em 12/09/2026.
+ * em segundos. Num cron, aparece amanhã de manhã — e só se alguém ler o e-mail.
  */
 const ROTAS_DE_CRON = [
   "app/api/sync-planilha/route.ts",
   "app/api/sync-meta/route.ts",
   "app/api/comercial/sync/route.ts",
 ];
+
+/**
+ * Arquivos que leem `process.env` por NOME VARIÁVEL, de propósito.
+ * ⚠️ Só o próprio conferidor, que lê as envs pelos nomes que as declarações entregam.
+ * Qualquer outro acesso dinâmico reprova: é exatamente a leitura que nenhuma declaração
+ * consegue acompanhar.
+ */
+const PODE_LER_DINAMICO = new Set(["lib/envs.ts"]);
 
 const lerArquivo = (p) => fs.readFileSync(path.join(RAIZ, p), "utf8");
 
@@ -42,25 +56,78 @@ function arquivosTs(dir, out = []) {
   return out;
 }
 
-/** Envs realmente lidas num arquivo. */
+// ---------------------------------------------------------------------------
+// OS PADRÕES DE LEITURA QUE ESTE AUDITOR RECONHECE — e só estes
+// ---------------------------------------------------------------------------
+const RE_PONTO = /process\.env\.([A-Z0-9_]+)/g;
+const RE_COLCHETE = /process\.env\[["'`]([A-Z0-9_]+)["'`]\]/g;
+/** `const { A, B: b, C = "x" } = process.env` — o padrão que faltou em 12/09/2026. */
+const RE_DESESTRUTURA = /\{([^{}]*)\}\s*=\s*process\.env\b/g;
+
+/** Envs realmente lidas num arquivo, pelos três padrões. */
 function envsLidas(src) {
   const s = new Set();
-  for (const m of src.matchAll(/process\.env\.([A-Z0-9_]+)/g)) s.add(m[1]);
-  for (const m of src.matchAll(/process\.env\[["'`]([A-Z0-9_]+)["'`]\]/g)) s.add(m[1]);
+  for (const m of src.matchAll(RE_PONTO)) s.add(m[1]);
+  for (const m of src.matchAll(RE_COLCHETE)) s.add(m[1]);
+  for (const m of src.matchAll(RE_DESESTRUTURA)) {
+    for (const parte of m[1].split(",")) {
+      const nome = parte.split(/[:=]/)[0].trim();
+      if (/^[A-Z0-9_]+$/.test(nome)) s.add(nome);
+    }
+  }
   return s;
 }
 
-/** Envs declaradas num arquivo (obrigatórias + opcionais, de qualquer bloco `ENVS_*`). */
+/**
+ * Tira comentário de bloco e linha inteira de comentário — SÓ para contar acessos.
+ * ⚠️ Não é parser. O erro comum é alarme a mais (um `process.env` citado num comentário no
+ * fim de uma linha de código). O raro é uma string com `/*` engolir código até o próximo
+ * fechamento de comentário. Quando reprova, o total do arquivo vai junto para quem for olhar.
+ */
+function semComentarios(src) {
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .split("\n")
+    .filter((l) => !l.trim().startsWith("//"))
+    .join("\n");
+}
+
+/** Quantos acessos a `process.env` nenhum padrão reconhecido explica. */
+function contarAcessos(src) {
+  const c = semComentarios(src);
+  const total = (c.match(/process\.env\b/g) || []).length;
+  const explicados =
+    (c.match(RE_PONTO) || []).length +
+    (c.match(RE_COLCHETE) || []).length +
+    (c.match(RE_DESESTRUTURA) || []).length;
+  return { total, naoReconhecidos: total - explicados };
+}
+
+/** Os objetos `ENVS_* = { ... }` de um arquivo, com chaves balanceadas. */
+function blocosEnvs(src) {
+  const blocos = [];
+  const re = /\bENVS_[A-Z0-9_]*\s*=\s*\{/g;
+  let m;
+  while ((m = re.exec(src))) {
+    let i = m.index + m[0].length;
+    let prof = 1;
+    while (i < src.length && prof > 0) {
+      if (src[i] === "{") prof++;
+      else if (src[i] === "}") prof--;
+      i++;
+    }
+    blocos.push(src.slice(m.index, i));
+  }
+  return blocos;
+}
+
+/** Tudo o que um arquivo DECLARA — obrigatórias, opcionais e os grupos de alternativas. */
 function envsDeclaradas(src) {
-  const obrig = new Set();
-  const opc = new Set();
-  for (const m of src.matchAll(/obrigatorias:\s*\[([^\]]*)\]/g)) {
-    for (const n of m[1].matchAll(/["']([A-Z0-9_]+)["']/g)) obrig.add(n[1]);
+  const todas = new Set();
+  for (const b of blocosEnvs(src)) {
+    for (const n of b.matchAll(/["']([A-Z0-9_]+)["']/g)) todas.add(n[1]);
   }
-  for (const m of src.matchAll(/opcionais:\s*\[([^\]]*)\]/g)) {
-    for (const n of m[1].matchAll(/["']([A-Z0-9_]+)["']/g)) opc.add(n[1]);
-  }
-  return { obrig, opc, todas: new Set([...obrig, ...opc]) };
+  return { todas };
 }
 
 /** Resolve um import relativo/aliased para um caminho real. */
@@ -96,13 +163,35 @@ function alcancaveis(entrada) {
 
 let falhas = 0;
 const aviso = (msg) => { console.log(`🛑 ${msg}`); falhas++; };
+const todos = [...arquivosTs("lib"), ...arquivosTs("app"), ...arquivosTs("components")];
 
 // ---------------------------------------------------------------------------
-// 1. MÓDULO QUE LÊ ENV E NÃO DECLARA (ou declara a menos)
+// 0. ONDE A COBERTURA DESTE AUDITOR ACABA — vem ANTES de tudo, porque limita o resto
 // ---------------------------------------------------------------------------
-console.log("1) Cada módulo declara o que lê?\n");
-const todos = [...arquivosTs("lib"), ...arquivosTs("app"), ...arquivosTs("components")];
-const declaracoes = new Map(); // arquivo -> {obrig, opc, todas}
+console.log("0) Algum acesso a process.env que este auditor NÃO sabe ler?\n");
+let semPontoCego = true;
+for (const f of todos) {
+  const { total, naoReconhecidos } = contarAcessos(lerArquivo(f));
+  if (!naoReconhecidos) continue;
+  if (PODE_LER_DINAMICO.has(f)) {
+    console.log(`   ok  ${f} — ${naoReconhecidos} acesso dinâmico, permitido: é o próprio conferidor`);
+    continue;
+  }
+  semPontoCego = false;
+  aviso(
+    `${f}: ${naoReconhecidos} de ${total} acesso(s) a process.env num padrão que o auditor não reconhece — ` +
+      `as verificações abaixo NÃO valem para este arquivo`
+  );
+}
+if (semPontoCego) {
+  console.log("   ok  todo acesso a process.env está num padrão reconhecido (ponto, colchete com literal, desestruturação)");
+}
+
+// ---------------------------------------------------------------------------
+// 1. MÓDULO QUE LÊ ENV E NÃO DECLARA (ou declara a mais)
+// ---------------------------------------------------------------------------
+console.log("\n1) Cada módulo declara o que lê?\n");
+const declaracoes = new Map();
 
 for (const f of todos) {
   const src = lerArquivo(f);
@@ -111,9 +200,8 @@ for (const f of todos) {
   const dec = envsDeclaradas(src);
   declaracoes.set(f, dec);
 
-  // ⚠️ `NEXT_PUBLIC_*` fica de fora: são embutidas no bundle em tempo de BUILD, então
-  // "ausente em runtime" não é o modo de falha delas — ausente no build é, e aí a tela
-  // quebra na hora, visível. Conferi-las aqui reprovaria o caso normal.
+  // ⚠️ `NEXT_PUBLIC_*` fica de fora: é embutida no bundle em tempo de BUILD, então ausente
+  // em runtime não é o modo de falha dela — ausente no build é, e a tela quebra na hora.
   const relevantes = [...lidas].filter((e) => !e.startsWith("NEXT_PUBLIC_"));
   if (!relevantes.length) continue;
 
@@ -143,19 +231,16 @@ for (const rota of ROTAS_DE_CRON) {
     continue;
   }
 
-  // Tudo o que o grafo dela realmente lê, menos as embutidas no build.
   const precisa = new Set();
   for (const f of alcancaveis(rota)) {
     for (const e of envsLidas(lerArquivo(f))) {
       if (!e.startsWith("NEXT_PUBLIC_")) precisa.add(e);
     }
   }
-  // Tudo o que ela declara + o que ela compõe dos módulos que importa.
   const compoe = new Set(envsDeclaradas(src).todas);
   for (const f of alcancaveis(rota)) {
     const d = declaracoes.get(f);
     if (!d) continue;
-    // Só conta se a rota realmente COMPÔS o grupo daquele módulo.
     const nomes = [...lerArquivo(f).matchAll(/export const (ENVS_[A-Z_]+)/g)].map((m) => m[1]);
     if (nomes.some((n) => new RegExp(`\\b${n}\\b`).test(src))) for (const e of d.todas) compoe.add(e);
   }
@@ -173,12 +258,20 @@ for (const rota of ROTAS_DE_CRON) {
 // ---------------------------------------------------------------------------
 console.log("\n3) .env.example está completo?\n");
 const exemplo = lerArquivo(".env.example");
-const noExemplo = new Set([...exemplo.matchAll(/^([A-Z0-9_]+)=/gm)].map((m) => m[1]));
+// ⚠️ LINHA COMENTADA CONTA COMO DOCUMENTADA. O `.env.example` descreve credenciais
+// alternativas assim: "escolha UMA das duas opções", com a opção B comentada (`# NOME=`).
+// Exigir linha ativa obrigaria a deixar as duas formas "ligadas" no exemplo — que é
+// justamente a confusão entre as duas que derrubou os crons em 13/09/2026.
+const noExemplo = new Set([...exemplo.matchAll(/^#?\s*([A-Z0-9_]+)=/gm)].map((m) => m[1]));
 const usadas = new Set();
 for (const f of todos) for (const e of envsLidas(lerArquivo(f))) usadas.add(e);
 const foraDoExemplo = [...usadas].filter((e) => !noExemplo.has(e)).sort();
 if (foraDoExemplo.length) aviso(`.env.example não declara: ${foraDoExemplo.join(", ")}`);
-else console.log(`   ok  ${usadas.size} envs usadas, todas no .env.example`);
+else {
+  // ⚠️ "Completo" aqui quer dizer completo EM RELAÇÃO AO QUE A VERIFICAÇÃO 0 DEIXOU LER.
+  // Em 12/09/2026 esta mesma linha disse "ok" com três envs do Firebase invisíveis para ela.
+  console.log(`   ok  ${usadas.size} envs lidas pelos padrões reconhecidos, todas no .env.example`);
+}
 
 console.log("");
 if (falhas) { console.log(`REPROVADO — ${falhas} problema(s).`); process.exit(1); }

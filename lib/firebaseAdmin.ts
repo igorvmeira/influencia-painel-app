@@ -2,8 +2,27 @@ import { cert, getApps, initializeApp, App, ServiceAccount } from "firebase-admi
 import { getFirestore, Firestore } from "firebase-admin/firestore";
 import { getAuth, Auth } from "firebase-admin/auth";
 
-/** Envs que este módulo lê. Ver `lib/envs.ts`. */
-export const ENVS_FIREBASE_ADMIN = { obrigatorias: ["FIREBASE_SERVICE_ACCOUNT_BASE64"] } as const;
+/**
+ * Envs que este módulo lê — e a credencial é UMA DE DUAS FORMAS, nunca uma lista fixa.
+ *
+ * 🛑 A versão anterior desta declaração dizia "BASE64 obrigatório" e derrubou os três crons
+ * em produção a partir de 13/09/2026: o `.env.local` tem o BASE64, a produção tem o trio, e o
+ * `carregarCredencial()` abaixo aceita as duas. O trio é lido por DESESTRUTURAÇÃO, padrão que
+ * o auditor da época não sabia ler — por isso ele disse "ok". Ver a régua da conferência
+ * automática que herda os pontos cegos de quem a escreveu, no CLAUDE.md.
+ */
+export const ENVS_FIREBASE_ADMIN = {
+  obrigatorias: [],
+  umaDas: [
+    {
+      nome: "credencial do Firebase Admin",
+      grupos: [
+        ["FIREBASE_SERVICE_ACCOUNT_BASE64"],
+        ["FIREBASE_PROJECT_ID", "FIREBASE_CLIENT_EMAIL", "FIREBASE_PRIVATE_KEY"],
+      ],
+    },
+  ],
+} as const;
 
 
 let db: Firestore | null = null;
