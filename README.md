@@ -298,6 +298,12 @@ Duas pendências anotadas, nenhuma urgente:
   o sintoma e deixaria a chamada mais longa e mais cara de repetir quando falhasse.
 
 ## Próximos passos
+- 📌 **Pendência (14/09/2026): o contexto da IA não filtra conta pausada.**
+  `lib/iaContexto.ts` monta o painel com a carteira INTEIRA (`montarPainel(daily, contas, …)`),
+  enquanto Dashboard, Início, /gestores, alertas e orientações usam só `!c.pausado` — a
+  "regra única" do painel. Em 14/09 eram **41 contas no balde PAUSADO** entrando no que a IA
+  descreve: nos totais, no CPL geral e como se "PAUSADO" fosse um gestor. Frase de IA
+  ninguém confere contra a tela, então a divergência não aparece sozinha.
 - **Login (fase 2)**: Firebase Auth + leitura por usuário; liberar leitura na
   `firestore.rules` e usar `lib/firebaseClient.ts`.
 
