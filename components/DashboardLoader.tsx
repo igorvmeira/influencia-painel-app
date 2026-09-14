@@ -19,5 +19,10 @@ export default function DashboardLoader() {
   }
   if (!dados) return <DashboardSkeleton />;
 
-  return <Dashboard daily={dados.daily} contas={dados.contas} fonte={dados.fonte} ultimaSync={dados.ultimaSync} limites={dados.limites} />;
+  return (
+    <Dashboard
+      daily={dados.daily} contas={dados.contas} fonte={dados.fonte} ultimaSync={dados.ultimaSync}
+      limites={dados.limites} diaParcial={dados.diaParcial ?? null}
+    />
+  );
 }

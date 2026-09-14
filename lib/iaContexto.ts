@@ -14,14 +14,17 @@ const TETO_CONTEXTO = 12000;
 // Monta um resumo compacto e já em R$ a partir dos agregados do período pedido:
 // totais + por gestor + por nicho + clientes + contas perto do limite de gasto.
 export async function montarContextoIA(periodoDias: number): Promise<string> {
-  const { daily, contas, limites, fonte } = await getDadosDiarios();
+  const { daily, contas, limites, fonte, ultimoDiaCompleto, diaParcial } = await getDadosDiarios();
   const painel = montarPainel(daily, contas, periodoDias);
   const nichos = montarNichos(daily, contas, periodoDias);
   const t = painel.totais;
 
   const l: string[] = [];
   l.push(`Fonte dos dados: ${fonte === "mock" ? "exemplo (mock)" : "Firestore (real)"}.`);
-  l.push(`Período analisado: últimos ${periodoDias} dias. Todos os valores em R$ (BRL).`);
+  l.push(`Período analisado: últimos ${periodoDias} dias${ultimoDiaCompleto ? `, até ${ultimoDiaCompleto}` : ""}. Todos os valores em R$ (BRL).`);
+  // O dia parcial já saiu dos dados na fonte (lib/data.ts); a IA precisa saber disso para
+  // não descrever "hoje" com números que não o incluem.
+  if (diaParcial) l.push(`O dia ${diaParcial} ainda está sendo sincronizado e ficou FORA de todos os números (dia incompleto).`);
 
   l.push("", "== TOTAIS DO PERÍODO ==");
   l.push(`Investido: ${brl(t.gasto)} (${t.gastoVar >= 0 ? "+" : ""}${t.gastoVar}% vs período anterior).`);

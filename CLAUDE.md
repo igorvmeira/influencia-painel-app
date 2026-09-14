@@ -993,7 +993,15 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
 - Confirme a moeda dos dados da fonte antes de assumir (pode vir em outra moeda).
 - Fuso horário como **constante única** no arquivo de marca — nunca espalhado pelo código.
 - Ao comparar períodos, compare **intervalos equivalentes** (1..D vs 1..D) e ancore no último
-  dia **com dado**, não no relógio. Deixe o intervalo explícito na tela.
+  dia **COMPLETO com dado**, não no relógio. Deixe o intervalo explícito na tela.
+  ⚠️ **"Com dado" não basta: o dia em que o sync roda tem dado e está pela metade.** Medido
+  em 14/09/2026: o 12/09, gravado às 12:46 UTC do próprio dia, tinha R$ 1.385,74 e 100
+  conversões; o sync seguinte o regravou com R$ 6.186,67 e 531. Com ele dentro, o modo Mês
+  mostrava conversões −2,7% onde houve +3,7% — o sinal invertido. E o aviso que existia só
+  aparecia quando o último dia era HOJE pelo relógio: com o sync caído, o dia parcial era
+  "ontem" e o aviso sumia justamente quando o número estava errado. **A regra olha a data do
+  sync, não o relógio, e mora na fonte** (`separarDiaParcial` em `lib/data.ts`): o dia sai
+  dos dados uma vez, e todas as telas ancoram certo sem conhecer a regra.
 
 ## Convenções de código
 - Limiares/parâmetros (tetos de alerta, janelas de dias, limites) como **constantes no topo**

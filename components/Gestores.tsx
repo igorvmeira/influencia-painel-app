@@ -589,7 +589,9 @@ export default function Gestores() {
 
           <p className="mt-4 text-[12px]" style={{ color: MUTED }}>
             Clique num gestor para ver a carteira conta a conta. Criativos do mês entram na próxima etapa.
-            {dados?.ultimaSync && ` Dados até ${ymdParaBR(dados.ultimaSync.slice(0, 10))}.`}
+            {/* O último dia que ENTRA nos números — não a data do sync, que é o dia parcial
+                que ficou de fora (e que, cortada em UTC, podia nem ser o dia certo). */}
+            {dados?.ultimoDiaCompleto && ` Dados até ${ymdParaBR(dados.ultimoDiaCompleto)}.`}
           </p>
         </>
       )}

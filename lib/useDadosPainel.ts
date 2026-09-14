@@ -11,6 +11,10 @@ export interface DadosPainel {
   fonte: "firestore" | "mock";
   ultimaSync: string | null;
   limites: LimiteConta[];
+  /** Último dia que entra nos números. `daily` já vem sem o dia parcial (lib/data.ts). */
+  ultimoDiaCompleto: string | null;
+  /** O dia que ficou de fora por estar incompleto, ou null. */
+  diaParcial: string | null;
 }
 
 // Cache de SESSÃO (módulo): busca /api/painel uma vez e reusa entre as telas

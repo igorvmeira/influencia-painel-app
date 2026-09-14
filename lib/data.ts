@@ -6,12 +6,15 @@ import { COL_AGREGADAS } from "./agregadas";
 // novo, o outro leria vazio, e o painel passaria a dizer que nunca sincronizou.
 import { COL_LIMITES, COL_SISTEMA, DOC_SYNC_META } from "./colecoes";
 import { ContaMap, LimiteConta, MetricaDiaria } from "./types";
+import { MARCA } from "./brand";
+import { diaParcialDe } from "./periodo";
 
 // Cache no servidor: os dados só mudam 1x/dia (após o sync). Segura leituras do
 // Firestore. Instância quente reusa. (item 3: a série vem pré-agregada, ~95 docs.)
 const TTL_MS = 10 * 60 * 1000;
 
 export interface DadosDiarios {
+  /** Série diária JÁ SEM o dia parcial — ver `separarDiaParcial`. */
   daily: MetricaDiaria[];
   contas: ContaMap[];
   fonte: "firestore" | "mock";
@@ -19,6 +22,10 @@ export interface DadosDiarios {
   ultimaSync: string | null;
   // Teto/gasto por conta (para o alerta de limite); vazio quando não há dados.
   limites: LimiteConta[];
+  /** Último dia que ENTRA nos números (YYYY-MM-DD) — a âncora de todas as telas. null sem dado. */
+  ultimoDiaCompleto: string | null;
+  /** O dia que ficou DE FORA por estar incompleto (YYYY-MM-DD), ou null. Diz na estrutura até onde o número vale. */
+  diaParcial: string | null;
 }
 
 // De-para indexado por accountId (chave única). Ignora docs repetidos do mesmo
@@ -35,6 +42,41 @@ function dedupContas(docs: FirebaseFirestore.QueryDocumentSnapshot[]): ContaMap[
   return out;
 }
 
+const maiorData = (daily: MetricaDiaria[]): string | null => {
+  let max = "";
+  for (const m of daily) if (m.data > max) max = m.data;
+  return max || null;
+};
+
+/**
+ * 🛑 O DIA DA SINCRONIZAÇÃO É PARCIAL, E SAI DOS NÚMEROS AQUI — NA FONTE, UMA VEZ.
+ *
+ * O sync-meta grava o dia em que roda, então o último dia com dado está sempre pela
+ * metade. Medido em 14/09/2026: o 12/09, gravado às 12:46 UTC do próprio dia, tinha
+ * R$ 1.385,74 e 100 conversões; o sync seguinte o regravou com R$ 6.186,67 e 531. Com ele
+ * dentro, o modo Mês comparava o dia 12 pela metade com o dia 12 inteiro de agosto e
+ * mostrava conversões −2,7% onde houve +3,7% — o sinal invertido. O aviso que existia na
+ * tela não mudava número nenhum, e só aparecia quando o último dia era HOJE pelo relógio:
+ * com o sync caído, o dia parcial era "ontem" e o aviso sumia.
+ *
+ * ⚠️ POR QUE AQUI E NÃO NAS TELAS. Dashboard, Início, /gestores, Análise de Conta, IA e
+ * criativos ancoram todos no último dia com dado. Tirando o dia da série na fonte, TODOS
+ * passam a ancorar no último dia completo sem nenhum aprender a regra — a tela recebe a
+ * decisão. Pôr a regra em cada tela seria seis cópias, e a sétima tela nasceria errada.
+ *
+ * ⚠️ O dado continua inteiro no Firestore; só não entra na conta. E o dia que saiu vai
+ * dito na estrutura (`diaParcial`), para a tela escrever até onde o número vale.
+ */
+function separarDiaParcial(
+  daily: MetricaDiaria[],
+  ultimaSync: string | null
+): { daily: MetricaDiaria[]; ultimoDiaCompleto: string | null; diaParcial: string | null } {
+  const diaParcial = diaParcialDe(maiorData(daily), ultimaSync, MARCA.fuso);
+  if (!diaParcial) return { daily, ultimoDiaCompleto: maiorData(daily), diaParcial: null };
+  const completos = daily.filter((m) => m.data < diaParcial);
+  return { daily: completos, ultimoDiaCompleto: maiorData(completos), diaParcial };
+}
+
 let cacheDados: { dados: DadosDiarios; expira: number } | null = null;
 
 // Dados completos do painel. IMPORTANTE: em produção (Firebase configurado), erro
@@ -43,7 +85,8 @@ let cacheDados: { dados: DadosDiarios; expira: number } | null = null;
 export async function getDadosDiarios(): Promise<DadosDiarios> {
   const db = getDb();
   if (!db) {
-    return { ...mockDiario(), fonte: "mock", ultimaSync: null, limites: mockLimites };
+    const mock = mockDiario();
+    return { ...mock, ...separarDiaParcial(mock.daily, null), fonte: "mock", ultimaSync: null, limites: mockLimites };
   }
   if (cacheDados && Date.now() < cacheDados.expira) return cacheDados.dados;
 
@@ -59,12 +102,13 @@ export async function getDadosDiarios(): Promise<DadosDiarios> {
   const contas = dedupContas(contasSnap.docs);
   // Achata os dias de cada conta no mesmo array plano de antes (valores copiados
   // como estão — null continua null, nunca vira 0).
-  const daily = aggSnap.docs.flatMap((d) => (d.data()?.dias as MetricaDiaria[] | undefined) ?? []);
+  const todosOsDias = aggSnap.docs.flatMap((d) => (d.data()?.dias as MetricaDiaria[] | undefined) ?? []);
   const ultimaSync =
     (syncSnap.exists ? (syncSnap.data()?.atualizadoEm as string | undefined) : undefined) ?? null;
   const limites = limitesSnap.docs.map((d) => d.data() as LimiteConta);
+  const { daily, ultimoDiaCompleto, diaParcial } = separarDiaParcial(todosOsDias, ultimaSync);
 
-  const dados: DadosDiarios = { daily, contas, fonte: "firestore", ultimaSync, limites };
+  const dados: DadosDiarios = { daily, contas, fonte: "firestore", ultimaSync, limites, ultimoDiaCompleto, diaParcial };
   cacheDados = { dados, expira: Date.now() + TTL_MS };
   return dados;
 }

@@ -15,7 +15,7 @@ import { brl, brlDec, num, pct } from "@/lib/format";
 import { montarKpis, montarKpisMes, moedaCard, numCard, serieGrafico, serieGraficoMes } from "@/lib/kpis";
 import {
   janelaMes, intervaloLabel, janelaPersonalizada, primeiroDiaDisponivel,
-  ultimoDiaDisponivel, comparacaoExigeDesde, ymdParaBR, diasSobrepostos,
+  ultimoDiaDisponivel, comparacaoExigeDesde, ymdParaBR, diasSobrepostos, rotuloMes,
 } from "@/lib/periodo";
 import { MARCA, TEMA } from "@/lib/brand";
 import NichosSection from "./NichosSection";
@@ -207,14 +207,10 @@ function difTamanhoPct(a: number, b: number): number {
   return maior > 0 ? (Math.abs(a - b) / maior) * 100 : 0;
 }
 
-// Dia de hoje (YYYY-MM-DD) no fuso do cliente — para saber se o último dia com
-// dado ainda está "em andamento" (o sync roda de manhã, então ele é parcial).
-function hojeNoFuso(): string {
-  const p = new Intl.DateTimeFormat("en-CA", {
-    timeZone: MARCA.fuso, year: "numeric", month: "2-digit", day: "2-digit",
-  }).format(new Date());
-  return p; // en-CA já formata como YYYY-MM-DD
-}
+// NOTA (14/09/2026): existia aqui um `hojeNoFuso()`, que decidia se o último dia estava
+// parcial comparando-o com o RELÓGIO. Saiu: com o sync caído, o dia parcial virava
+// "ontem" e o aviso sumia justamente quando o número estava errado. A decisão agora vem
+// do servidor (`diaParcial`), pela data do sync — ver `separarDiaParcial` em lib/data.ts.
 
 // "HH:MM" do último sync no fuso do cliente.
 function horaSync(iso: string | null): string | null {
@@ -251,8 +247,13 @@ function Info({ texto }: { texto: string }) {
 }
 
 export default function Dashboard(
-  { daily, contas, fonte, ultimaSync, limites }:
-  { daily: MetricaDiaria[]; contas: ContaMap[]; fonte: "firestore" | "mock"; ultimaSync: string | null; limites: LimiteConta[] }
+  { daily, contas, fonte, ultimaSync, limites, diaParcial }:
+  {
+    daily: MetricaDiaria[]; contas: ContaMap[]; fonte: "firestore" | "mock"; ultimaSync: string | null;
+    limites: LimiteConta[];
+    /** O dia que o servidor tirou dos dados por estar incompleto (lib/data.ts), ou null. */
+    diaParcial: string | null;
+  }
 ) {
   // Seletor de período: agora filtra de verdade, recomputando o painel a partir
   // dos registros diários para a janela selecionada.
@@ -286,13 +287,15 @@ export default function Dashboard(
   const primeiroDia = useMemo(() => primeiroDiaDisponivel(daily, contasAtivas), [daily, contasAtivas]);
   const ultimoDia = useMemo(() => ultimoDiaDisponivel(daily, contasAtivas), [daily, contasAtivas]);
 
-  // Período personalizado: por padrão, a última semana FECHADA (termina no dia
-  // anterior à âncora, que costuma estar parcial) — o caso de uso que motivou isto.
+  // Período personalizado: por padrão, a última semana FECHADA — o caso de uso que motivou
+  // isto. ⚠️ Até 14/09/2026 aqui se tirava um dia da âncora "porque costuma estar parcial".
+  // Agora o dia parcial já sai dos dados na fonte (lib/data.ts): a âncora É o último dia
+  // completo, e tirar mais um jogaria fora um dia fechado.
   const [custIni, setCustIni] = useState("");
   const [custFim, setCustFim] = useState("");
   useEffect(() => {
     if (!ultimoDia || custIni || custFim) return;
-    const fimMs = Date.parse(ultimoDia + "T00:00:00Z") - 86400000; // último dia fechado
+    const fimMs = Date.parse(ultimoDia + "T00:00:00Z"); // já é o último dia completo
     const iniMs = fimMs - 6 * 86400000;
     const piso = primeiroDia ? Date.parse(primeiroDia + "T00:00:00Z") : iniMs;
     const ymd = (ms: number) => new Date(ms).toISOString().slice(0, 10);
@@ -437,21 +440,27 @@ export default function Dashboard(
     [modoCustom, compValido, custIni, custFim, compIni, compFim]
   );
 
-  // ---- Aviso de dia parcial: a janela inclui o último dia sincronizado? ----
-  // O sync roda de manhã, então o dia corrente entra incompleto.
+  // ---- O dia que ficou de fora: INFORMAÇÃO, não alarme ----
+  // O servidor tira o dia da sincronização dos dados (lib/data.ts) e diz qual foi. A tela
+  // só desenha: não recalcula a regra e não depende do relógio de quem abre. Todos os
+  // modos (7/15/30/60, Mês e personalizado) já terminam, no máximo, no último dia completo.
   const avisoParcial = useMemo(() => {
-    if (!ultimoDia) return null;
-    const ultimoEhHoje = ultimoDia === hojeNoFuso();
-    if (!ultimoEhHoje) return null;             // último dia já fechou: nada a avisar
-    // Vale para os DOIS períodos: o de comparação também pode alcançar a âncora
-    // quando é escolhido à mão (no automático ele termina antes, por definição).
-    const incluiUltimo = modoCustom
-      ? custFim >= ultimoDia || (compValido && compFim >= ultimoDia)
-      : true;                                       // dia/mês sempre terminam na âncora
-    if (!incluiUltimo) return null;
+    if (!diaParcial) return null;
     const hora = horaSync(ultimaSync);
-    return hora ? `inclui dia parcial — última sincronização às ${hora}` : "inclui dia parcial (ainda em andamento)";
-  }, [ultimoDia, modoCustom, custFim, compValido, compFim, ultimaSync]);
+    const ddmm = (ymd: string) => ymdParaBR(ymd).slice(0, 5);
+    return `dados até ${ultimoDia ? ddmm(ultimoDia) : "—"} · ${ddmm(diaParcial)} ainda incompleto`
+      + `${hora ? ` (sincronizado às ${hora})` : ""}, fora dos números`;
+  }, [diaParcial, ultimoDia, ultimaSync]);
+
+  // Dia 1º do mês: o mês novo ainda não tem nenhum dia completo, e o "Mês" mostra o
+  // anterior inteiro. Quem apara diz o motivo — sem isto, "Setembro" no dia 1º de outubro
+  // parece defeito.
+  const avisoMesSemDia = useMemo(() => {
+    if (!modoMes || !diaParcial || !diaParcial.endsWith("-01")) return null;
+    const [ano, mes] = diaParcial.split("-").map(Number);
+    return `${rotuloMes(ano, mes)} ainda não tem nenhum dia completo — o Mês mostra `
+      + `${jmMes?.labelAtual ?? "o mês anterior"} até o próximo sync`;
+  }, [modoMes, diaParcial, jmMes]);
 
   // NOTA (29/07/2026): existia aqui um `tooltipSemDado`, que calculava a data em que a
   // coleta de reach/impressions começou para explicar o "—" dessas duas colunas.
@@ -710,7 +719,7 @@ export default function Dashboard(
 
       {/* Avisos honestos da janela ativa (dia parcial / comparação impossível /
           tamanhos diferentes / sobreposição). Todos são AVISO, nunca bloqueio. */}
-      {(avisoParcial || motivoSemComparacao || avisoTamanhos || diasEmComum > 0) && (
+      {(avisoParcial || avisoMesSemDia || motivoSemComparacao || avisoTamanhos || diasEmComum > 0) && (
         <div className="mb-5 flex flex-wrap gap-2">
           {avisoTamanhos && (
             <span
@@ -730,13 +739,24 @@ export default function Dashboard(
               ⚠ os dois períodos se sobrepõem em {diasEmComum} {diasEmComum === 1 ? "dia" : "dias"} — os mesmos dias contam dos dois lados do Δ
             </span>
           )}
+          {/* Estado de TODO dia — o sync sempre grava um dia incompleto —, então é
+              informação em cor de ênfase, não alerta em âmbar: aviso que está sempre lá
+              deixa de ser lido, e o âmbar precisa sobrar para o que muda. */}
           {avisoParcial && (
             <span
               className="rounded-lg px-3 py-1.5 text-[12px]"
-              style={{ background: TEMA.limiteFundo, color: AMBAR }}
-              title="O sync roda de manhã; o dia corrente entra incompleto. Para conferir com a Business Manager, use um período que termine no dia anterior."
+              style={{ background: TEMA.avisoFundo, color: OURO }}
+              title="O sync grava o dia em que roda, e esse dia só se completa no sync seguinte. Por isso ele fica fora de todos os números e comparações: 7, 15, 30 e 60 dias, Mês e personalizado. Para conferir com a Business Manager, use o mesmo último dia daqui."
             >
-              ⚠ {avisoParcial}
+              {avisoParcial}
+            </span>
+          )}
+          {avisoMesSemDia && (
+            <span
+              className="rounded-lg px-3 py-1.5 text-[12px]"
+              style={{ background: TEMA.avisoFundo, color: OURO }}
+            >
+              {avisoMesSemDia}
             </span>
           )}
           {motivoSemComparacao && (

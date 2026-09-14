@@ -153,7 +153,36 @@ export function primeiroDiaDisponivel(daily: MetricaDiaria[], contas: ContaMap[]
   return min || null;
 }
 
+/**
+ * O dia que está INCOMPLETO nos dados, ou null.
+ *
+ * Regra: o último dia com dado é parcial quando a última sincronização aconteceu NELE
+ * MESMO, no fuso da marca. O sync grava o dia em que roda, e só o sync seguinte o completa
+ * (ele relê os últimos 30 dias de cada conta). Olha a data do SYNC, nunca o relógio: com o
+ * sync caído, o dia parcial continua parcial depois da meia-noite — era exatamente o caso
+ * que o aviso antigo do Dashboard, preso ao relógio, deixava passar.
+ *
+ * null quando não dá para saber (sem dado ou sem registro de sync): nada sai, e quem
+ * consome não afirma nem que o último dia está completo nem que está parcial.
+ * Função pura; quem aplica é `lib/data.ts`, na fonte.
+ */
+export function diaParcialDe(
+  ultimoDiaComDado: string | null,
+  ultimaSyncIso: string | null,
+  fuso: string
+): string | null {
+  if (!ultimoDiaComDado || !ultimaSyncIso) return null;
+  const t = new Date(ultimaSyncIso);
+  if (Number.isNaN(t.getTime())) return null;
+  const diaDoSync = new Intl.DateTimeFormat("en-CA", {
+    timeZone: fuso, year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(t); // en-CA formata como YYYY-MM-DD
+  return diaDoSync === ultimoDiaComDado ? ultimoDiaComDado : null;
+}
+
 // Último dia COM DADO (YYYY-MM-DD) — a âncora, e o teto do seletor.
+// ⚠️ Desde 14/09/2026 o `daily` que chega às telas já vem SEM o dia parcial (ver
+// `separarDiaParcial` em lib/data.ts), então este é o último dia COMPLETO.
 export function ultimoDiaDisponivel(daily: MetricaDiaria[], contas: ContaMap[]): string | null {
   const set = new Set(contas.map((c) => c.accountId));
   let max = "";
