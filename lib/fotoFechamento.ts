@@ -3,7 +3,7 @@ import {
   coberturaMes, faltaDaLeitura, janelaMesFechado, mesesDisponiveis, momentoSync, rotuloFaltaCobertura, rotuloMes, ymdParaBR,
 } from "./periodo";
 import { montarPainel } from "./painel";
-import { calcularDestaques, elegibilidadeDestaque, escolherPremiado } from "./destaques";
+import { calcularDestaques, elegibilidadeDestaque, escolherPremiado, linhasDeEvolucao, type RankingEvolucao } from "./destaques";
 import { cplDe, variacaoPct } from "./cpl";
 import { RETENCAO_DIAS } from "./agregadas";
 import { brl } from "./format";
@@ -289,11 +289,38 @@ export function mesesSemFechamento(ins: InsumosFoto, resumo: ResumoFechamentos, 
     .map((m) => ({ ano: m.ano, mes: m.mes, rotulo: m.label, saida: saidaDaJanela(m.ano, m.mes, hojeYmd) }));
 }
 
-/** O texto que diz o que a foto É. O único ponto da tela que muda se o Thiago decidir que ela vale. */
+/**
+ * O que a foto É. Frase e rótulo curto moram juntos, e são os únicos pontos das telas (/gestores e
+ * Início) que mudam se o Thiago decidir que ela vale.
+ */
 export function textoDoValor(valor: ValorDaFoto): string {
   return valor === "pagamento"
     ? "Fechamento: é este registro que vale para a bonificação do mês."
     : "Registro do fechamento: o que o painel calculou quando o mês foi fechado. Não decide pagamento — a decisão, quando houve, fica registrada fora do painel.";
+}
+
+export const rotuloDoValor = (valor: ValorDaFoto) => (valor === "pagamento" ? "Fechamento" : "Registro do fechamento");
+
+/**
+ * O PÓDIO DA INÍCIO A PARTIR DA FOTO — no formato de `rankingEvolucaoGestores`, e pela mesma regra de
+ * quem entra e em que ordem (`linhasDeEvolucao`). Nenhuma conta é refeita: CPL, variação e
+ * elegibilidade são os gravados. Conferido em 15/09/2026 com agosto real e setembro plantado: a foto
+ * montada com o dado do dia dá os mesmos gestores, ordem, elegibilidade e motivos do cálculo de hoje.
+ * ⚠️ Os NÚMEROS diferem em até 5e-15 (relativo): a foto soma as contas em ordem de id, o cálculo na
+ * ordem do painel. Nenhuma casa exibida muda, e a divergência não compara esses números — mas quem
+ * conferir foto × cálculo com igualdade exata vai ver "diferente" onde não há diferença.
+ */
+export function rankingDaFoto(foto: ConteudoFoto): RankingEvolucao {
+  const [ano, mes] = foto.mes.split("-").map(Number);
+  const [anoA, mesA] = foto.mesAnterior.split("-").map(Number);
+  return {
+    mes: { ano, mes },
+    mesAnterior: { ano: anoA, mes: mesA },
+    linhas: linhasDeEvolucao(foto.gestores.map((g) => ({
+      gestor: g.gestor, cplAtual: g.cplAtual, cplAnterior: g.cplAnterior, variacaoPct: g.variacaoPct,
+      conversoes: g.conversas, elegivel: g.elegivel, motivoInelegivel: g.motivoInelegivel,
+    }))),
+  };
 }
 
 export interface CausaDivergencia {
@@ -426,4 +453,10 @@ export function divergenciasDaFoto(foto: FotoFechamento, ins: InsumosFoto): Dive
   }
 
   return { regua, carteira, dado, dadoIndisponivel };
+}
+
+/** As causas presentes, com o nome que as telas mostram — a mesma lista na /gestores e na Início. */
+export function causasDaDivergencia(d: Divergencias): { nome: string; causa: CausaDivergencia }[] {
+  const todas: [string, CausaDivergencia | null][] = [["régua", d.regua], ["carteira", d.carteira], ["dado", d.dado]];
+  return todas.filter((x): x is [string, CausaDivergencia] => x[1] !== null).map(([nome, causa]) => ({ nome, causa }));
 }

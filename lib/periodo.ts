@@ -223,7 +223,7 @@ export function diaParcialDe(
 }
 
 /** Dia (YYYY-MM-DD) de um instante, no fuso informado. */
-function diaNoFuso(ms: number, fuso: string): string {
+export function diaNoFuso(ms: number, fuso: string): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: fuso, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(ms));
 }
 

@@ -273,7 +273,7 @@ export function rankingEvolucaoGestores(
     if (a.primeiroDiaSerie !== null && (!a.completo || !b.completo)) incompletas.add(c.accountId);
   }
 
-  const linhas: EvolucaoGestor[] = [];
+  const resultado: ResultadoGestorEvolucao[] = [];
   for (const g of pAtual.gestores) {
     const atuais = pAtual.detalhes.find((d) => d.gestor === g.nome)?.clientes ?? [];
     const anteriores = new Map<string, { gasto: number; conversas: number }>();
@@ -281,12 +281,9 @@ export function rankingEvolucaoGestores(
       anteriores.set(c.accountId, { gasto: c.gasto, conversas: c.conversas });
     }
     const d = calcularDestaques(atuais, anteriores, incompletas);
-    // Sem CPL nos dois meses não há evolução para ranquear — a linha simplesmente
-    // não entra (é diferente de "evoluiu 0%", que seria uma afirmação).
-    if (!d || d.cplAtual === null || d.cplAnterior === null || d.deltaPct === null) continue;
-
+    if (!d) continue;
     const eleg = elegibilidadeDestaque(g.conversas, d);
-    linhas.push({
+    resultado.push({
       gestor: g.nome,
       cplAtual: d.cplAtual,
       cplAnterior: d.cplAnterior,
@@ -297,8 +294,39 @@ export function rankingEvolucaoGestores(
     });
   }
 
-  linhas.sort((a, b) => a.variacaoPct - b.variacaoPct); // maior queda primeiro
-  return { mes: { ano, mes }, mesAnterior: ant, linhas };
+  return { mes: { ano, mes }, mesAnterior: ant, linhas: linhasDeEvolucao(resultado) };
+}
+
+/** O resultado de um gestor no mês, antes de decidir se entra no ranking. */
+export interface ResultadoGestorEvolucao {
+  gestor: string;
+  cplAtual: number | null;
+  cplAnterior: number | null;
+  variacaoPct: number | null;
+  conversoes: number;
+  elegivel: boolean;
+  motivoInelegivel: string | null;
+}
+
+/**
+ * QUEM ENTRA NO RANKING DE EVOLUÇÃO E EM QUE ORDEM — a regra única do pódio.
+ *
+ * ⚠️ Dois consumidores: o cálculo de hoje (`rankingEvolucaoGestores`, acima) e a foto do fechamento
+ * (`rankingDaFoto`, lib/fotoFechamento.ts). Se cada um filtrasse e ordenasse do seu jeito, a Início
+ * mostraria um pódio da foto diferente do que o mesmo resultado daria hoje, e a diferença pareceria
+ * divergência de dado.
+ *
+ * Sem CPL nos dois meses não há evolução para ranquear — a linha simplesmente não entra (é diferente
+ * de "evoluiu 0%", que seria uma afirmação). Ordem: maior queda primeiro; o empate fica na ordem de
+ * chegada (gasto decrescente, nos dois consumidores).
+ */
+export function linhasDeEvolucao(resultado: ResultadoGestorEvolucao[]): EvolucaoGestor[] {
+  const linhas: EvolucaoGestor[] = [];
+  for (const g of resultado) {
+    if (g.cplAtual === null || g.cplAnterior === null || g.variacaoPct === null) continue;
+    linhas.push({ ...g, cplAtual: g.cplAtual, cplAnterior: g.cplAnterior, variacaoPct: g.variacaoPct });
+  }
+  return linhas.sort((a, b) => a.variacaoPct - b.variacaoPct);
 }
 
 /**

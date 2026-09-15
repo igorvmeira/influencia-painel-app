@@ -11,10 +11,15 @@ import {
   limitesQuePedemAcao, contasComCplAlto, contasQueGastaramSemConverter,
   CPL_ALERTA, DIAS_ESTOURO_URGENTE, type ContaEmAlerta,
 } from "@/lib/alertas";
-import { intervaloLabel } from "@/lib/periodo";
+import { diaNoFuso, intervaloLabel, momentoSync, rotuloMes } from "@/lib/periodo";
+import {
+  antesDoPrimeiroFechamento, causasDaDivergencia, chaveMes, divergenciasDaFoto, mesesSemFechamento, rankingDaFoto,
+  rotuloDoValor, type InsumosFoto,
+} from "@/lib/fotoFechamento";
+import { useFechamentosDoMes } from "@/lib/useFechamento";
 import { haQuanto } from "@/lib/tempo";
 import { brl, brlDec, num } from "@/lib/format";
-import { TEMA } from "@/lib/brand";
+import { MARCA, TEMA } from "@/lib/brand";
 import { useEntrada } from "@/lib/useEntrada";
 import IndicadorFrescor from "./IndicadorFrescor";
 import AvisoDadoVelho from "./AvisoDadoVelho";
@@ -33,6 +38,8 @@ const MUTED = TEMA.muted;
  * /api/orientacoes já vinham da versão anterior). O acréscimo é **1 documento**, o
  * pré-agregado do comercial. Todo o resto — KPIs, alertas, pódios, funil — é
  * função pura sobre o `daily` que a sessão já carregou. Nenhuma busca nova cara.
+ * Desde 15/09/2026, o pódio lê a foto do fechamento: +1 leitura por SESSÃO (o resumo dos
+ * fechamentos) e +1 quando o mês do pódio tem foto — cache em lib/useFechamento.ts.
  *
  * ⚠️ Os três cards de navegação saíram: a sidebar já faz isso, e eles ocupavam a
  * dobra inteira com informação que o menu repete.
@@ -108,6 +115,34 @@ export default function Inicio() {
     () => (dados ? rankingEvolucaoGestores(daily, contasAtivas, dados.leituraPorConta, dados.inicioJanela) : null),
     [dados, daily, contasAtivas]
   );
+
+  /**
+   * 🔑 O PÓDIO É A FOTO QUANDO O MÊS TEM FOTO (Igor, 15/09/2026) — o mesmo desenho da /gestores: a foto
+   * é o número principal do mês fechado. Sem foto, o pódio é o cálculo de hoje e diz isso.
+   * O mês é sempre o do cálculo (`evolucao.mes`, o mais recente com o anterior inteiro); a foto de outro
+   * mês não entra aqui.
+   */
+  const ins: InsumosFoto | null = useMemo(() => (dados ? {
+    daily: dados.daily, contas: dados.contas, leituraPorConta: dados.leituraPorConta,
+    inicioJanela: dados.inicioJanela, ultimaSync: dados.ultimaSync, ultimoDiaCompleto: dados.ultimoDiaCompleto,
+  } : null), [dados]);
+  const mesPodio = evolucao ? chaveMes(evolucao.mes.ano, evolucao.mes.mes) : null;
+  const pagoSemFoto = evolucao ? antesDoPrimeiroFechamento(evolucao.mes.ano, evolucao.mes.mes) : false;
+  const fech = useFechamentosDoMes(mesPodio);
+  const foto = fech.resposta?.foto && fech.resposta.foto.mes === mesPodio ? fech.resposta.foto : null;
+  const podio = useMemo(() => (foto ? rankingDaFoto(foto) : evolucao), [foto, evolucao]);
+  // Só os NOMES das causas: a explicação de qual dos dois vale para quê mora na /gestores, e cortá-la
+  // aqui arriscaria ler "difere" como "está errada".
+  const causasDiverg = useMemo(
+    () => (foto && ins ? causasDaDivergencia(divergenciasDaFoto(foto, ins)).map((c) => c.nome) : []),
+    [foto, ins]
+  );
+  const hoje = diaNoFuso(Date.now(), MARCA.fuso);
+  const semFechamento = useMemo(
+    () => (fech.resposta && ins ? mesesSemFechamento(ins, fech.resposta.resumo, hoje) : []),
+    [fech.resposta, ins, hoje]
+  );
+  const rotuloPodio = podio ? rotuloMes(podio.mes.ano, podio.mes.mes) : "";
 
   const destaquesNicho = useMemo(
     () => (dados ? destaquesVsNicho(montarNichos(daily, contasAtivas, DIAS_KPI)) : []),
@@ -233,6 +268,19 @@ export default function Inicio() {
                 nomes={semConversao.map((c) => `${c.cliente} ${brlDec(c.gasto)}`)}
                 href="/dashboard"
               />
+              {/* O PRAZO DO FECHAMENTO — a mesma lista do aviso da /gestores (`mesesSemFechamento`), porque
+                  o risco do clique humano é esquecer, e esta é a tela aberta todo dia. Âmbar: é prazo, não
+                  pane. Some sozinho quando o mês ganha foto. */}
+              <LinhaAlerta
+                n={semFechamento.length}
+                cor={TEMA.atencao}
+                texto={semFechamento.length === 1 ? "mês fechado sem registro do fechamento" : "meses fechados sem registro do fechamento"}
+                detalhe="Fecha-se na /gestores. Depois que o mês sai da janela do painel, ele só existe na tela como reconstrução."
+                nomes={semFechamento.map((p) =>
+                  `${p.rotulo} (${p.saida.dias > 0 ? `${p.saida.dias} dia(s) até sair da janela` : "sai da janela na próxima sincronização"})`
+                )}
+                href="/gestores"
+              />
               <LinhaAlerta
                 n={ori?.sem ?? 0}
                 cor={TEMA.muted}
@@ -259,8 +307,8 @@ export default function Inicio() {
         <div>
           <SecaoHeader
             titulo="Melhores do mês"
-            subtitulo={evolucao
-              ? `CPL de ${mesBR(evolucao.mes)} contra ${mesBR(evolucao.mesAnterior)}.`
+            subtitulo={podio
+              ? `CPL de ${mesBR(podio.mes)} contra ${mesBR(podio.mesAnterior)}.`
               : "Sem dois meses fechados na janela."}
             icone="★"
           />
@@ -268,13 +316,27 @@ export default function Inicio() {
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.13em]" style={{ color: MUTED }}>
               Gestores · evolução de CPL
             </p>
-            {!evolucao ? (
+            {!podio ? (
               <p className="text-[12.5px]" style={{ color: MUTED }}>
                 A janela de dados ainda não cobre dois meses fechados.
               </p>
+            ) : !pagoSemFoto && fech.carregando ? (
+              // ⚠️ ESPERA A FOTO ANTES DE MOSTRAR NÚMERO: pintar o cálculo de hoje e trocá-lo pelo registro
+              // um instante depois mudaria o pódio diante de quem está lendo. Mês pago sem foto não espera.
+              <p className="text-[12.5px]" style={{ color: MUTED }}>Lendo o registro do fechamento…</p>
             ) : (
               <>
-                {evolucao.linhas.filter((l) => l.elegivel).slice(0, TOP_DESTAQUES).map((l) => (
+                {/* DE ONDE VEM O PÓDIO — sempre dito, nos quatro casos. */}
+                <p className="mb-1.5 text-[11px] leading-snug" style={{ color: !foto && fech.erro ? TEMA.negativo : MUTED }}>
+                  {foto
+                    ? `${rotuloDoValor(foto.valor)} · versão ${foto.versao} · fechado em ${momentoSync(foto.fechadoEm, MARCA.fuso) ?? "—"}.`
+                    : fech.erro
+                      ? "Não deu para ler os registros de fechamento — abaixo, o cálculo de hoje."
+                      : pagoSemFoto
+                        ? `Cálculo de hoje: ${rotuloPodio} foi pago sem registro do fechamento.`
+                        : `Cálculo de hoje: ${rotuloPodio} ainda sem fechamento.`}
+                </p>
+                {podio.linhas.filter((l) => l.elegivel).slice(0, TOP_DESTAQUES).map((l) => (
                   <div key={l.gestor} className="flex items-baseline justify-between gap-2 py-1 text-[12.5px]">
                     <span style={{ color: TEMA.texto }}>{l.gestor}</span>
                     {/* COLUNA: três gestores empilhados, valores alinhados à direita. */}
@@ -289,11 +351,17 @@ export default function Inicio() {
                 {/* ⚠️ O INELEGÍVEL APARECE, com o motivo. Sumir com ele faria o pódio
                     parecer completo e esconderia que alguém ficou de fora por base
                     furada — que é justamente o que a régua existe para dizer. */}
-                {evolucao.linhas.filter((l) => !l.elegivel).slice(0, 2).map((l) => (
+                {podio.linhas.filter((l) => !l.elegivel).slice(0, 2).map((l) => (
                   <p key={l.gestor} className="mt-1.5 text-[11px] leading-snug" style={{ color: MUTED }}>
                     <b>{l.gestor}</b> fora do pódio: {l.motivoInelegivel}
                   </p>
                 ))}
+                {causasDiverg.length > 0 && (
+                  <p className="mt-1.5 text-[11px] leading-snug" style={{ color: TEMA.atencao }}>
+                    O cálculo de hoje difere deste registro — {causasDiverg.join(", ")}.{" "}
+                    <Link href="/gestores" className="underline" style={{ color: TEMA.ouroTexto }}>ver por quê na /gestores</Link>
+                  </p>
+                )}
               </>
             )}
 

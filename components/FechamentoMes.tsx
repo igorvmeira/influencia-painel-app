@@ -4,22 +4,19 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { DadosPainel } from "@/lib/useDadosPainel";
 import { MARCA, TEMA } from "@/lib/brand";
 import { brlDec } from "@/lib/format";
-import { momentoSync, rotuloMes, ymdParaBR } from "@/lib/periodo";
+import { diaNoFuso, momentoSync, rotuloMes, ymdParaBR } from "@/lib/periodo";
 import {
-  antesDoPrimeiroFechamento, chaveMes, divergenciasDaFoto, liberacaoFechamento, mesesSemFechamento, textoDoValor,
-  MOTIVO_MINIMO_CARACTERES, MSG_FECHAMENTO_RESTRITO,
-  type CausaDivergencia, type Divergencias, type FotoFechamento, type GestorNaFoto, type InsumosFoto, type ResumoFechamentos,
+  antesDoPrimeiroFechamento, causasDaDivergencia, chaveMes, divergenciasDaFoto, liberacaoFechamento, mesesSemFechamento,
+  rotuloDoValor, textoDoValor, MOTIVO_MINIMO_CARACTERES, MSG_FECHAMENTO_RESTRITO,
+  type Divergencias, type FotoFechamento, type GestorNaFoto, type InsumosFoto, type ResumoFechamentos,
 } from "@/lib/fotoFechamento";
-import { buscarFechamentos, ErroFechamento, pedirFechamento, type RespostaPrevia } from "@/lib/useFechamento";
+import { buscarFechamentos, ErroFechamento, esquecerFechamentos, pedirFechamento, type RespostaPrevia } from "@/lib/useFechamento";
 import Modal from "./Modal";
 import DeltaChip from "./DeltaChip";
 
 const MUTED = TEMA.muted;
 const AMBAR = TEMA.atencao;
 const LINE = TEMA.borda;
-
-const hojeNoFuso = () =>
-  new Intl.DateTimeFormat("en-CA", { timeZone: MARCA.fuso, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 
 /**
  * O FECHAMENTO DO MÊS na /gestores — aviso, foto e prévia.
@@ -28,8 +25,9 @@ const hojeNoFuso = () =>
  * aprovado pelo Igor em 15/09/2026). A linha de divergência só aparece quando há diferença, com a
  * causa separada — e o texto sai de lib/fotoFechamento.ts, que diz qual dos dois vale para quê.
  *
- * ⚠️ LIMITE DESTA VERSÃO: os cards, o slope e a decomposição abaixo continuam no cálculo de hoje,
- * e a Início não lê a foto. A foto fica no topo, e o bloco termina dizendo onde começa o cálculo.
+ * ⚠️ LIMITE DESTA VERSÃO: os cards, o slope e a decomposição abaixo continuam no cálculo de hoje.
+ * A foto fica no topo, e o bloco termina dizendo onde começa o cálculo. O pódio da Início lê a foto
+ * desde 15/09/2026 (components/Inicio.tsx), com cache de sessão — por isso gravar limpa esse cache.
  *
  * Custo: 1 leitura por troca de mês (resumo), 2 quando o mês tem foto. Divergência e liberação são
  * calculadas aqui, sobre o `daily` que a sessão já carregou — zero leitura. Prévia e gravação são
@@ -56,7 +54,7 @@ export default function FechamentoMes({ dados, ano, mes }: { dados: DadosPainel;
     daily: dados.daily, contas: dados.contas, leituraPorConta: dados.leituraPorConta,
     inicioJanela: dados.inicioJanela, ultimaSync: dados.ultimaSync, ultimoDiaCompleto: dados.ultimoDiaCompleto,
   }), [dados]);
-  const hoje = hojeNoFuso();
+  const hoje = diaNoFuso(Date.now(), MARCA.fuso);
   const resumo = carregado?.resumo ?? null;
   // A foto só vale para o mês que ela descreve — resposta atrasada de outro mês não aparece aqui.
   const foto = carregado?.chave === chave ? carregado.foto : null;
@@ -65,7 +63,7 @@ export default function FechamentoMes({ dados, ano, mes }: { dados: DadosPainel;
   const diverg = useMemo(() => (foto ? divergenciasDaFoto(foto, ins) : null), [foto, ins]);
   const antigo = antesDoPrimeiroFechamento(ano, mes);
   const fecharPrevia = useCallback(() => setPreviaAberta(false), []);
-  const aoGravar = useCallback(() => { setPreviaAberta(false); setRecarga((n) => n + 1); }, []);
+  const aoGravar = useCallback(() => { esquecerFechamentos(); setPreviaAberta(false); setRecarga((n) => n + 1); }, []);
 
   return (
     <div className="mb-6 space-y-2">
@@ -92,7 +90,7 @@ export default function FechamentoMes({ dados, ano, mes }: { dados: DadosPainel;
       ) : carregado?.chave !== chave ? null : foto ? (
         <section className="p-4" style={{ background: TEMA.card, border: `1px solid ${LINE}`, borderRadius: TEMA.raioCard, boxShadow: TEMA.sombraCard }}>
           <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: MUTED }}>
-            {foto.valor === "pagamento" ? "Fechamento" : "Registro do fechamento"} · {rotulo} · versão {foto.versao}
+            {rotuloDoValor(foto.valor)} · {rotulo} · versão {foto.versao}
           </p>
           <p className="mt-1 text-[12.5px]" style={{ color: TEMA.texto }}>{textoDoValor(foto.valor)}</p>
           <p className="mt-1 text-[12px]" style={{ color: MUTED }}>
@@ -170,18 +168,17 @@ function TabelaGestores({ gestores, selo, mesAnterior, mes }: { gestores: Gestor
 }
 
 function LinhasDivergencia({ d }: { d: Divergencias }) {
-  const causas: [string, CausaDivergencia | null][] = [["régua", d.regua], ["carteira", d.carteira], ["dado", d.dado]];
   return (
     <div className="mt-3 space-y-2">
-      {causas.filter(([, c]) => c).map(([nome, c]) => (
+      {causasDaDivergencia(d).map(({ nome, causa: c }) => (
         <div key={nome} className="rounded-lg px-3 py-2 text-[12.5px]" style={{ background: TEMA.limiteFundo, color: TEMA.texto }}>
-          <p><b style={{ color: AMBAR }}>O cálculo de hoje difere da foto — {nome}.</b> {c!.resumo}</p>
-          <p className="mt-0.5">{c!.explicacao}</p>
+          <p><b style={{ color: AMBAR }}>O cálculo de hoje difere da foto — {nome}.</b> {c.resumo}</p>
+          <p className="mt-0.5">{c.explicacao}</p>
           {/* A dobra anuncia o que tem dentro; o alerta em si fica aberto acima dela. */}
           <details className="mt-1">
-            <summary className="cursor-pointer text-[12px]">Ver {c!.itens.length === 1 ? "o item" : `os ${c!.itens.length} itens`}</summary>
+            <summary className="cursor-pointer text-[12px]">Ver {c.itens.length === 1 ? "o item" : `os ${c.itens.length} itens`}</summary>
             <ul className="mt-1 list-disc pl-5 text-[12px]">
-              {c!.itens.map((i, k) => <li key={k}>{i}</li>)}
+              {c.itens.map((i, k) => <li key={k}>{i}</li>)}
             </ul>
           </details>
         </div>

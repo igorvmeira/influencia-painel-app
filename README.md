@@ -491,7 +491,19 @@ dinâmico fica invisível — e isso não é um caso torto, é um jeito normal d
     o último dia do mês não está completo, se o mês não é comparável ou se alguma conta ativa parou
     de ser lida antes do fim. Julho e agosto de 2026 não podem ser fotografados.
   · Fechar exige estar em `FILA_EMAILS_PERMITIDOS`; a prévia abre para quem está logado.
-  · Custo: a /gestores lê +1 documento por troca de mês (o resumo), +1 quando o mês tem foto.
+  · Custo: a /gestores lê +1 documento por troca de mês (o resumo), +1 quando o mês tem foto. A
+    Início lê +1 por sessão (o resumo) e +1 quando o mês do pódio tem foto — cache de sessão, limpo
+    quando um mês é fechado na mesma sessão.
+  · ✅ **A Início lê a foto (15/09/2026).** O pódio "Melhores do mês" vem da foto quando o mês dele tem
+    foto, com o rótulo do valor e a versão; quando o cálculo de hoje difere, uma linha curta com o nome
+    das causas manda para a /gestores, onde está o texto de qual dos dois vale para quê. Sem foto, o
+    pódio é o cálculo de hoje e diz isso ("ainda sem fechamento", ou "pago sem registro" para julho e
+    agosto). O prazo de fechar aparece em "Precisa de ação", pela mesma lista da /gestores. Quem entra
+    no pódio e em que ordem é uma regra só (`linhasDeEvolucao`, `lib/destaques.ts`).
+    Conferido com o dado de 15/09 e setembro plantado: o cálculo de hoje não mudou com a extração; a
+    foto montada com o mesmo dado dá os mesmos gestores, ordem, elegibilidade e motivos, com os números
+    diferindo em até 5e-15 — a soma corre em outra ordem, e comparação exata acusa diferença onde não
+    há; troca de carteira depois da foto muda o cálculo e não o pódio da foto. Não vista na tela (login).
   Conferido com casos plantados e dado real: a foto de agosto e de julho dá o mesmo selo,
   elegibilidade e variação da tela; liberação nos quatro casos; saída da janela (agosto 01/11,
   setembro 02/12); cada causa de divergência isolada, sem texto dizendo que a foto está errada;
@@ -499,8 +511,8 @@ dinâmico fica invisível — e isso não é um caso torto, é um jeito normal d
   intacta — numa coleção de teste que FICOU no banco (`teste_fotosFechamento_1789486947166`, 3 docs).
   ⚠️ **Não exercitada ponta a ponta na tela:** exige login, e o primeiro mês fechável é setembro.
   📌 **Pendências:** (1) abaixo da foto, cards, slope e decomposição seguem no cálculo de hoje — ok
-  por decisão do Igor (15/09/2026) enquanto o bloco disser isso, e ele diz; a Início ler a foto fica
-  para depois; (2) ✅ a leitura de `FILA_EMAILS_PERMITIDOS`, copiada em três rotas, foi consolidada
+  por decisão do Igor (15/09/2026) enquanto o bloco disser isso, e ele diz; ✅ a Início passou a ler
+  a foto no mesmo dia (acima); (2) ✅ a leitura de `FILA_EMAILS_PERMITIDOS`, copiada em três rotas, foi consolidada
   em `lib/listaDeEmails.ts` (15/09/2026), e a /api/ia usa a mesma leitura com a env dela; a coleção
   de teste da gravação foi apagada no mesmo dia; (3) remedição da mudança por dia de atraso
   contra a Meta em 16/09 (vigia em segundo plano), que confirma ou derruba a liberação no dia 1.
