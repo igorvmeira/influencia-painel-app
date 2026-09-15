@@ -373,7 +373,25 @@ Duas pendências anotadas, nenhuma urgente:
   guardava dados desde 31/05; sem ela, nenhuma conta ativa tem junho inteiro na janela.
   A `/conciliacao` passa a listar a ISP4 entre as estacionadas com "planilha diz dono ISMAIL" —
   é sugestão, não escrita; enquanto a linha estiver na aba do ISMAIL, ela fica lá.
-- 📌 **Próxima obra (15/09/2026): a saída/troca com data.** O painel reescreve mês fechado toda
+- ✅ **Resolvido (15/09/2026): DRA. ANA PAULA e TRAJETO reativadas** (→ ISMAIL e → VINÍCIUS, as
+  abas delas na planilha). Veiculavam todos os dias desde 17/08 e 25/08 e estavam marcadas como
+  paradas. Decisão do Igor: reativar se nenhum selo mudar. Medido com a régua nova em quatro
+  cenários (carteira atual, cada uma sozinha, as duas): nenhum selo muda na /gestores nem na
+  Início, e agosto continua o único mês oferecido. Mudou na tela: agosto do ISMAIL CPL R$ 12,68 →
+  R$ 12,75 (−9,26% → −8,74%) e do VINÍCIUS variação 5,10% → 5,13%. Gravadas por script com prévia
+  (aba da planilha conferida contra o destino) e leitura de volta; coleção inteira depois: 40
+  pausadas, 40 no balde PAUSADO, 0 divergentes. ⚠️ Pela régua antiga a mesma reativação tiraria o
+  selo de agosto do ISMAIL (a DRA. ANA PAULA contava como base incompleta) — era o que a travava.
+- 📌 **Ordem decidida (Igor, 15/09/2026): a janela de 95 dias ANTES da saída com data.** A saída
+  com data muda agosto na tela de novo: a ISP4 volta para o ISMAIL até 15/09 e, pelo histórico
+  gravado, a DRA. ANA PAULA e a TRAJETO saem dos dias de agosto em que estavam no balde PAUSADO.
+  **O que a janela resolve e o que não resolve (calculado em 15/09/2026):** agosto deixa de ser
+  oferecido na /gestores na sincronização de 05/10/2026 com 95 dias, e na de 01/11/2026 com os
+  122 dias propostos — janela maior ADIA, não evita; setembro sai em 05/11 ou 02/12. Nesse dia
+  some a TELA, não o dado: `metricasDiarias` guarda julho e agosto inteiros desde 02/04/2026
+  (2.352 e 2.346 linhas conta-dia, iguais ao agregado). Manter um mês pago à vista é outra obra —
+  foto do fechamento, ou leitura sob demanda do granular para mês fora da janela. Sem decisão.
+- 📌 **Depois dela: a saída/troca com data.** O painel reescreve mês fechado toda
   vez que uma conta sai ou troca de gestor, porque `montarPainel` soma cada conta inteira no
   gestor que ela tem hoje e as telas tiram a conta pausada de todos os meses. Não iniciada.
   ⚠️ **Ela não fecha o problema inteiro:** correção de regra e a janela de 95 dias continuam

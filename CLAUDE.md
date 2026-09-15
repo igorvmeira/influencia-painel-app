@@ -1141,9 +1141,9 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
 
   | mecanismo | caso real | o que mudou na tela |
   |---|---|---|
-  | troca de gestor (estacionar incluído) | Hotel Oscar e CAMPEZZA em 08/09; ISP4 em 15/09 | agosto do LUCAS: CPL R$ 20,74 → R$ 21,36. Agosto do ISMAIL: R$ 14,71 → R$ 12,68 (−4,76% → −9,26%) |
+  | troca de gestor (estacionar e reativar incluídos) | Hotel Oscar e CAMPEZZA em 08/09; ISP4 estacionada e DRA. ANA PAULA e TRAJETO reativadas em 15/09 | agosto do LUCAS: CPL R$ 20,74 → R$ 21,36. Agosto do ISMAIL: R$ 14,71 → R$ 12,68 (−4,76% → −9,26%) sem a ISP4, e → R$ 12,75 (−8,74%) com a DRA. ANA PAULA. Agosto do VINÍCIUS: variação 5,10% → 5,13% |
   | correção de regra | base incompleta, 15/09 | selo de agosto ISMAIL → WEDER, com a carteira da manhã de 15/09 |
-  | janela de retenção (95 dias) | julho sem selo desde ~05/09 (estimado pela fórmula, não observado) | julho some da /gestores em 15/09. Agosto deixa de ser comparável na 1ª sincronização de 05/10/2026 (calculado em 15/09) |
+  | janela de retenção (95 dias) | julho sem selo desde ~05/09 (estimado pela fórmula, não observado) | julho some da /gestores em 15/09. Agosto deixa de ser oferecido na 1ª sincronização de 05/10/2026 (calculado em 15/09). **Some a TELA, não o dado:** `metricasDiarias` guarda julho e agosto inteiros desde 02/04 (medido em 15/09: 2.352 e 2.346 linhas conta-dia, iguais ao agregado) |
 
   📌 **AGOSTO/2026 FOI PAGO COM A RÉGUA ANTIGA DE BASE INCOMPLETA** (Igor, 15/09/2026), e o
   retroativo não se mexe. **O que a tela mostra de agosto depois de 15/09 NÃO é o que embasou
@@ -1151,16 +1151,19 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
 
   | leitura de agosto | selo | ISMAIL em agosto |
   |---|---|---|
-  | régua antiga, ISP4 na carteira | ISMAIL | CPL R$ 14,71 · −4,76% |
-  | régua nova, ISP4 na carteira | WEDER (−7,81%) | CPL R$ 14,71 · −4,76% |
-  | **régua nova, ISP4 estacionada — a tela depois de 15/09** | **ISMAIL** | **CPL R$ 12,68 · −9,26%** |
+  | régua antiga; ISP4 na carteira, DRA. ANA PAULA e TRAJETO pausadas | ISMAIL | CPL R$ 14,71 · −4,76% |
+  | régua nova, mesma carteira | WEDER (−7,81%) | CPL R$ 14,71 · −4,76% |
+  | régua nova, ISP4 estacionada | ISMAIL | CPL R$ 12,68 · −9,26% |
+  | **régua nova, ISP4 estacionada, DRA. ANA PAULA e TRAJETO reativadas — a tela depois de 15/09** | **ISMAIL** | **CPL R$ 12,75 · −8,74%** |
 
   ⚠️ **O NOME NO SELO VOLTOU A SER O MESMO — e é por isso que esta nota precisa existir.** Quem
   comparar o pagamento com a tela vai ver ISMAIL nos dois e concluir que batem. Não batem: na
   régua antiga o ISMAIL levou porque o WEDER, 1º em evolução, foi barrado por dois falsos
   positivos (WELL e AZM, contas que só começaram a veicular em agosto); na tela de hoje ele
-  leva por ter a maior queda, −9,26%, que só existe sem a ISP4. **Mesmo nome, outro motivo,
-  outro número.** Coincidência que parece conferência é o pior caso desta família.
+  leva por ter a maior queda, −8,74%, que só existe sem a ISP4 e com a DRA. ANA PAULA. **Mesmo
+  nome, outro motivo, outro número.** E a coincidência é mais frágil do que parece: pela régua
+  antiga, a carteira do fim de 15/09 daria o selo ao LUCAS (a DRA. ANA PAULA contaria como base
+  incompleta do ISMAIL). Coincidência que parece conferência é o pior caso desta família.
   🕳️ **E nenhuma das três linhas é foto do dia do pagamento.** A data em que agosto foi
   decidido não está no painel, e a carteira de agosto já tinha mudado em 08/09. As linhas são
   o dado de 15/09 recalculado — reconstrução, não registro (ver *NÚMERO DE MÊS FECHADO QUE
