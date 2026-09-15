@@ -15,6 +15,8 @@ export interface DadosPainel {
   ultimoDiaCompleto: string | null;
   /** O dia que ficou de fora por estar incompleto, ou null. */
   diaParcial: string | null;
+  /** Primeiro dia garantido pela janela da última sync (lib/data.ts). */
+  inicioJanela: string | null;
 }
 
 // Cache de SESSÃO (módulo): busca /api/painel uma vez e reusa entre as telas

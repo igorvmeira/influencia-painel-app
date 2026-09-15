@@ -14,7 +14,7 @@ import { estiloDe } from "@/lib/semaforo";
 import { brl, brlDec, num, pct } from "@/lib/format";
 import { montarKpis, montarKpisMes, moedaCard, numCard, serieGrafico, serieGraficoMes } from "@/lib/kpis";
 import {
-  janelaMes, intervaloLabel, janelaPersonalizada, primeiroDiaDisponivel,
+  janelaMes, intervaloLabel, janelaPersonalizada, inicioDisponivel, momentoSync, motivoDiaBloqueado,
   ultimoDiaDisponivel, comparacaoExigeDesde, ymdParaBR, diasSobrepostos, rotuloMes,
 } from "@/lib/periodo";
 import { MARCA, TEMA } from "@/lib/brand";
@@ -27,6 +27,7 @@ import KpiCard from "./KpiCard";
 import DeltaChip from "./DeltaChip";
 import CplValor from "./CplValor";
 import { compararCpl, explicaSemCpl } from "@/lib/cpl";
+import { RETENCAO_DIAS } from "@/lib/agregadas";
 import BarraDado from "./BarraDado";
 import Modal from "./Modal";
 import OrientacaoDoCliente from "./OrientacaoDoCliente";
@@ -215,14 +216,8 @@ function difTamanhoPct(a: number, b: number): number {
 // do servidor (`diaParcial`), pela data do sync — ver `separarDiaParcial` em lib/data.ts.
 
 // "HH:MM" do último sync no fuso do cliente.
-function horaSync(iso: string | null): string | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  return new Intl.DateTimeFormat("pt-BR", {
-    timeZone: MARCA.fuso, hour: "2-digit", minute: "2-digit", hour12: false,
-  }).format(d);
-}
+// NOTA (15/09/2026): existia aqui um `horaSync()` que devolvia só "12:48". Lido às 9h do dia
+// seguinte, parecia horário de hoje. Saiu para `momentoSync` (lib/periodo.ts), sempre com data.
 
 type ColCliente = "cliente" | "tipo" | "gasto" | "conversas" | "cplSemanal";
 
@@ -249,12 +244,14 @@ function Info({ texto }: { texto: string }) {
 }
 
 export default function Dashboard(
-  { daily, contas, fonte, ultimaSync, limites, diaParcial }:
+  { daily, contas, fonte, ultimaSync, limites, diaParcial, inicioJanela }:
   {
     daily: MetricaDiaria[]; contas: ContaMap[]; fonte: "firestore" | "mock"; ultimaSync: string | null;
     limites: LimiteConta[];
     /** O dia que o servidor tirou dos dados por estar incompleto (lib/data.ts), ou null. */
     diaParcial: string | null;
+    /** Primeiro dia garantido pela janela da última sync (lib/data.ts), ou null. */
+    inicioJanela: string | null;
   }
 ) {
   // Seletor de período: agora filtra de verdade, recomputando o painel a partir
@@ -283,10 +280,11 @@ export default function Dashboard(
   // Orientações (indicador discreto na linha da conta). Degrada gracioso se falhar.
   const { mapa: orientacoes, recarregar: recarregarOrientacoes } = useOrientacoes();
 
-  // ---- Limites do histórico disponível (janela móvel do agregado, ~95 dias) ----
-  // Só contas ATIVAS: o mínimo global pegaria dias órfãos de conta pausada
-  // (ver comentário em lib/periodo.ts).
-  const primeiroDia = useMemo(() => primeiroDiaDisponivel(daily, contasAtivas), [daily, contasAtivas]);
+  // ---- Limites do histórico disponível (janela móvel do agregado) ----
+  // ⚠️ O início vem da JANELA QUE O SYNC GARANTE (`inicioJanela`), não da menor data entre as
+  // contas: até 15/09/2026 uma conta com doc parado (ISP4, 31/05) fazia a tela afirmar dados
+  // desde 31/05 para 82 contas que começavam em 11/06. Ver `inicioDisponivel`.
+  const primeiroDia = useMemo(() => inicioDisponivel(daily, contasAtivas, inicioJanela), [daily, contasAtivas, inicioJanela]);
   const ultimoDia = useMemo(() => ultimoDiaDisponivel(daily, contasAtivas), [daily, contasAtivas]);
 
   // Período personalizado: por padrão, a última semana FECHADA — o caso de uso que motivou
@@ -339,10 +337,11 @@ export default function Dashboard(
       ? janelaPersonalizada(
           daily, contasAtivas, custIni, custFim,
           compValido ? compIni : undefined,
-          compValido ? compFim : undefined
+          compValido ? compFim : undefined,
+          inicioJanela
         )
       : null),
-    [modoCustom, daily, contasAtivas, custIni, custFim, compValido, compIni, compFim]
+    [modoCustom, daily, contasAtivas, custIni, custFim, compValido, compIni, compFim, inicioJanela]
   );
   // Janela explícita ativa (mês OU personalizado). No modo dia, é null.
   const jm = modoCustom ? jmCustom : jmMes;
@@ -392,10 +391,10 @@ export default function Dashboard(
       return `comparação indisponível: exigiria dados desde ${desdeBR(exigidoYmd)}, o histórico do painel começa em ${desdeBR(primeiroDia)}`;
     }
     if (modoMes) return null; // o modo mês já tem o selo "dados parciais" próprio
-    const exigido = comparacaoExigeDesde(daily, contasAtivas, diasEfetivos);
+    const exigido = comparacaoExigeDesde(daily, contasAtivas, diasEfetivos, inicioJanela);
     if (!exigido) return null;
     return `comparação indisponível: exigiria dados desde ${desdeBR(exigido)}, o histórico do painel começa em ${desdeBR(primeiroDia)}`;
-  }, [primeiroDia, modoCustom, modoMes, jmCustom, custIni, compValido, compIni, daily, contasAtivas, diasEfetivos]);
+  }, [primeiroDia, modoCustom, modoMes, jmCustom, custIni, compValido, compIni, daily, contasAtivas, diasEfetivos, inicioJanela]);
 
   // ---- Tamanhos diferentes: o Δ de gasto/conversões carrega o dia a mais ----
   // CPL é RAZÃO e continua justo; gasto e conversões são SOMAS. Avisamos em vez de
@@ -448,11 +447,35 @@ export default function Dashboard(
   // modos (7/15/30/60, Mês e personalizado) já terminam, no máximo, no último dia completo.
   const avisoParcial = useMemo(() => {
     if (!diaParcial) return null;
-    const hora = horaSync(ultimaSync);
+    const quando = momentoSync(ultimaSync, MARCA.fuso);
     const ddmm = (ymd: string) => ymdParaBR(ymd).slice(0, 5);
     return `dados até ${ultimoDia ? ddmm(ultimoDia) : "—"} · ${ddmm(diaParcial)} ainda incompleto`
-      + `${hora ? ` (sincronizado às ${hora})` : ""}, fora dos números`;
+      + `${quando ? ` (sincronizado em ${quando})` : ""}, fora dos números`;
   }, [diaParcial, ultimoDia, ultimaSync]);
+
+  // ---- Ao lado do calendário: por que o dia não pode ser escolhido, e quando entra ----
+  // Calendário que só desabilita parece quebrado (caso do Roberto, 15/09/2026). A regra de
+  // qual dia está incompleto é do servidor; a frase só a redige. Ver `motivoDiaBloqueado`.
+  const motivoBloqueio = useMemo(
+    () => motivoDiaBloqueado(diaParcial, ultimaSync, Date.now(), MARCA.fuso),
+    [diaParcial, ultimaSync]
+  );
+
+  // Data digitada fora do limite: a janela APARA em silêncio (lib/periodo.ts corta o fim no
+  // último dia completo). Quem apara diz o motivo.
+  const ajusteDatas = useMemo(() => {
+    if (!modoCustom) return null;
+    const partes: string[] = [];
+    const depoisDoFim = (v: string) => !!v && !!ultimoDia && v > ultimoDia;
+    const antesDoInicio = (v: string) => !!v && !!primeiroDia && v < primeiroDia;
+    if (ultimoDia && (depoisDoFim(custFim) || (compValido && depoisDoFim(compFim)))) {
+      partes.push(`o fim foi ajustado para ${ymdParaBR(ultimoDia)}, o último dia completo`);
+    }
+    if (primeiroDia && (antesDoInicio(custIni) || (compValido && antesDoInicio(compIni)))) {
+      partes.push(`antes de ${ymdParaBR(primeiroDia)} as contas não têm dado no painel, e o total desses dias fica incompleto`);
+    }
+    return partes.length ? `⚠ ${partes.join("; ")}.` : null;
+  }, [modoCustom, ultimoDia, primeiroDia, custIni, custFim, compValido, compIni, compFim]);
 
   // Dia 1º do mês: o mês novo ainda não tem nenhum dia completo, e o "Mês" mostra o
   // anterior inteiro. Quem apara diz o motivo — sem isto, "Setembro" no dia 1º de outubro
@@ -671,16 +694,19 @@ export default function Dashboard(
                 style={{ background: INK, color: TEXTO, border: `1px solid ${LINE}` }}
               />
             </label>
-            <p className="pb-2 text-[11px]" style={{ color: MUTED }}>
-              {primeiroDia && `Dados disponíveis a partir de ${ymdParaBR(primeiroDia)}`}
-              {ultimoDia && ` até ${ymdParaBR(ultimoDia)}.`}
-              {!compAtivo && (
-                <>
-                  <br />
-                  Comparação: mesmo nº de dias imediatamente antes do início.
-                </>
+            {/* O LIMITE e o MOTIVO ficam aqui, colados no calendário: o campo de data do
+                navegador só desabilita, e bloqueio sem motivo parece defeito. */}
+            <div className="pb-2 text-[11px] leading-relaxed" style={{ color: MUTED }}>
+              {primeiroDia && ultimoDia && (
+                <p>
+                  Dá para escolher de {ymdParaBR(primeiroDia)} a {ymdParaBR(ultimoDia)} — o painel guarda
+                  os últimos {RETENCAO_DIAS} dias.
+                </p>
               )}
-            </p>
+              {motivoBloqueio && <p style={{ color: TEXTO }}>{motivoBloqueio}</p>}
+              {ajusteDatas && <p style={{ color: TEXTO }}>{ajusteDatas}</p>}
+              {!compAtivo && <p>Comparação: mesmo nº de dias imediatamente antes do início.</p>}
+            </div>
           </div>
 
           {/* Segundo período: fechado por padrão. Quem só quer a janela atual não

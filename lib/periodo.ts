@@ -164,6 +164,25 @@ export function primeiroDiaDisponivel(daily: MetricaDiaria[], contas: ContaMap[]
 }
 
 /**
+ * O PRIMEIRO DIA QUE O SELETOR PODE OFERECER: o mais TARDIO entre o início da janela que o
+ * sync garante (`piso`, publicado pelo servidor em `inicioJanela`) e o primeiro dia com dado
+ * entre as contas.
+ *
+ * 🛑 Sem o piso, o mínimo sai de QUALQUER conta — e basta uma. Medido em 15/09/2026: a ISP4,
+ * cujo doc agregado o sync não reescreve desde 03/09, ainda guardava 31/05, enquanto 82 das
+ * 83 contas ativas começavam em 11/06. O Dashboard escrevia "dados disponíveis a partir de
+ * 31/05/2026", falso para 82 contas. É o mesmo mecanismo que fazia a /gestores oferecer
+ * julho como comparável (ver CLAUDE.md, "o seletor lista o que consegue montar").
+ * ⚠️ `mesesDisponiveis` ainda decide pelo mínimo global — mexer nele muda o selo de julho,
+ * e isso está pendente de decisão.
+ */
+export function inicioDisponivel(daily: MetricaDiaria[], contas: ContaMap[], piso?: string | null): string | null {
+  const primeiro = primeiroDiaDisponivel(daily, contas);
+  if (!primeiro || !piso) return primeiro;
+  return primeiro > piso ? primeiro : piso;
+}
+
+/**
  * O dia que está INCOMPLETO nos dados, ou null.
  *
  * Regra: o último dia com dado é parcial quando a última sincronização aconteceu NELE
@@ -188,6 +207,57 @@ export function diaParcialDe(
     timeZone: fuso, year: "numeric", month: "2-digit", day: "2-digit",
   }).format(t); // en-CA formata como YYYY-MM-DD
   return diaDoSync === ultimoDiaComDado ? ultimoDiaComDado : null;
+}
+
+/** Dia (YYYY-MM-DD) de um instante, no fuso informado. */
+function diaNoFuso(ms: number, fuso: string): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: fuso, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(ms));
+}
+
+/**
+ * "14/09 às 12:48" — o momento de uma sincronização, SEMPRE com a data, no fuso da marca.
+ *
+ * ⚠️ Só a hora não basta. "Sincronizado às 12:48", lido às 9h do dia seguinte, parece
+ * horário de HOJE — que ainda nem chegou. Caso real (15/09/2026): o Roberto não conseguia
+ * escolher o dia 14 e leu o travamento como defeito.
+ */
+export function momentoSync(iso: string | null, fuso: string): string | null {
+  if (!iso) return null;
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return null;
+  const [, m, d] = diaNoFuso(t, fuso).split("-");
+  const hora = new Intl.DateTimeFormat("pt-BR", { timeZone: fuso, hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(t));
+  return `${d}/${m} às ${hora}`;
+}
+
+/**
+ * POR QUE o dia depois do último completo não pode ser escolhido, e QUANDO ele entra — a
+ * frase que vai AO LADO do calendário, onde a pessoa está clicando.
+ *
+ * ⚠️ O relógio de quem lê entra só na REDAÇÃO ("hoje", "ontem"). A DECISÃO de qual dia está
+ * incompleto continua vindo do servidor (`diaParcial`, pela data do sync). Até 14/09/2026
+ * existia um `hojeNoFuso()` que DECIDIA pelo relógio e fazia o aviso sumir justamente com o
+ * sync caído. Aqui, sync atrasado muda a frase ("não rodou desde então") — não a esconde.
+ */
+export function motivoDiaBloqueado(
+  diaParcial: string | null,
+  ultimaSyncIso: string | null,
+  agoraMs: number,
+  fuso: string
+): string | null {
+  const quando = momentoSync(ultimaSyncIso, fuso);
+  if (!quando || !ultimaSyncIso) return null;
+  if (!diaParcial) return `Última sincronização: ${quando}.`;
+  const [, m, d] = diaParcial.split("-");
+  const dia = `${d}/${m}`;
+  const diaDoSync = diaNoFuso(Date.parse(ultimaSyncIso), fuso);
+  if (diaDoSync === diaNoFuso(agoraMs, fuso)) {
+    return `O ${dia} ainda não entra: foi sincronizado hoje (${quando}), com o dia em andamento. Entra na sincronização de amanhã.`;
+  }
+  if (diaDoSync === diaNoFuso(agoraMs - DIA_MS, fuso)) {
+    return `O ${dia} ainda não entra: foi sincronizado em ${quando}, com o dia pela metade. Entra assim que a sincronização de hoje rodar.`;
+  }
+  return `O ${dia} ainda não entra: foi sincronizado em ${quando}, com o dia pela metade, e a sincronização não rodou desde então. Entra quando ela voltar a rodar.`;
 }
 
 // Último dia COM DADO (YYYY-MM-DD) — a âncora, e o teto do seletor.
@@ -250,10 +320,12 @@ export function janelaPersonalizada(
   inicioYmd: string,
   fimYmd: string,
   compIniYmd?: string,
-  compFimYmd?: string
+  compFimYmd?: string,
+  /** Início da janela garantida pelo sync (`inicioJanela`). Ver `inicioDisponivel`. */
+  piso?: string | null
 ): JanelaMes | null {
   const { ancoraMs } = ancoraMin(daily, contas);
-  const primeiro = primeiroDiaDisponivel(daily, contas);
+  const primeiro = inicioDisponivel(daily, contas, piso);
   if (!inicioYmd || !fimYmd) return null;
 
   let iniMs = Date.parse(inicioYmd + "T00:00:00Z");
@@ -347,10 +419,12 @@ export function diasSobrepostos(
 export function comparacaoExigeDesde(
   daily: MetricaDiaria[],
   contas: ContaMap[],
-  periodoDias: number
+  periodoDias: number,
+  /** Início da janela garantida pelo sync (`inicioJanela`). Ver `inicioDisponivel`. */
+  piso?: string | null
 ): string | null {
   const { ancoraMs } = ancoraMin(daily, contas);
-  const primeiro = primeiroDiaDisponivel(daily, contas);
+  const primeiro = inicioDisponivel(daily, contas, piso);
   if (!primeiro) return null;
   const exigidoMs = ancoraMs - (2 * periodoDias - 1) * DIA_MS;
   if (exigidoMs >= Date.parse(primeiro + "T00:00:00Z")) return null; // cabe

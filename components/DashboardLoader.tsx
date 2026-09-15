@@ -22,7 +22,7 @@ export default function DashboardLoader() {
   return (
     <Dashboard
       daily={dados.daily} contas={dados.contas} fonte={dados.fonte} ultimaSync={dados.ultimaSync}
-      limites={dados.limites} diaParcial={dados.diaParcial ?? null}
+      limites={dados.limites} diaParcial={dados.diaParcial ?? null} inicioJanela={dados.inicioJanela ?? null}
     />
   );
 }

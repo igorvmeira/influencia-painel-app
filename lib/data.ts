@@ -1,6 +1,6 @@
 import { getDb } from "./firebaseAdmin";
 import { mockDiario, mockLimites, mockContas } from "./mock";
-import { COL_AGREGADAS } from "./agregadas";
+import { COL_AGREGADAS, cutoffRetencao } from "./agregadas";
 // ⚠️ Este arquivo LÊ o doc que app/api/sync-meta ESCREVE. Os dois diziam "sync" à mão:
 // um erro de digitação em qualquer um dos lados não daria erro — criaria um documento
 // novo, o outro leria vazio, e o painel passaria a dizer que nunca sincronizou.
@@ -26,6 +26,14 @@ export interface DadosDiarios {
   ultimoDiaCompleto: string | null;
   /** O dia que ficou DE FORA por estar incompleto (YYYY-MM-DD), ou null. Diz na estrutura até onde o número vale. */
   diaParcial: string | null;
+  /**
+   * Primeiro dia que a janela do agregado GARANTE para toda conta que a última sync reescreveu
+   * (YYYY-MM-DD) — `cutoffRetencao` aplicado ao instante da sync, a mesma conta que o sync faz
+   * ao podar. null sem sync.
+   * ⚠️ NÃO é a menor data dos dados: doc que o sync não reescreve guarda dias mais antigos
+   * (a ISP4 guardava 31/05 com as outras 82 contas começando em 11/06, medido em 15/09/2026).
+   */
+  inicioJanela: string | null;
 }
 
 // De-para indexado por accountId (chave única). Ignora docs repetidos do mesmo
@@ -86,7 +94,7 @@ export async function getDadosDiarios(): Promise<DadosDiarios> {
   const db = getDb();
   if (!db) {
     const mock = mockDiario();
-    return { ...mock, ...separarDiaParcial(mock.daily, null), fonte: "mock", ultimaSync: null, limites: mockLimites };
+    return { ...mock, ...separarDiaParcial(mock.daily, null), fonte: "mock", ultimaSync: null, limites: mockLimites, inicioJanela: null };
   }
   if (cacheDados && Date.now() < cacheDados.expira) return cacheDados.dados;
 
@@ -108,7 +116,10 @@ export async function getDadosDiarios(): Promise<DadosDiarios> {
   const limites = limitesSnap.docs.map((d) => d.data() as LimiteConta);
   const { daily, ultimoDiaCompleto, diaParcial } = separarDiaParcial(todosOsDias, ultimaSync);
 
-  const dados: DadosDiarios = { daily, contas, fonte: "firestore", ultimaSync, limites, ultimoDiaCompleto, diaParcial };
+  const instanteSync = ultimaSync ? Date.parse(ultimaSync) : NaN;
+  const inicioJanela = Number.isNaN(instanteSync) ? null : cutoffRetencao(instanteSync);
+
+  const dados: DadosDiarios = { daily, contas, fonte: "firestore", ultimaSync, limites, ultimoDiaCompleto, diaParcial, inicioJanela };
   cacheDados = { dados, expira: Date.now() + TTL_MS };
   return dados;
 }
