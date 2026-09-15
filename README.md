@@ -304,14 +304,20 @@ Duas pendências anotadas, nenhuma urgente:
   "regra única" do painel. Em 14/09 eram **41 contas no balde PAUSADO** entrando no que a IA
   descreve: nos totais, no CPL geral e como se "PAUSADO" fosse um gestor. Frase de IA
   ninguém confere contra a tela, então a divergência não aparece sozinha.
-- 📌 **Pendência (14/09/2026): `lib/destaques.ts` tem cópia própria de `cplDe`.** Ela exige
-  conversão e NÃO exige gasto, ao contrário de `lib/cpl.ts`. Gestor com conversões e gasto
-  zero no mês teria CPL 0 e variação −100%, entraria no pódio da Início como a maior melhora
-  e, com 100+ conversões, passaria na elegibilidade do selo. **Medido em 14/09/2026: nenhum
-  gestor com conversão e gasto zero, em nenhuma janela** — trocar pela função de `lib/cpl.ts`
-  não muda número nenhum hoje. Não feito sem aprovação porque é o código do selo.
-  Consequência de deixar: a /gestores (já protegida) e a Início podem divergir no dia em que o
-  caso aparecer.
+- ✅ **Resolvido (14/09/2026): a cópia própria de `cplDe` em `lib/destaques.ts` saiu.** Ela
+  exigia conversão e não exigia gasto — gestor com conversões e gasto zero entraria no pódio
+  da Início com −100% enquanto a /gestores já devolvia `null`. Trocada pela de `lib/cpl.ts`
+  com conferência antes×depois no mesmo dado: pódio da Início e decomposição da /gestores de
+  julho e agosto idênticos. A régua que ela deixou está no CLAUDE.md ("proteção que funciona
+  pelo dado, e não pelo código").
+- 📌 **Pendência (14/09/2026): o selo da /gestores pode ir para gestor SEM variação.** A fila
+  (`premiado` em `components/Gestores.tsx`) põe quem não tem variação no FIM, mas não o tira.
+  Se todos os gestores com variação forem inelegíveis, o selo vai para um sem evolução — e a
+  Início, que exclui essas linhas do pódio, não daria selo a ninguém: as duas telas
+  divergiriam. `elegibilidadeDestaque` olha volume e base, não a existência da variação.
+  Achado por caso plantado (gestor sintético com 150 conversões e gasto zero); **em julho e
+  agosto nenhum gestor ficou sem variação**, então hoje nada muda. Conserto provável: tirar da
+  fila quem tem `cplVar === null`. Não feito sem aprovação: é o código do selo.
 - 📌 **Decisão (14/09/2026): não medir criativo ao vivo com 5+ conversões e gasto zero.** Era o
   único caso em que o CPL 0 abria o ranking de criativos do Dashboard em 1º, em dourado, e
   medir custa uma chamada à Meta por conta.

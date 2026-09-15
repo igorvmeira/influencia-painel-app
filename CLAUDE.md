@@ -574,6 +574,26 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   de depender do que não foi apagado.
   Junto com o vazio ambíguo e o `situacaoDoAnuncio`: **a tela nunca deve afirmar mais do que
   a fonte sabe.**
+- 🛑🛑 **FONTE QUE NÃO CONSEGUE CONTER O CASO NÃO PROVA QUE ELE NÃO EXISTE — e este erro
+  passou por DOIS, não por um.**
+  Caso real (14/09/2026). No conserto do CPL 0 dos criativos sobrou um caso sem medir:
+  anúncio ao vivo com 5+ conversões e gasto zero, o único que abriria o ranking de criativos
+  em 1º. Eu escrevi que "no cache dos meses fechados esse caso não existe, porque só
+  guardamos anúncio com gasto". **A frase se desmente sozinha:** o cache descarta gasto zero
+  ANTES de gravar (`buscarCriativosPeriodo` filtra `gasto > 0`), então ele é cego por
+  construção justamente para o caso perguntado. O que ela provava era outra coisa — que o
+  melhor/pior dos meses já gravados não mudava.
+  **E o Igor aceitou a frase e decidiu em cima dela** ("um caso que o cache mostra não
+  existir"). A decisão ficou certa — não medir —, mas pelo motivo errado. O motivo certo é
+  que a tela passou a tratar o caso se ele vier; medir diria QUANTOS, não se está certo.
+  🔑 **Por que passou pelos dois:** quem escreve já acredita, e quem lê recebe uma frase com
+  a forma de uma medição. Nenhum dos dois perguntou *"se o caso existisse, esta fonte teria
+  como mostrá-lo?"*. É a revisão que falha exatamente quando a frase soa como dado — e duas
+  pessoas concordando não somam conferência nenhuma se nenhuma das duas olhou o filtro.
+  ⚠️ **A régua: antes de usar uma fonte como prova de AUSÊNCIA, confira se o filtro dela
+  deixaria o caso entrar.** Se não deixaria, a fonte não diz nada — nem sim, nem não —, e a
+  frase certa é "daqui não dá para saber". É o `me/adaccounts` que não lista parceria de BM,
+  só que dentro do nosso próprio cache: o filtro é nosso, e por isso ninguém lembra dele.
 - ⚠️ **ALARME QUE DISPARA TODO DIA VIRA RUÍDO QUE NINGUÉM LÊ.** Ao ligar uma verificação
   automática, separe o que **deriva** do que **quebra**:
   · comparação contra uma foto de referência **diverge sozinha** com o tempo (a base é
@@ -959,6 +979,37 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   regra existente (conversões elegíveis em vez de totais), e aí ela passa a cobrir a classe.
   Quando uma proteção parece já funcionar, pergunte por que — se a resposta for um valor
   específico da base de hoje, ela vai falhar quando a base mudar.
+- 🛑🛑 **PROTEÇÃO QUE FUNCIONA PELO DADO, E NÃO PELO CÓDIGO, É SORTE COM PRAZO.** "Nenhum caso
+  hoje" descreve a BASE, não o sistema. No dia em que a base mudar — um cliente novo, uma
+  conversão atribuída a uma conta sem gasto — a proteção some sem ninguém ter mexido em nada,
+  e não há commit para investigar.
+  Caso real (14/09/2026). A cópia de `cplDe` em `lib/destaques.ts` exigia conversão e não
+  exigia gasto. Um gestor com conversões e gasto zero teria CPL 0, −100% e o 1º lugar do
+  pódio da Início; com 100+ conversões passaria até na elegibilidade do selo. Não acontecia
+  porque nenhum gestor tinha gasto zero — o único guarda era o dado. E a fila do selo da
+  /gestores, com a mesma pergunta, já estava protegida por `variacaoPct`: **duas telas
+  respondendo "quem evoluiu mais" com duas regras, e a divergência esperando o primeiro caso.**
+  🔧 A troca pela função de `lib/cpl.ts` saiu com conferência antes×depois no mesmo dado:
+  pódio da Início e decomposição da /gestores de julho e agosto — 16 gestor-mês, 166
+  contribuições conta a conta, 462 pontos de série — **idênticos**.
+  ⚠️ **E o "idêntico" era o esperado, não o mérito:** o universo tinha 0 contas com conversão
+  e gasto zero, então o ramo que mudou nunca rodou na conferência. Ela prova que nada mudou
+  HOJE; não prova que o código novo trata o caso. Para isso o caso foi PLANTADO — um gestor
+  sintético com 150 conversões e gasto zero, rodado nos dois códigos. No antigo ele entrava no
+  pódio com −100%; no novo, sai.
+  🕳️ **E o plantio achou o que a conferência não acharia:** `elegibilidadeDestaque` continua
+  respondendo `elegível: true` para esse gestor, porque olha volume e base, não se a variação
+  EXISTE. Na /gestores o selo vai para o primeiro elegível da fila, e quem não tem variação
+  fica no FIM dela — mas continua NA fila. Se todos os gestores com variação forem
+  inelegíveis, o selo iria para um gestor sem evolução, enquanto a Início (que exclui essas
+  linhas) não daria selo a ninguém. Em julho e agosto nenhum gestor ficou sem variação: é a
+  mesma sorte com prazo, um andar abaixo. Pendência no `README.md`.
+  🔑 **A régua: quando a justificativa de uma proteção é "não há caso", aponte a LINHA que
+  barra o caso quando ele vier.** Se a resposta for "nenhuma, mas ele não existe", é pendência
+  com prazo desconhecido — e vai para lugar VISÍVEL (README, esta seção), nunca só para um
+  comentário ao lado da linha, que só quem já está no arquivo lê. É o degrau acima da regra
+  anterior: lá a proteção dependia de um VALOR da base; aqui dependia da AUSÊNCIA de um caso,
+  que se confunde ainda mais fácil com desenho.
 
 ## Mudanças estruturais em dados (migração segura)
 - Quando trocar a fonte de leitura de uma tela, faça em **duas etapas**:
@@ -1288,14 +1339,13 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   Aberto o commit que o criou, o motivo era CPL indefinido; o volume mínimo é o piso de 100,
   noutra função. Afrouxar o piso não abriria a porta — ela já estava aberta pelo lado do gasto.
   🔧 **O que mudou em 14/09/2026:** na /gestores a proteção passou a ser `variacaoPct`, que
-  devolve `null` para as duas ausências por desenho — e continua valendo se o filtro sair.
-  **O que NÃO mudou:** `lib/destaques.ts` tem cópia própria de `cplDe` que exige conversão e
-  não exige gasto, e ela alimenta o pódio da Início e a decomposição da /gestores. Ali o lado
-  do gasto zero segue aberto — sem caso hoje e sem trava (pendência no `README.md`). É a
-  mesma regra morando em dois lugares, e só um deles foi consertado.
-  🔑 **A régua: quando uma proteção parece funcionar, aponte a LINHA que a garante.** Se a
-  resposta for um filtro posto por outro motivo, ou uma propriedade do dado de hoje, ela não
-  existe. O teste é imaginar o filtro removido — e procurar a mesma conta em outro arquivo.
+  devolve `null` para as duas ausências por desenho — e continua valendo se o filtro sair. A
+  mesma regra morava numa segunda cópia, em `lib/destaques.ts` (pódio da Início), com o lado
+  do gasto zero aberto; ela saiu no mesmo dia. A régua que isso deixou tem seção própria: ver
+  *PROTEÇÃO QUE FUNCIONA PELO DADO, E NÃO PELO CÓDIGO* (em *O QUE NÃO É CONFERIDO NÃO É
+  GRAVADO*).
+  🔑 **A régua: quando uma proteção parece funcionar, aponte a LINHA que a garante.** O teste
+  é imaginar o filtro removido — e procurar a mesma conta em outro arquivo.
 - ⚠️ **DUAS RÉGUAS PARA O MESMO DADO É DESENHO, NÃO DUPLICAÇÃO — quando respondem a
   perguntas diferentes.** "Quantas contas estão perto do teto de gasto" (ESTADO) e "quais
   exigem alguém fazer algo hoje" (AÇÃO) saem dos mesmos dois campos e não são a mesma

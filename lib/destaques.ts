@@ -1,6 +1,7 @@
 import { ContaMap, LinhaCliente, MetricaDiaria } from "./types";
 import { JanelaMes, coberturaMes, janelaMesFechado, mesesDisponiveis } from "./periodo";
 import { montarPainel } from "./painel";
+import { cplDe } from "./cpl";
 
 // ===========================================================================
 // DESTAQUES CALCULADOS POR REGRA — Análise de Gestores
@@ -85,11 +86,11 @@ export interface Destaques {
   somaConfere: boolean;
 }
 
-// ⚠️ CÓPIA DA REGRA DE CPL, e DIFERENTE da de lib/cpl.ts: esta exige conversão e NÃO exige
-// gasto. Gestor com conversões e gasto zero teria CPL 0 e variação −100% aqui — no pódio da
-// Início e na decomposição da /gestores —, enquanto a fila do selo da /gestores já devolve
-// `null`. Medido em 14/09/2026: nenhum caso. Pendência no README ("cópia própria de cplDe").
-const cplDe = (gasto: number, conv: number): number | null => (conv > 0 ? gasto / conv : null);
+// ⚠️ O CPL VEM DE lib/cpl.ts (import no topo). Até 14/09/2026 morava aqui uma cópia que
+// exigia conversão e NÃO exigia gasto: gestor com conversões e gasto zero teria CPL 0 e
+// variação −100% no pódio da Início e na decomposição da /gestores, enquanto a fila do selo
+// já devolvia `null`. Nenhum caso existia — a proteção era o dado, não o código. Trocada com
+// conferência antes×depois de todos os meses fechados (números idênticos).
 
 const DIA_MS = 86400000;
 
