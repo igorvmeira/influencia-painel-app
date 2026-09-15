@@ -1168,11 +1168,29 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   decidido não está no painel, e a carteira de agosto já tinha mudado em 08/09. As linhas são
   o dado de 15/09 recalculado — reconstrução, não registro (ver *NÚMERO DE MÊS FECHADO QUE
   MUDA*, logo acima).
+  📌 **JULHO/2026 VOLTA À TELA — registrado ANTES de aplicar (15/09/2026).** A extensão dos docs
+  agregados para trás (16/05..11/06, fonte Meta) devolve junho inteiro à janela, e julho volta a
+  ser oferecido na /gestores com **selo do LUCAS (−26,34%, nenhuma conta incompleta)** — calculado
+  hoje, sobre a carteira de hoje. **Ninguém sabe o que a tela mostrava quando julho foi pago:** a
+  data do pagamento não está no painel, e desde então o julho de três gestores mudou por troca de
+  carteira (Hotel Oscar e CAMPEZZA estacionadas em 08/09 mexeram no LUCAS e no JOÃO PEDRO; a ISP4
+  estacionada em 15/09 levou o julho do ISMAIL de CPL R$ 15,45 para R$ 13,97), e a régua de base
+  incompleta foi corrigida no mesmo dia. O selo que volta não é o que embasou o pagamento. Aplicado às 15:26 UTC e
+  conferido na tela: início da carteira 16/05, julho com selo LUCAS (−26,34%), agosto intacto (ISMAIL).
+  🛑 **É a TERCEIRA VEZ em uma semana que um mês pago aparece na tela com número diferente** —
+  agosto em 08/09 (estacionamento), agosto em 15/09 (régua, ISP4 e reativações) e julho em 15/09
+  (extensão da janela). Nenhum foi erro: cada conserto estava certo. **Isso é o argumento da foto
+  do fechamento, não um detalhe dela** — sem foto, cada correção certa sobrescreve um registro que
+  nunca chegou a existir.
   🔑 **Por que não se resolve consertando caso a caso.** A saída com data acaba com o primeiro
   mecanismo e não toca nos outros dois: correção de regra e janela continuam reescrevendo o
   passado. Só a **foto do fechamento** torna a tela um registro. Ela seria o resultado do mês
   gravado uma vez, quando o mês fecha, e nunca recalculado: números por gestor, elegibilidade,
-  selo, carteira e versão da régua. **Não existe em 15/09/2026, e não há decisão sobre ela.**
+  selo, carteira e versão da régua. **Construída em 15/09/2026 (lib/fotoFechamento.ts), com o
+  primeiro mês fechável em setembro/2026 — o botão libera em 01/10.** Nasce como REGISTRO: se ela
+  vale para a bonificação é decisão pendente do Thiago, e promovê-la é mudar uma linha
+  (`VALOR_DA_FOTO_NOVA`) e o texto da tela, não a arquitetura. Julho e agosto de 2026 não têm foto
+  e não podem ganhar uma: seria o cálculo de hoje com cara de registro do pagamento.
   ⚠️ **A régua, enquanto a foto não existir:**
   1. **Mês exibido não é mês pago.** A pergunta "o que embasou o pagamento" não se responde
      abrindo a tela; responde-se com o registro de quem pagou, fora do painel.

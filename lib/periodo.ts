@@ -596,11 +596,7 @@ export function coberturaMes(
   }
 
   const fimExigido = ultimoDaCarteira !== "" && ultimoDaCarteira < ultimoDiaMes ? ultimoDaCarteira : ultimoDiaMes;
-  const falta: CoberturaMes["falta"] =
-    leitura === null ? "semLeitura"
-      : leitura.desde > primeiroDiaMes ? "inicio"
-        : leitura.ate < fimExigido ? "fim"
-          : null;
+  const falta = faltaDaLeitura(leitura, primeiroDiaMes, fimExigido);
 
   return {
     completo: falta === null,
@@ -611,6 +607,24 @@ export function coberturaMes(
     diasComDado,
     diasNoMes: D,
   };
+}
+
+/**
+ * A régua de `coberturaMes` sem a série: o que falta da janela de leitura para cobrir
+ * [primeiroDiaMes, fimExigido]. null quando cobre.
+ * ⚠️ EXPORTADA para a foto do fechamento reaplicar a régua de HOJE à leitura GRAVADA
+ * (lib/fotoFechamento.ts) sem uma segunda cópia da regra — duas cópias divergiriam, e a
+ * divergência apareceria na tela como "a régua mudou".
+ */
+export function faltaDaLeitura(
+  leitura: JanelaLeitura | null,
+  primeiroDiaMes: string,
+  fimExigido: string
+): CoberturaMes["falta"] {
+  if (leitura === null) return "semLeitura";
+  if (leitura.desde > primeiroDiaMes) return "inicio";
+  if (leitura.ate < fimExigido) return "fim";
+  return null;
 }
 
 /** O que falta, em texto curto para a tela — "dados a partir de 12/06". null quando completo. */

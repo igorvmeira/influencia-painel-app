@@ -36,6 +36,12 @@ export const COL_LIMITES = "limitesConta";
 /** Documentos de controle: cursores de sync, fila de contas novas, ignoradas. */
 export const COL_SISTEMA = "sistema";
 
+/**
+ * Fotos do fechamento de mês: um documento por VERSÃO (`AAAA-MM_vN`), criado uma vez e nunca
+ * sobrescrito — refechar cria a versão seguinte, com motivo. Ver lib/fotoFechamento.ts.
+ */
+export const COL_FOTOS_FECHAMENTO = "fotosFechamento";
+
 // ---- documentos dentro de `sistema` ---------------------------------------
 
 /**
@@ -63,6 +69,13 @@ export const DOC_DISPARO_WORKFLOWS = "disparoWorkflows";
  * que exige prazo e motivo.
  */
 export const DOC_FALHAS_CIENTES = "falhasCientes";
+
+/**
+ * Resumo dos fechamentos de mês: `meses[AAAA-MM] = { versao, id, fechadoEm, valor }`. É o que a
+ * /gestores lê para saber se um mês tem foto (uma leitura) antes de ler a foto em si. Escrito na
+ * MESMA transação que cria a versão (lib/fechamentoServidor.ts) — os dois nunca discordam.
+ */
+export const DOC_FECHAMENTOS = "fechamentos";
 
 /**
  * Cursor do sync do comercial (Xmax).

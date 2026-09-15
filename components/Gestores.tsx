@@ -28,6 +28,7 @@ import CardGestor from "./CardGestor";
 import CplValor from "./CplValor";
 import { compararCpl, compararVariacao, explicaSemCpl, variacaoPct } from "@/lib/cpl";
 import SlopeCpl from "./SlopeCpl";
+import FechamentoMes from "./FechamentoMes";
 import BarraSplit from "./BarraSplit";
 
 // O waterfall é o ÚNICO ponto desta tela que usa recharts, e só aparece quando o
@@ -439,6 +440,10 @@ export default function Gestores() {
               </span>
             )}
           </div>
+
+          {/* A FOTO DO FECHAMENTO vem antes de todo número do mês: quando existe, é ela o número
+              principal, e o bloco diz onde começa o cálculo de hoje (components/FechamentoMes.tsx). */}
+          {dados && sel && <FechamentoMes dados={dados} ano={sel.ano} mes={sel.mes} />}
 
           {/* Slope: a evolução dos 8 num relance, antes do detalhe.
               ⚠️ A legenda vira SUBTÍTULO do cabeçalho em vez de texto solto à direita:

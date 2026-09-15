@@ -405,20 +405,56 @@ Duas pendências anotadas, nenhuma urgente:
   · o modal da conta perde a variação quando o painel não leu os dois períodos DAQUELA conta: hoje
     o 60d mostra "—" com o motivo (exigiria dados desde 18/05, o painel lê desde 12/06);
   · o calendário do Dashboard calcula os dias disponíveis em vez de afirmar "guarda os últimos N".
-  ⚠️ **Os docs NÃO foram estendidos para trás.** Crescem um dia por sincronização desde 12/06 e
-  chegam aos 122 em 12/10/2026; até lá o 60d do Dashboard continua sem comparação. Estender traria
-  julho de volta à /gestores — mês pago — e é decisão à parte (o `backfill-conjuntos` com
-  `dias=123` faria isso; está marcado para não rodar sem decisão).
+  ✅ **Docs estendidos para trás em 15/09/2026** (decisão do Igor, depois de prévia com custo).
+  Fonte Meta, faixa 16/05..11/06: 121 docs (1.790 linhas) e 81 linhas no granular das 3 contas
+  cadastradas em 07/09 (SIGA ON, VOX ITABUNA, VIVA CONNECTION). ⚠️ A primeira prévia usava o
+  granular como fonte e deixava as três de fora — e a extensão inteira não mudaria a tela, porque
+  o início da carteira é o `desde` mais TARDIO entre as ativas: uma conta sem extensão segura todas.
+  Conferência antes de gravar: nos 1.730 dias-conta em que granular e Meta existem, zero diferenças.
+  Custo real: 572 leituras, 202 gravações, 121 chamadas à Meta — a prévia estimou 242 leituras e
+  181 gravações e deixou de fora a leitura do plano e a de volta do granular. Lido de volta: 121
+  docs com `lidoDesde` 16/05, nenhum errado. Conferido na tela depois: início da carteira 16/05;
+  julho de volta com selo LUCAS (−26,34%, registrado ANTES no CLAUDE.md); agosto intacto (ISMAIL
+  −8,74%); comparação de 7/15/30/60d no Dashboard e 60d no modal das 84 contas. O
+  `backfill-conjuntos` com `dias=123` continua marcado para não rodar sem decisão.
   Conferência antes×depois com o código de produção, no dado real: meses oferecidos, selo de agosto
   (ISMAIL), pódio da Início, "Mês", calendário e comparação de 7/15/30/60d idênticos; o modal da
   conta em 7/15/30d igual nas 84 contas ativas, e em 60d as 84 perdem a variação com o motivo.
   Casos plantados (doc parado, conta nova truncada, exigência do calendário, doc legado, conta nova,
   agosto em 05/10 e em 01/11, modal com leitura curta, parada e ausente): todos no esperado.
-- 📌 **Decidido (Igor, 15/09/2026): a foto do fechamento entra, com prazo em 01/10/2026** — o dia em
-  que setembro fecha, a primeira chance de fotografar um mês antes de ele ser pago. Desenho ainda
-  não decidido (o que guarda, quem tira, o que a tela mostra quando foto e cálculo divergem, e se a
-  foto é o que vale para bonificação). Medido em 15/09 com agosto: só por gestor 3,1 kB; com a
-  composição conta a conta 31,9 kB; com a série diária 453,8 kB (44% do limite de um documento).
+- ✅ **Construída (15/09/2026): a foto do fechamento** — decisão do Igor, prazo 01/10/2026 (quando
+  setembro fecha, a primeira chance de fotografar um mês antes de ele ser pago).
+  **Desenho aprovado:** resultado por gestor + composição conta a conta, sem série diária (medido com
+  agosto: 3,1 kB só por gestor, 31,9 kB com a composição, 453,8 kB com a série; a foto real ficou em
+  25 kB); clique humano; aviso na /gestores a partir do dia 1 com os dias até o mês sair da janela;
+  a foto é o número principal, e a linha de divergência só aparece quando o cálculo de hoje difere,
+  com a causa separada em régua, carteira ou dado — e o texto diz qual dos dois vale para quê,
+  nunca que a foto está errada.
+  · **Nasce como REGISTRO** (`VALOR_DA_FOTO_NOVA` em `lib/fotoFechamento.ts`). 📌 **Decisão pendente
+    do Thiago:** se a foto vale para a bonificação. Se valer, muda essa linha e o texto de
+    `textoDoValor` — nada mais.
+  · Já pronta para valer: prévia antes de gravar (o servidor monta o conteúdo e só grava se a
+    assinatura for a da prévia — sync novo ou troca de carteira no meio recusa), quem fechou (e-mail
+    do token, gravado junto de "login compartilhado, não identifica a pessoa"), versões que nunca se
+    sobrescrevem (`fotosFechamento/AAAA-MM_vN`, resumo em `sistema/fechamentos`) e refechamento com
+    motivo de pelo menos 20 caracteres.
+  · **O botão libera no dia 1**, por medição (15/09/2026): de um sync para o seguinte, nenhuma
+    conversão mudou nos 30 dias mais recentes (83 contas) e o gasto mudou 0,03% só nos 7 mais
+    recentes; depois dos 30 dias do sync, zero diferença em 1.730 dias-conta contra a Meta. Trava se
+    o último dia do mês não está completo, se o mês não é comparável ou se alguma conta ativa parou
+    de ser lida antes do fim. Julho e agosto de 2026 não podem ser fotografados.
+  · Fechar exige estar em `FILA_EMAILS_PERMITIDOS`; a prévia abre para quem está logado.
+  · Custo: a /gestores lê +1 documento por troca de mês (o resumo), +1 quando o mês tem foto.
+  Conferido com casos plantados e dado real: a foto de agosto e de julho dá o mesmo selo,
+  elegibilidade e variação da tela; liberação nos quatro casos; saída da janela (agosto 01/11,
+  setembro 02/12); cada causa de divergência isolada, sem texto dizendo que a foto está errada;
+  gravação v1, recusa 409 com prévia velha, recusa 400 sem motivo, v2 substituindo a v1 com a v1
+  intacta — numa coleção de teste que FICOU no banco (`teste_fotosFechamento_1789486947166`, 3 docs).
+  ⚠️ **Não exercitada ponta a ponta na tela:** exige login, e o primeiro mês fechável é setembro.
+  📌 **Pendências:** (1) abaixo da foto, cards, slope e decomposição seguem no cálculo de hoje, e a
+  Início não lê a foto; (2) a leitura de `FILA_EMAILS_PERMITIDOS` tem três cópias (sync-planilha,
+  fila-contas, fechamento) — mudar uma obriga as outras; (3) remedição da mudança por dia de atraso
+  contra a Meta em 16/09 (vigia em segundo plano), que confirma ou derruba a liberação no dia 1.
 - 📌 **Depois dela: a saída/troca com data.** O painel reescreve mês fechado toda
   vez que uma conta sai ou troca de gestor, porque `montarPainel` soma cada conta inteira no
   gestor que ela tem hoje e as telas tiram a conta pausada de todos os meses. Não iniciada.
