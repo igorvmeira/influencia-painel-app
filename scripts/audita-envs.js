@@ -19,6 +19,11 @@
  * sabendo dizer onde a cobertura dele ACABA. E cada padrão reconhecido foi visto reprovando
  * um defeito plantado antes de ser confiado.
  *
+ * 🛑 ANTES DE CONFIAR NO "Tudo certo" (15/09/2026): este auditor confere por BUSCA DE TEXTO, não
+ * lendo o código como código, e sete dos dez pontos em que ele faz isso podem aprovar o que está
+ * errado. Pega o caso descuidado e perde o caso torto — é lembrete, não garantia. A lista dos dez,
+ * separada por risco, está no README (*O auditor de envs é lembrete, não garantia*).
+ *
  * Sai com código 1 se reprovar. Rodar: `node scripts/audita-envs.js`
  */
 const fs = require("fs");

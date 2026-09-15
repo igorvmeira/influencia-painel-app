@@ -916,6 +916,9 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
      acesso a `process.env` e reprova quando algum não é explicado por um padrão que ele
      reconhece. Não é cobertura total — é saber declarar o que não vê. "Tudo certo" passa a
      querer dizer "certo dentro do que eu leio, e eu leio todos".
+     📌 **Correção (15/09/2026): isso vale só para a contagem de `process.env`.** O resto do auditor
+     também confere por busca de texto, e sete de dez pontos dele podem aprovar o que está errado —
+     é lembrete, não garantia. Lista e saída no README, *O auditor de envs é lembrete, não garantia*.
   2. **Cada padrão é visto reprovando um defeito PLANTADO antes de ser confiado — e o
      plantio só conta se a mensagem CITAR o que foi plantado.** No teste, o auditor antigo
      também deu "REPROVADO" em dois dos três plantios — por um motivo sem relação (não

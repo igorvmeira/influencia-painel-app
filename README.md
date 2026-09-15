@@ -297,6 +297,53 @@ Duas pendências anotadas, nenhuma urgente:
   ~25s de 60 com 400 ids por chamada; 800 ids ainda cabem. Subir o `maxDuration` trataria
   o sintoma e deixaria a chamada mais longa e mais cara de repetir quando falhasse.
 
+## O auditor de envs é lembrete, não garantia
+
+`node scripts/audita-envs.js` confere se cada módulo declara as envs que lê, se as rotas de cron
+compõem tudo o que alcançam e se o `.env.example` está completo. **Ele faz isso por BUSCA DE TEXTO
+no arquivo, não lendo o código como código** — e isso muda o que o "Tudo certo" dele vale.
+
+🛑 **Levantado em 15/09/2026, lendo o auditor inteiro: dez pontos funcionam por busca de texto, e
+SETE deles podem aprovar o que está errado.** Ele não é uma conferência com pontos cegos: é uma busca
+de texto que se parece com conferência. **Pega o caso descuidado e perde o caso torto. Serve como
+lembrete, não como garantia** — quem ler "Tudo certo" não deve concluir que as envs estão conferidas.
+
+As três falhas que ele já teve têm essa forma — o padrão de leitura sem desestruturação (12–14/09),
+a lista de rotas de cron mantida à mão (15/09) e o nome de uma declaração achado num comentário
+(15/09) —, e a do teste da foto do fechamento também (ver CLAUDE.md, *conferência por busca de
+palavra*).
+
+**Podem aprovar o que está errado:**
+
+| # | onde (em `scripts/audita-envs.js`) | o que ele busca | como aprova errado |
+|---|---|---|---|
+| 1 | verificação 2 — "chama `conferirEnvs`?" | o texto `conferirEnvs(` no arquivo, com comentários | um comentário citando a chamada basta — o caso de 15/09, noutra linha |
+| 2 | verificação 2 — "compõe?" | o texto dentro de `comporEnvs(...)` | não confere se o resultado é o que chega a `conferirEnvs`; parêntese aninhado quebra a leitura |
+| 3 | `alcancaveis` e `resolver` | `import … from "…"` e as extensões `.ts`, `.tsx`, `/index.ts` | módulo alcançado por `require`, `export … from` ou `import()` dinâmico — ou em `/index.tsx` e `.js` — fica fora do grafo, e as envs dele somem da verificação 2 |
+| 4 | `blocosEnvs` e `envsDeclaradas` | qualquer texto maiúsculo entre aspas dentro do bloco `ENVS_*`, com as chaves contadas no texto | nome entre aspas num comentário dentro do bloco conta como declarado; chave dentro de string desalinha o bloco |
+| 5 | `envsLidas` nas verificações 1, 2 e 3 | `process.env.X` no arquivo com comentários (só a verificação 0 tira comentário) | um comentário citando uma env esconde a declaração que ninguém mais lê |
+| 6 | verificação 1b — leitura dos workflows | `schedule:` e URLs `https://…/api/…` escritas no workflow | URL montada por variável ou secret: a rota de cron nem é detectada, e a verificação 2 nunca a olha |
+| 7 | verificação 3 — leitura do `.env.example` | qualquer linha `# NOME=` (de propósito, para opções comentadas) | um exemplo em prosa com `NOME=` também conta como documentada |
+
+**Só dão alarme a mais:**
+
+| # | onde | o que acontece |
+|---|---|---|
+| 8 | `RE_PONTO` e `contarAcessos` | `process.env.X` dentro de string (uma mensagem de erro) conta como leitura, ou como acesso fora dos padrões reconhecidos |
+| 9 | `semComentarios` | tira comentário por linha — não é leitor de código, e o próprio comentário da função diz isso |
+
+**Listas mantidas à mão:**
+
+| # | onde | o que acontece |
+|---|---|---|
+| 10 | `ROTAS_DE_CRON` e `PODE_LER_DINAMICO` | envelhecem caladas; a primeira é vigiada pela verificação 1b, que depende do item 6 |
+
+📌 **Não consertado, de propósito (decisão do Igor, 15/09/2026).** Se um dia valer a pena, a saída
+**não é tapar os dez — é ler o código como código** (a árvore de sintaxe do TypeScript, não o texto):
+chamada é chamada, comentário não é código, e import de qualquer forma é aresta do grafo.
+🔑 **Por onde começar: o item 3.** Módulo alcançado por `require`, `export … from` ou `import()`
+dinâmico fica invisível — e isso não é um caso torto, é um jeito normal de escrever código.
+
 ## Próximos passos
 - 📌 **Pendência (14/09/2026): o contexto da IA não filtra conta pausada.**
   `lib/iaContexto.ts` monta o painel com a carteira INTEIRA (`montarPainel(daily, contas, …)`),
