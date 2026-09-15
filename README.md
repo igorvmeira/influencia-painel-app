@@ -333,17 +333,22 @@ Duas pendências anotadas, nenhuma urgente:
   **Critério, em 7 dias no ar:** disparo aceito até 09:05 UTC e execução começando até 09:15
   UTC em todos os dias. Se não cumprir, a opção volta à mesa — e a tela continua dizendo a
   verdade no meio-tempo ("entra assim que a sincronização de hoje rodar").
-- 📌 **Pendência (15/09/2026): ISP4 (ISMAIL) sem leitura na Meta desde 04/09.** A Meta responde
-  #200 ("o dono da conta não concedeu ads_read") — e responde igual para conta inexistente, mas o
-  mesmo id devolveu dado até 03/09, então o provável é acesso retirado. LINK 10 e DIQUALI, as
-  duas pausadas, falham pelo mesmo código. **Não estacionar antes da conversa com o Thiago:**
-  estacionar tira a ISP4 de todos os meses, e ela foi 22,8% do gasto de agosto do ISMAIL.
-  O que fazer: perguntar ao Roberto/ISMAIL por que o acesso saiu e pedir ao cliente que
-  conceda de novo. Marca de "sem acesso, ciente" em `sistema/falhasCientes`, **válida até
-  22/09/2026** — depois disso o sync volta a ficar vermelho por ela.
-  ⚠️ **E a tela não avisa:** o setembro do ISMAIL aparece sem a ISP4. Estimativa (não dado),
-  se ela seguiu no ritmo de agosto: ~R$ 1.191 e ~37 conversões fora; CPL do ISMAIL em
-  setembro ~R$ 13,23 na tela contra ~R$ 14,40 com ela.
+- 📌 **Pendência (15/09/2026): a ISP4 (ISMAIL) SAIU da carteira** (confirmado pelo Igor em
+  15/09) — foi a saída que retirou o acesso: a Meta responde #200 desde 04/09. A planilha a
+  marca como "0 - PAUSADO" (lida em 11/09), mas isso NÃO provava a saída: na planilha
+  PAUSADO é relação comercial, e 11 contas PAUSADO lá seguiam veiculando em 10/09 (ver
+  `lib/conciliaPlanilha.ts`). Setembro sem ela é o número certo: não há o que faltar depois
+  da saída.
+  **O caminho para tirá-la vai para a conversa com o Thiago, porque o único que resolve
+  mexe em agosto.** Simulado em 15/09/2026 com o código real:
+  · estacionar → ISMAIL agosto R$ 14,71 → R$ 12,68 e julho R$ 15,45 → R$ 13,97; variação
+    −4,76% → −9,26%, e ele passa o WEDER. Régua de hoje: selo segue ISMAIL. Régua corrigida:
+    selo **WEDER → ISMAIL**;
+  · lápide em `sistema/contasRemovidas` ou renovar a marca de ciente → agosto intacto (nenhum
+    código de número lê as duas), mas nenhuma resolve: a conta segue "ativa" e o sync volta a
+    ficar vermelho quando a marca vence.
+  Marca de "sem acesso, ciente" em `sistema/falhasCientes` **válida até 18/09/2026**, motivo
+  "cliente saiu da carteira, acesso retirado pelo dono".
 - 📌 **Decisão pendente (15/09/2026): `sync-comercial` e `sync-planilha` continuam INDEPENDENTES**
   do `sync-meta`, no agendamento próprio do GitHub. Encadear ao fim do `sync-meta` criaria um
   ponto único de falha entre fontes que não dependem uma da outra (Xmax, planilha e Meta).
