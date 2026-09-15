@@ -596,6 +596,23 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   para QUALQUER conferência que trate ausência como resposta. Se a fonte não deixaria o caso
   entrar, ela não diz nada — nem sim, nem não —, e a frase certa é "daqui não dá para saber".
   No cache o risco é maior que na API: o filtro é nosso, e por isso ninguém lembra dele.
+- 🛑🛑 **O SELETOR LISTA O QUE CONSEGUE MONTAR, NÃO O QUE CONSEGUE COMPARAR — e basta UM
+  item fora do padrão para abrir a porta para todos.** A régua do vazio ambíguo virada do
+  avesso: lá a lista vazia escondia o que existia; aqui a lista cheia oferece o que não existe.
+  Caso real (15/09/2026). A /gestores oferecia julho como mês comparável, e em julho ninguém
+  levava o selo: 81 de 83 contas apareciam com "junho incompleto". `mesesDisponiveis` decide
+  a oferta pela MENOR data de QUALQUER conta ativa; a cobertura que barra o selo é cobrada
+  CONTA A CONTA. A menor data era da ISP4, cujo doc agregado não é reescrito desde 03/09 e
+  por isso ainda guarda 31/05 — a poda da janela só acontece quando o sync reescreve o doc.
+  As outras 82 começavam em 11/06 ou depois. **Sem a ISP4, julho nem seria oferecido.** O
+  `primeiroDiaDisponivel` do Dashboard decide pela mesma menor data global.
+  🔑 **Por que engana:** a oferta e o julgamento usam agregações diferentes da mesma
+  população — uma olha o MELHOR caso, a outra exige de TODOS. Cada uma está certa sobre o que
+  calcula; a tela junta as duas e afirma "dá para comparar" e "ninguém tem base" ao mesmo
+  tempo, sem nada quebrado.
+  ⚠️ **A régua: a disponibilidade de um recorte se decide com a MESMA população e a MESMA
+  exigência que depois vão julgá-lo.** E dado parado não pode alargar o que a tela oferece:
+  o documento que o sync esqueceu de reescrever não pode virar a borda do sistema.
 - ⚠️ **ALARME QUE DISPARA TODO DIA VIRA RUÍDO QUE NINGUÉM LÊ.** Ao ligar uma verificação
   automática, separe o que **deriva** do que **quebra**:
   · comparação contra uma foto de referência **diverge sozinha** com o tempo (a base é
@@ -1403,6 +1420,23 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   **A régua: antes de implementar o conserto pedido, meça se o defeito é o descrito.**
   Confirmar o diagnóstico é parte da tarefa, não etapa opcional antes dela. E quando a
   medição contraria quem pediu, isso se diz — com o número na mão, antes do código.
+- 🛑 **PERGUNTA RETÓRICA EMBUTE CONCLUSÃO — e a conclusão entra sem ter sido medida, porque a
+  frase não se apresenta como afirmação.**
+  Caso real (15/09/2026). O pedido de investigação dizia: *"se julho não tem selo e ninguém
+  percebeu, ou o selo não é olhado, ou alguém decidiu a bonificação por fora da tela"*. As
+  duas saídas pareciam cobrir todos os casos, e as duas partiam de uma premissa que ninguém
+  tinha medido: que julho estava sem selo quando importava. Medido: julho perdeu o selo por
+  causa da janela de 95 dias, e pela fórmula da retenção isso começou nos syncs a partir de
+  05/09 — depois de agosto inteiro ter passado com junho completo na janela. "Ninguém
+  percebeu" não dizia nada sobre o uso do selo.
+  📌 **E a correção quase repetiu o erro.** Ao pedir o registro, a frase voltou como "você
+  mediu que julho tinha selo em agosto". Não foi medido. O que se mediu foi a data em que
+  junho sai da janela (pela fórmula, não observada) e o selo com junho inteiro na carteira de
+  HOJE (LUCAS). A tela de agosto, com a carteira de agosto, não foi reconstruída: "julho tinha
+  selo em agosto" é provável, não medido.
+  🔑 **A régua: numa pergunta do tipo "se X, então A ou B", meça o X antes de escolher entre
+  A e B.** O "ou" dá à frase cara de análise exaustiva — e é exatamente isso que impede de
+  perguntar se o X aconteceu.
 - 🛑🛑 **DESCRIÇÃO DE ARRANJO DADA DE MEMÓRIA TEM A MESMA CONFIABILIDADE DE NÚMERO DADO DE
   MEMÓRIA — e ela engana mais, porque ninguém desconfia de uma descrição.** "A sidebar usa
   `MARCA.agencia`", "o componente tem um consumidor", "a regra é só Bearer", "o símbolo é
