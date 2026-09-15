@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/firebaseAdmin";
-import { COL_LIMITES, COL_SISTEMA, DOC_SYNC_META } from "@/lib/colecoes";
+import { COL_LIMITES, COL_SISTEMA, DOC_FALHAS_CIENTES, DOC_SYNC_META } from "@/lib/colecoes";
+import { classificarFalha, falhaEmMassa, MarcaCiente, tipoDoErro, Veredito } from "@/lib/falhasSync";
+import { MARCA } from "@/lib/brand";
 import { buscarDiario, buscarLimiteConta, buscarDiarioPorConjunto, somarPorGrupoDia, somarPorDia } from "@/lib/meta";
 import { ContaMap, GrupoDia, MetricaDiaria } from "@/lib/types";
 import { COL_AGREGADAS, COL_CONJUNTOS, RETENCAO_DIAS, cutoffRetencao, mesclarDias, mesclarGrupos } from "@/lib/agregadas";
@@ -414,6 +416,41 @@ export async function GET(req: Request) {
     else erros.push({ accountId: aProcessar[i].accountId, erro: String(r.reason) });
   });
 
+  // ---- CLASSIFICAÇÃO DAS FALHAS (lib/falhasSync.ts) ----
+  // ⚠️ É ELA, e não o `.erros`, que decide a cor do job. Até 15/09/2026 toda falha de conta
+  // só avisava, e a ISP4 ficou 12 dias sem dado com o job verde. A regra mora no módulo; aqui
+  // só se junta o insumo de cada conta (pausada? código do erro? marca? última gravação?).
+  const agoraMs = Date.now();
+  const hojeYmd = new Intl.DateTimeFormat("en-CA", {
+    timeZone: MARCA.fuso, year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(new Date(agoraMs));
+  const marcasSnap = await db.collection(COL_SISTEMA).doc(DOC_FALHAS_CIENTES).get();
+  const marcas = (marcasSnap.exists ? marcasSnap.data() : {}) as Record<string, MarcaCiente>;
+  const itensFalha: { accountId: string; cliente: string; veredito: Veredito; motivo: string; codigo: number | null; http: number | null }[] = [];
+  resultados.forEach((r, i) => {
+    if (r.status !== "rejected") return;
+    const c = aProcessar[i];
+    const erro = tipoDoErro(r.reason);
+    // O `atualizadoEm` do snapshot lido ANTES de processar: a gravação anterior a esta execução.
+    const ultimaGravacaoIso = (aggPorConta.get(c.accountId)?.data()?.atualizadoEm as string | undefined) ?? null;
+    const { veredito, motivo } = classificarFalha({
+      pausada: !!c.pausado, erro, marca: marcas[c.accountId], hojeYmd, ultimaGravacaoIso, agoraMs,
+    });
+    itensFalha.push({ accountId: c.accountId, cliente: c.cliente ?? "", veredito, motivo, codigo: erro.codigo, http: erro.http });
+  });
+  const comVeredito = (v: Veredito) => itensFalha.filter((x) => x.veredito === v);
+  const classificacao = {
+    ativasNoBloco: aProcessar.filter((c) => !c.pausado).length,
+    bloqueantes: comVeredito("bloqueante"),
+    toleradas: comVeredito("tolerada"),
+    cientes: comVeredito("ciente"),
+    esperadas: comVeredito("esperada"),
+    // Conta com marca de ciente que VOLTOU a gravar: a marca não cala nada, mas precisa sair.
+    marcasObsoletas: sincronizadas
+      .filter((s) => marcas[s.accountId])
+      .map((s) => ({ accountId: s.accountId, cliente: s.cliente })),
+  };
+
   // ---- CONFERÊNCIA DE IDENTIDADE consolidada do bloco (ver `conferir`) ----
   const divergencias = sincronizadas.flatMap((s) => s.conferencia.divergencias);
   const conferencia = {
@@ -477,6 +514,39 @@ export async function GET(req: Request) {
     }
   }
 
+  // ---- FECHAMENTO DA EXECUÇÃO — regra 4, falha em massa ----
+  // Só no bloco FINAL da varredura por offset, e só quando o workflow informa o início dela
+  // (`?inicio=`). Conta pelo REGISTRO de cada conta — o `atualizadoEm` do doc agregado —, e não
+  // pela soma das respostas dos blocos: assim pega também a conta cuja falha nem virou resposta.
+  // Conta ativa COM doc agregado e sem gravação desde o início = não gravada nesta execução.
+  const inicioParam = url.searchParams.get("inicio");
+  const inicioMs = inicioParam ? Date.parse(inicioParam) : NaN;
+  let fechamento: {
+    inicio: string; ativasComDoc: number; naoGravadas: number; corteContas: number;
+    proporcao: number; massa: boolean; contas: string[];
+  } | null = null;
+  if (!alvoParam && proximoOffset === null && !Number.isNaN(inicioMs)) {
+    const gravadoEm = new Map(
+      (await db.collection(COL_AGREGADAS).select("atualizadoEm").get()).docs
+        .map((d) => [d.id, d.data().atualizadoEm as string | undefined] as const)
+    );
+    const ativasComDoc = contas.filter((c) => !c.pausado && gravadoEm.has(c.accountId));
+    const naoGravadas = ativasComDoc.filter((c) => {
+      const t = gravadoEm.get(c.accountId);
+      return !t || Date.parse(t) < inicioMs;
+    });
+    const m = falhaEmMassa(ativasComDoc.length, naoGravadas.length);
+    fechamento = {
+      inicio: new Date(inicioMs).toISOString(),
+      ativasComDoc: ativasComDoc.length,
+      naoGravadas: naoGravadas.length,
+      corteContas: m.corteContas,
+      proporcao: Number(m.proporcao.toFixed(3)),
+      massa: m.massa,
+      contas: naoGravadas.slice(0, 15).map((c) => c.cliente || c.accountId),
+    };
+  }
+
   return NextResponse.json({
     ok: true,
     janelaPadrao: JANELA_DIAS,
@@ -501,6 +571,10 @@ export async function GET(req: Request) {
     // Dual-write por conjunto (Etapa 1). `identidadeOk: false` = bug, derruba o job.
     conferencia,
     erros,
+    // É isto que decide a cor do job (lib/falhasSync.ts) — o `.erros` fica só como histórico cru.
+    classificacao,
+    // Regra 4 (falha em massa). null fora do bloco final ou sem `?inicio=`.
+    fechamento,
     // null = não rodou nesta chamada (não era o bloco final). ok:false NÃO reprova
     // o sync — é etapa secundária, e o workflow só avisa.
     descoberta,

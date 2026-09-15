@@ -8,6 +8,24 @@ export const ENVS_META_SYNC = {
 } as const;
 
 
+/**
+ * Erro da Marketing API com o CÓDIGO separado da mensagem. A classificação de falha do sync
+ * (lib/falhasSync.ts) decide pelo código — nunca pelo texto, que a Meta muda sem aviso.
+ * A mensagem continua a de antes, para o log não mudar.
+ */
+export class ErroMetaApi extends Error {
+  readonly http: number;
+  readonly codigoMeta: number | null;
+  readonly subcodigoMeta: number | null;
+  constructor(mensagem: string, http: number, codigoMeta: number | null, subcodigoMeta: number | null) {
+    super(mensagem);
+    this.name = "ErroMetaApi";
+    this.http = http;
+    this.codigoMeta = codigoMeta;
+    this.subcodigoMeta = subcodigoMeta;
+  }
+}
+
 const API = process.env.META_API_VERSION || "v21.0";
 const TOKEN = process.env.META_ACCESS_TOKEN || "";
 
@@ -145,7 +163,18 @@ export async function buscarDiario(accountId: string, dias = 30): Promise<Metric
   while (url) {
     const res: Response = await fetch(url, { cache: "no-store" });
     if (!res.ok) {
-      throw new Error(`Meta API ${res.status} (diário) para ${accountId}: ${await res.text()}`);
+      const corpo = await res.text();
+      let codigo: number | null = null;
+      let subcodigo: number | null = null;
+      try {
+        const e = JSON.parse(corpo)?.error;
+        if (typeof e?.code === "number") codigo = e.code;
+        if (typeof e?.error_subcode === "number") subcodigo = e.error_subcode;
+      } catch {
+        // Corpo que não é JSON (proxy, página de erro): fica sem código, e a classificação
+        // do sync trata como "desconhecido".
+      }
+      throw new ErroMetaApi(`Meta API ${res.status} (diário) para ${accountId}: ${corpo}`, res.status, codigo, subcodigo);
     }
     const json = await res.json();
     for (const r of (json?.data ?? []) as any[]) {

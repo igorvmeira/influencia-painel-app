@@ -112,11 +112,18 @@ jobs:
           LIMITE=10
           MAX_ITER=50
           OFFSET=0
+          PROXIMO=""
+          # O início da execução vai em toda chamada: o bloco final usa para contar, pelo
+          # registro de cada conta, quantas ativas NÃO gravaram nesta execução (falha em massa).
+          INICIO=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          ESPERADAS="${RUNNER_TEMP}/falhas-esperadas.txt"
+          : > "$ESPERADAS"
+          BLOQUEANTES=0
 
           for i in $(seq 1 "$MAX_ITER"); do
             echo "== Iteração $i (offset=$OFFSET) =="
 
-            RESP=$(curl -sS -H "Authorization: Bearer ${CRON_SECRET}" "${BASE}?offset=${OFFSET}&limite=${LIMITE}")
+            RESP=$(curl -sS -H "Authorization: Bearer ${CRON_SECRET}" "${BASE}?offset=${OFFSET}&limite=${LIMITE}&inicio=${INICIO}")
 
             PROCESSADAS=$(echo "$RESP" | jq -r '.processadas // 0')
             REGISTROS=$(echo "$RESP" | jq -r '.registros // 0')
@@ -147,17 +154,24 @@ jobs:
               echo "Identidade OK em $(echo "$RESP" | jq -r '.conferencia.diasConferidos') dia-conta."
             fi
 
-            # ⚠️ `ok: true` NAO SIGNIFICA "todas as contas foram". O sync devolve ok
-            # true e coloca as contas que falharam em `.erros` — e foi assim que a OBBU
-            # ficou sem quebra por conjunto no backfill sem ninguem ver: quem lia so o
-            # `.ok` recebia sucesso.
-            # AVISA e nao reprova, de proposito: no sync DIARIO a proxima execucao
-            # refaz a conta. No backfill e o contrario (tiro unico), e la reprova.
-            ERROS=$(echo "$RESP" | jq -r '.erros | length')
-            if [ "${ERROS:-0}" != "0" ]; then
-              echo "::warning::${ERROS} conta(s) FALHARAM nesta chamada (o ok=true nao cobre isso):"
-              echo "$RESP" | jq -r '.erros[] | "  - \(.accountId): \(.erro)"'
+            # ⚠️ AS FALHAS DE CONTA VÊM CLASSIFICADAS PELA ROTA (lib/falhasSync.ts), e é o veredito
+            # que decide a cor. Até 15/09/2026 toda falha de conta só AVISAVA "porque o próximo sync
+            # refaz" — e a ISP4 ficou 12 dias sem dado com o job verde, porque erro de permissão não
+            # se refaz. As regras: pausada = esperada (nunca derruba); ativa com permissão negada =
+            # derruba; passageira = avisa até a conta passar de 36 h sem gravar; em massa = derruba.
+            # O bloqueante NÃO interrompe a varredura: as outras contas precisam ser gravadas. O
+            # job só fica vermelho no fim.
+            if ! echo "$RESP" | jq -e '.classificacao' > /dev/null 2>&1; then
+              echo "::error::A resposta não trouxe a classificação das falhas — sem ela o job não sabe se alguma conta ativa ficou sem gravar."
+              exit 1
             fi
+            N_BLOQ=$(echo "$RESP" | jq -r '.classificacao.bloqueantes | length')
+            BLOQUEANTES=$(( BLOQUEANTES + N_BLOQ ))
+            echo "$RESP" | jq -r '.classificacao.bloqueantes[] | "::error::\(.cliente) (\(.accountId)) — \(.motivo)"'
+            echo "$RESP" | jq -r '.classificacao.toleradas[] | "::warning::\(.cliente) (\(.accountId)) — \(.motivo)"'
+            echo "$RESP" | jq -r '.classificacao.cientes[] | "::warning::\(.cliente) (\(.accountId)) — \(.motivo)"'
+            echo "$RESP" | jq -r '.classificacao.marcasObsoletas[] | "::notice::\(.cliente) (\(.accountId)) voltou a gravar — a marca de ciente dela pode ser removida (scripts/marcar-falha-ciente.js --remover)."'
+            echo "$RESP" | jq -r '.classificacao.esperadas[] | "  - \(.cliente) (\(.accountId)): \(.motivo)"' >> "$ESPERADAS"
 
             # Falha de rede na quebra por conjunto NAO e divergencia: nao houve o que
             # comparar, e a linha conta-dia (que alimenta o app) ja foi gravada. Avisa.
@@ -190,3 +204,34 @@ jobs:
             OFFSET="$PROXIMO"
             sleep 2
           done
+
+          # ---- A COR DO JOB, decidida só depois de a varredura inteira gravar o que conseguiu ----
+          if [ "$PROXIMO" != "null" ] && [ -n "$PROXIMO" ]; then
+            echo "::error::A varredura parou em ${MAX_ITER} iterações sem terminar (próximo offset ${PROXIMO})."
+            exit 1
+          fi
+
+          # Regra 1: pausada sem leitura é esperada — um aviso só, no fim, e nunca vermelho.
+          if [ -s "$ESPERADAS" ]; then
+            echo "Falhas esperadas (contas pausadas — não derrubam o job):"
+            cat "$ESPERADAS"
+            echo "::notice::$(wc -l < "$ESPERADAS") conta(s) pausada(s) sem leitura na Meta — fora dos números; sem leitura não dá para saber se voltaram a veicular."
+          fi
+
+          # Regra 4: falha em massa, pelo registro de gravação de cada conta (bloco final).
+          MASSA=$(echo "$RESP" | jq -r '.fechamento.massa // "ausente"')
+          if [ "$MASSA" = "ausente" ]; then
+            echo "::error::O fechamento da execução não veio no bloco final — sem ele o job não sabe se houve falha em massa."
+            exit 1
+          fi
+          echo "Fechamento: $(echo "$RESP" | jq -r '.fechamento | "\(.naoGravadas) de \(.ativasComDoc) contas ativas sem gravar nesta execução (corte de massa: \(.corteContas))"')"
+          if [ "$MASSA" = "true" ]; then
+            echo "::error::FALHA EM MASSA — $(echo "$RESP" | jq -r '.fechamento | "\(.naoGravadas) de \(.ativasComDoc) contas ativas não gravaram (corte: \(.corteContas)). Primeiras: \(.contas | join(", "))"'). Token da Meta vencido? Meta fora do ar?"
+            exit 1
+          fi
+
+          # Regras 2 e 3: conta ativa sem gravar por falha que não se resolve sozinha.
+          if [ "$BLOQUEANTES" -gt 0 ]; then
+            echo "::error::${BLOQUEANTES} conta(s) ativa(s) sem gravar por falha que não se resolve sozinha — ver os erros acima. As outras contas foram gravadas normalmente."
+            exit 1
+          fi

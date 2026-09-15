@@ -58,6 +58,13 @@ export const DOC_SYNC_META = "sync";
 export const DOC_DISPARO_WORKFLOWS = "disparoWorkflows";
 
 /**
+ * Marcas de "sem acesso, ciente": um campo por accountId (ver `MarcaCiente` em
+ * lib/falhasSync.ts). Lido pelo sync-meta; escrito SÓ por `scripts/marcar-falha-ciente.js`,
+ * que exige prazo e motivo.
+ */
+export const DOC_FALHAS_CIENTES = "falhasCientes";
+
+/**
  * Cursor do sync do comercial (Xmax).
  *
  * ⚠️ Existia como `const DOC_SYNC` PRIVADO em `app/api/comercial/backfill` e como

@@ -1009,10 +1009,22 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   o envelope recebe "deu certo". Caso real: uma conta com R$ 9.079 de gasto lançou exceção
   no meio de um backfill, entrou em `.erros`, a resposta veio `ok: true`, e o laço registrou
   como bloco vazio — a conta ficou sem o dado novo e só apareceu numa conferência manual.
-  **Todo consumidor de resposta parcial checa a lista de falhas, não o booleano.** E a
-  severidade é assimétrica: em rotina que se repete (sync diário), falha individual AVISA,
-  porque amanhã refaz; em rotina de tiro único (backfill, migração), REPROVA, porque item
-  perdido fica perdido.
+  **Todo consumidor de resposta parcial checa a lista de falhas, não o booleano.**
+  🛑 **E "em rotina diária a falha só AVISA, porque amanhã refaz" ESTAVA ERRADO — era proxy, e
+  a premissa quebrou.** Caso real (15/09/2026): a ISP4, conta ativa com 22,8% do gasto de
+  agosto do ISMAIL, teve a leitura recusada pela Meta a partir de 04/09 (#200: o dono retirou o
+  acesso). O "amanhã" nunca refez: foram 11 execuções verdes com o aviso "1 conta falhou" e 12
+  dias sem dado dela no painel. E a mesma regra deixaria o job verde com o token vencido e as
+  124 contas falhando. **A severidade se decide pelo que a falha É, não pela frequência da
+  rotina:** conta pausada que falha é esperada; permissão não se resolve sozinha e derruba no
+  dia; erro passageiro só avisa enquanto a conta tem gravação recente; falha em massa derruba
+  sempre (ver `lib/falhasSync.ts`). Em rotina de tiro único (backfill, migração) qualquer
+  falha continua reprovando, porque item perdido fica perdido.
+  ⚠️ **E o silêncio consciente precisa de prazo.** Conta que não dá para consertar agora (a
+  ISP4, que não pode ser estacionada antes da conversa sobre o selo de agosto) recebe uma marca
+  de "ciente" com validade de no máximo 14 dias e presa ao código do erro: marca vencida, ou
+  falha que muda de código, volta a derrubar o job. Marca sem prazo seria o mesmo aviso que
+  ninguém lê — só que assinado.
 - ⚠️ **REGRA QUE FUNCIONA POR ACASO NÃO É REGRA — confira se ela cobre a CLASSE ou só o
   caso.** Um piso de "mínimo de 100 conversões" barrava corretamente o gestor sem campanha
   de geração de lead… porque ele tinha 5 conversões, não porque tinha zero elegíveis. Um

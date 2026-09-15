@@ -333,6 +333,17 @@ Duas pendências anotadas, nenhuma urgente:
   **Critério, em 7 dias no ar:** disparo aceito até 09:05 UTC e execução começando até 09:15
   UTC em todos os dias. Se não cumprir, a opção volta à mesa — e a tela continua dizendo a
   verdade no meio-tempo ("entra assim que a sincronização de hoje rodar").
+- 📌 **Pendência (15/09/2026): ISP4 (ISMAIL) sem leitura na Meta desde 04/09.** A Meta responde
+  #200 ("o dono da conta não concedeu ads_read") — e responde igual para conta inexistente, mas o
+  mesmo id devolveu dado até 03/09, então o provável é acesso retirado. LINK 10 e DIQUALI, as
+  duas pausadas, falham pelo mesmo código. **Não estacionar antes da conversa com o Thiago:**
+  estacionar tira a ISP4 de todos os meses, e ela foi 22,8% do gasto de agosto do ISMAIL.
+  O que fazer: perguntar ao Roberto/ISMAIL por que o acesso saiu e pedir ao cliente que
+  conceda de novo. Marca de "sem acesso, ciente" em `sistema/falhasCientes`, **válida até
+  22/09/2026** — depois disso o sync volta a ficar vermelho por ela.
+  ⚠️ **E a tela não avisa:** o setembro do ISMAIL aparece sem a ISP4. Estimativa (não dado),
+  se ela seguiu no ritmo de agosto: ~R$ 1.191 e ~37 conversões fora; CPL do ISMAIL em
+  setembro ~R$ 13,23 na tela contra ~R$ 14,40 com ela.
 - 📌 **Decisão pendente (15/09/2026): `sync-comercial` e `sync-planilha` continuam INDEPENDENTES**
   do `sync-meta`, no agendamento próprio do GitHub. Encadear ao fim do `sync-meta` criaria um
   ponto único de falha entre fontes que não dependem uma da outra (Xmax, planilha e Meta).
