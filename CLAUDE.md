@@ -17,6 +17,25 @@ diferentes, reaproveitando o mesmo "motor" e trocando só a "casca" (marca, tela
 - Sempre **rode o build** antes de finalizar e diga ao usuário **como testar** (URL/rota).
 - Repositório **nunca dentro de pasta sincronizada** (OneDrive, Google Drive, Dropbox) —
   a sincronização corrompe a pasta `.git`. Use algo como `C:\dev\nome-do-projeto`.
+- 🛑 **NO WINDOWS POWERSHELL 5.1, MENSAGEM DE COMMIT VAI POR ARQUIVO, NUNCA PELA LINHA DE
+  COMANDO — e o push "passar" não prova que houve commit.**
+  Caso real (14/09/2026). Rodei `git commit -q -F - @'...'@; git push -q origin main`, e
+  duas coisas se somaram:
+  1. `-F -` lê a mensagem da ENTRADA PADRÃO; o here-string foi como ARGUMENTO, e argumento
+     solto no `git commit` é *pathspec*;
+  2. o PowerShell 5.1 não escapa aspas duplas ao montar a linha de comando de um executável
+     nativo, e a mensagem (que tinha `"a mais barata"`) foi partida em vários argumentos, um
+     a cada aspa. Com `-m "..."` e aspas dentro, a quebra é a mesma.
+  O commit **não foi criado** (`error: pathspec ... did not match any file(s)`), o `;` seguiu,
+  e o `git push -q` **teve sucesso sem imprimir nada** — não havia o que empurrar. O erro
+  estava na saída, no meio dos avisos de CRLF; o que terminava a saída era o silêncio de um
+  sucesso. **Quem denunciou foi o ESTADO:** os arquivos ainda como `M ` (preparados) no
+  `git status` e o `git log -1` mostrando o commit anterior.
+  🔧 **O procedimento, sempre:** (1) escrever a mensagem num arquivo com a ferramenta de
+  escrita — nunca por shell, heredoc ou here-string; (2) `git commit -F <arquivo>`;
+  (3) conferir o ESTADO, não o código de saída: o hash do `git log -1` igual ao de
+  `git ls-remote origin refs/heads/main`. É o "pergunte ao estado" (ver *O QUE NÃO É
+  CONFERIDO NÃO É GRAVADO*) no lugar em que ele custa um deploy inteiro.
 
 ### ⚠️ ASSINATURA: 500 em TODOS os estáticos é CACHE, não código
 **Código quebrado dá erro em UM lugar; cache dá erro em tudo de uma vez.** Se o console
@@ -1231,6 +1250,33 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   **A régua: em `a ÷ b`, pergunte o que acontece quando `a` é zero e quando `b` é zero.**
   Os dois pisos medem coisas diferentes e nenhum substitui o outro — um garante que a razão
   SIGNIFICA algo, o outro garante que ela EXISTE.
+- 🛑🛑 **EM MÉTRICA DE VARIAÇÃO, AUSÊNCIA NÃO É VALOR — e cada lado da ausência mente de um
+  jeito.** O zero do CPL dizia "muito barato"; o −100% dizia "melhorou mais que todo mundo".
+  Os dois vinham da mesma ausência lida como número, e o segundo é o maior: afirma
+  DESEMPENHO, não só preço.
+  Caso real (14/09/2026), medido antes×depois do conserto do CPL-zero, com os dados do banco:
+  · **ausência no período ATUAL** → CPL 0 contra qualquer anterior dá **−100%**, o piso da
+    escala, pintado de verde. Foram **52**: 38 no desvio contra a média do nicho (conta sem
+    veiculação aparecia "−100% abaixo da média", no TOPO da lista "cliente vs nicho", que
+    ordena por CPL) e 14 no card de CPL da Análise da Conta — a **CDL, com R$ 904,76 em 30
+    dias e nenhuma conversão, aparecia com o CPL em −100% verde**;
+  · **ausência no período ANTERIOR** → a conta dá infinito, e o código antigo trocava por
+    **0%**. Não a outra ponta: o MEIO, "estável". Foram **45**.
+  📌 **O que a medição corrigiu no enunciado.** A régua chegou como "a conta que parou de
+  converter aparecia no topo do ranking de evolução" e "as duas ausências produzem os dois
+  extremos da escala". Medido: **no ranking de evolução dos gestores (o do selo) não houve
+  nenhuma** — ele já filtrava `conversas > 0`. E a ausência no anterior não ia para o
+  extremo oposto: ia para 0%, que engana de outro jeito, porque "estável" é o valor que
+  ninguém investiga.
+  🔑 **A régua: em variação, ausência no período atual e ausência no anterior viram `null`
+  com motivo — nunca número.** A matemática devolve −100% e infinito; o código costuma
+  "consertar" o infinito para 0 e deixar o −100% passar, e os dois são mentira com cara de
+  dado. **Quem ordena por variação põe o `null` no FIM nas duas direções**
+  (`compararVariacao` em `lib/cpl.ts`), senão a lista abre com ele.
+  ⚠️ **E o ranking do selo escapou por acaso, não por desenho.** O filtro `conversas > 0`
+  foi posto para barrar volume, não ausência: um gestor com conversão atribuída e gasto zero
+  passaria por ele e cairia em −100%. É a régua "regra que funciona por acaso" (ver *O QUE
+  NÃO É CONFERIDO NÃO É GRAVADO*) — hoje a proteção é `variacaoPct`, não o filtro.
 - ⚠️ **DUAS RÉGUAS PARA O MESMO DADO É DESENHO, NÃO DUPLICAÇÃO — quando respondem a
   perguntas diferentes.** "Quantas contas estão perto do teto de gasto" (ESTADO) e "quais
   exigem alguém fazer algo hoje" (AÇÃO) saem dos mesmos dois campos e não são a mesma

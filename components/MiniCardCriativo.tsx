@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { TEMA } from "@/lib/brand";
-import { brl, brlDec, num } from "@/lib/format";
+import { brl, num } from "@/lib/format";
 import { CriativoMes } from "@/lib/useCriativosMes";
+import CplValor from "./CplValor";
 
 // Mini-card do criativo. A thumbnail é SEMPRE best-effort: a URL vem ao vivo (não
 // é persistida, porque expira) e o anúncio pode ter sido excluído depois do mês.
@@ -61,7 +62,9 @@ export default function MiniCardCriativo({
           {c.adName}
         </p>
         <p className="mt-1 text-[11px] tabular-nums" style={{ color: TEMA.muted }}>
-          CPL <strong style={{ color: bom ? TEMA.positivo : TEMA.negativo }}>{brlDec(c.cpl)}</strong>
+          CPL <strong style={{ color: bom ? TEMA.positivo : TEMA.negativo }}>
+            <CplValor cpl={c.cpl} gasto={c.gasto} conversas={c.conversas} motivo={false} />
+          </strong>
           {" · "}{num(c.conversas)} conv · {brl(c.gasto)}
         </p>
       </div>

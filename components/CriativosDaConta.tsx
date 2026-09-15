@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { buscarJson } from "@/lib/buscaAutenticada";
 import { mensagemErro } from "@/lib/erros";
-import { brl, brlDec, num } from "@/lib/format";
+import { brl, num } from "@/lib/format";
 import { TEMA } from "@/lib/brand";
 import { ContaMap, Criativo } from "@/lib/types";
+import CplValor from "./CplValor";
 
 const MUTED = TEMA.muted;
 
@@ -146,7 +147,9 @@ export default function CriativosDaConta({ conta, dias }: { conta: ContaMap; dia
             <span className="shrink-0 text-[12px] tabular-nums" style={{ color: MUTED }}>{brl(c.gasto)}</span>
             <span className="shrink-0 text-[12px] tabular-nums" style={{ color: MUTED }}>{num(c.conversas)} conv</span>
             <span className="w-20 shrink-0 text-right text-[12.5px] font-medium tabular-nums" style={{ color: TEMA.texto }}>
-              {c.conversas > 0 ? brlDec(c.cpl) : "—"}
+              {/* Coluna estreita: só o "—", com a frase no tooltip — gasto e conversões,
+                  que dizem o motivo, estão nas duas colunas ao lado. */}
+              <CplValor cpl={c.cpl} gasto={c.gasto} conversas={c.conversas} motivo={false} />
             </span>
           </div>
         ))}

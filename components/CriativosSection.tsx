@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ContaMap, Criativo } from "@/lib/types";
-import { brl, brlDec, num } from "@/lib/format";
+import { brl, num } from "@/lib/format";
 import { auth } from "@/lib/firebaseClient";
 import { TEMA } from "@/lib/brand";
+import { compararCpl, rotuloSemCpl } from "@/lib/cpl";
+import CplValor from "./CplValor";
 
 // Cores lidas dos design tokens (fonte única em lib/brand.ts).
 const INK = TEMA.fundo;
@@ -102,7 +104,10 @@ export default function CriativosSection(
   );
 
   const ranqueados = useMemo(
-    () => visiveis.filter((c) => c.conversas >= PISO_CONVERSAS).sort((a, b) => a.cpl - b.cpl),
+    // Ordem de CPL da casa (lib/cpl.ts): sem CPL no FIM, sem posição e sem destaque. A lista
+    // ao vivo não descarta gasto zero, então um anúncio com conversas acima do piso e gasto
+    // zero pode vir — e com CPL 0 ele seria o 1º, em dourado.
+    () => visiveis.filter((c) => c.conversas >= PISO_CONVERSAS).sort((a, b) => compararCpl(a, b)),
     [visiveis]
   );
   const insuficientes = useMemo(
@@ -238,7 +243,8 @@ export default function CriativosSection(
             ) : (
               <div className="flex flex-col gap-2">
                 {ranqueados.map((c, i) => (
-                  <LinhaCriativo key={`${c.adId}-${i}`} c={c} pos={i + 1} melhor={i === 0} />
+                  <LinhaCriativo key={`${c.adId}-${i}`} c={c}
+                    pos={c.cpl === null ? undefined : i + 1} melhor={i === 0 && c.cpl !== null} />
                 ))}
               </div>
             )}
@@ -285,9 +291,10 @@ function LinhaCriativo({ c, pos, melhor }: { c: Criativo; pos?: number; melhor?:
       </div>
       <div className="shrink-0 text-right">
         <p className="text-sm font-medium tabular-nums" style={{ color: melhor ? YELLOW : TEMA.texto }}>
-          {c.conversas > 0 ? brlDec(c.cpl) : "—"}
+          <CplValor cpl={c.cpl} gasto={c.gasto} conversas={c.conversas} motivo={false} />
         </p>
-        <p className="text-[11px]" style={{ color: MUTED }}>CPL</p>
+        {/* Sem CPL, o rótulo embaixo vira o MOTIVO escrito — cabe no mesmo lugar. */}
+        <p className="text-[11px]" style={{ color: MUTED }}>{c.cpl === null ? rotuloSemCpl(c.gasto, c.conversas) : "CPL"}</p>
       </div>
     </div>
   );

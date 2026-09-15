@@ -1,4 +1,5 @@
 import { ContaMap, Criativo, GrupoDia, MetricaConjunto, MetricaDiaria } from "./types";
+import { cplDe } from "./cpl";
 
 /** Envs que este módulo lê — as mesmas do `lib/descobrirContas.ts`, ver `ENVS_META` lá. */
 export const ENVS_META_SYNC = {
@@ -345,7 +346,10 @@ export async function buscarCriativos(accountId: string, dias: number): Promise<
       adName: r.ad_name || r.ad_id,
       gasto,
       conversas,
-      cpl: conversas > 0 ? gasto / conversas : 0,
+      // ⚠️ `null`, nunca 0: esta lista NÃO descarta gasto zero (vem direto do insights), então
+      // anúncio com conversão atribuída e sem gasto no recorte pode vir — e com CPL 0 ele
+      // abriria o ranking de criativos como o melhor. Ver lib/cpl.ts.
+      cpl: cplDe(gasto, conversas),
       thumbnailUrl: thumbs.get(r.ad_id) ?? null,
       situacao: situacaoDoAnuncio(bruto),
       statusMeta: bruto,
@@ -414,7 +418,8 @@ export async function buscarCriativosPeriodo(
         adName: r.ad_name || r.ad_id,
         gasto: Math.round(gasto * 100) / 100,
         conversas,
-        cpl: conversas > 0 ? Math.round((gasto / conversas) * 100) / 100 : 0,
+        // Mesmo arredondamento de sempre para o CPL que existe; `null` para o que não existe.
+        cpl: cplDe(gasto, conversas) === null ? null : Math.round((gasto / conversas) * 100) / 100,
         thumbnailUrl: null, // nunca persistido — ver comentário acima
       };
     })

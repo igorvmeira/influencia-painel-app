@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthAdmin, getDb } from "@/lib/firebaseAdmin";
 import { buscarCriativosPeriodo, buscarThumbnails } from "@/lib/meta";
+import { cplDe } from "@/lib/cpl";
 import { Criativo } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -99,7 +100,15 @@ export async function GET(req: Request) {
 
   // Miniaturas AO VIVO, sempre — nunca vêm do cache (ver comentário no topo).
   const thumbs = await buscarThumbnails(accountId);
-  const comThumb = criativos.map((c) => ({ ...c, thumbnailUrl: thumbs[c.adId] ?? null }));
+  // ⚠️ CPL NORMALIZADO NA LEITURA. O cache é permanente, e o que foi gravado antes de
+  // 14/09/2026 guarda CPL 0 onde não houve conversão. Não se reescreve o cache: o CPL que
+  // existe passa IDÊNTICO (com o arredondamento gravado), e o 0 sem conversão ou sem gasto
+  // vira `null` aqui, antes de chegar a qualquer tela.
+  const comThumb = criativos.map((c) => ({
+    ...c,
+    cpl: cplDe(c.gasto, c.conversas) === null ? null : c.cpl,
+    thumbnailUrl: thumbs[c.adId] ?? null,
+  }));
 
   return NextResponse.json({
     ok: true,

@@ -295,7 +295,12 @@ export interface Criativo {
   adName: string;
   gasto: number;
   conversas: number; // lead de formulário + conversa de WhatsApp
-  cpl: number;
+  /**
+   * `null` = sem CPL (sem conversão ou sem gasto) — nunca 0. Ver lib/cpl.ts.
+   * ⚠️ O cache `criativosMes` gravado ANTES de 14/09/2026 guarda 0 nesses casos; a rota
+   * /api/criativos-mes normaliza na LEITURA, sem reescrever o cache.
+   */
+  cpl: number | null;
   thumbnailUrl: string | null;
   cliente?: string; // preenchido no ranking por nicho (de qual cliente é o criativo)
   /**

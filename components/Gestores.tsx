@@ -26,7 +26,7 @@ import IndicadorFrescor from "./IndicadorFrescor";
 import DeltaChip from "./DeltaChip";
 import CardGestor from "./CardGestor";
 import CplValor from "./CplValor";
-import { compararVariacao, explicaSemCpl, variacaoPct } from "@/lib/cpl";
+import { compararCpl, compararVariacao, explicaSemCpl, variacaoPct } from "@/lib/cpl";
 import SlopeCpl from "./SlopeCpl";
 import BarraSplit from "./BarraSplit";
 
@@ -806,9 +806,15 @@ function BlocoCriativos({
   // "pior criativo" injustamente.
   const elegiveis = (dados?.criativos ?? [])
     .filter((c) => c.conversas >= PISO_CONVERSOES_DESTAQUE)
-    .sort((a, b) => a.cpl - b.cpl);
-  const melhor = elegiveis[0] ?? null;
-  const pior = elegiveis.length > 1 ? elegiveis[elegiveis.length - 1] : null;
+    .sort((a, b) => compararCpl(a, b));
+  // "Melhor" e "pior" CPL só entre os que TÊM CPL: com gasto zero o 0 fazia o anúncio ser
+  // o "melhor criativo" do mês numa tela de bonificação. No cache de mês fechado isto não
+  // acontece hoje — buscarCriativosPeriodo descarta gasto zero —, e o filtro fica para o dia
+  // em que aquele descarte mudar, não por um caso medido.
+  const comCpl = elegiveis.filter((c) => c.cpl !== null);
+  const semCpl = elegiveis.length - comCpl.length;
+  const melhor = comCpl[0] ?? null;
+  const pior = comCpl.length > 1 ? comCpl[comCpl.length - 1] : null;
 
   return (
     <div className="rounded-lg p-3" style={{ background: TEMA.card, border: `1px solid ${LINE}` }}>
@@ -828,6 +834,7 @@ function BlocoCriativos({
         {estado === "pronto" && dados && (
           <span className="text-[11px]" style={{ color: MUTED }}>
             {dados.criativos.length} anúncios · {elegiveis.length} com ≥{PISO_CONVERSOES_DESTAQUE} conversões
+            {semCpl > 0 && ` · ${semCpl} sem gasto (fora de melhor/pior)`}
             {dados.deCache > 0 && ` · ${dados.deCache} conta(s) do cache`}
             {dados.falhas > 0 && ` · ${dados.falhas} conta(s) falharam`}
           </span>
@@ -850,9 +857,9 @@ function BlocoCriativos({
         <p className="text-[12px]" style={{ color: RED }}>{erroMsg}</p>
       )}
       {estado === "pronto" && (
-        elegiveis.length === 0 ? (
+        comCpl.length === 0 ? (
           <p className="text-[12px]" style={{ color: MUTED }}>
-            Nenhum anúncio com pelo menos {PISO_CONVERSOES_DESTAQUE} conversões no mês.
+            Nenhum anúncio com pelo menos {PISO_CONVERSOES_DESTAQUE} conversões e gasto no mês.
           </p>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">

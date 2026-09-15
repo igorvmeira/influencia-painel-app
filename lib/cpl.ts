@@ -60,9 +60,13 @@ export function explicaSemCpl(gasto: number, conversas: number): string | null {
  * Variação percentual ARREDONDADA. `null` quando qualquer lado não existe ou quando não há
  * base (anterior ≤ 0).
  *
- * ⚠️ Antes devolvia 0 sem base — e "0%" se lê "estável". E com CPL atual 0 (sem conversão)
- * contra um anterior de R$ 10 dava −100%: a conta que PAROU de converter aparecia como a
- * maior melhora do período.
+ * ⚠️ AS DUAS AUSÊNCIAS MENTIAM, cada uma para um lado. Sem CPL no período ATUAL, o 0 contra
+ * qualquer anterior dava −100% — o piso da escala, em verde: "melhorou tudo". Sem CPL no
+ * ANTERIOR a conta daria infinito, e o código antigo trocava por 0% — "estável".
+ * Medido em 14/09/2026, antes do conserto: 52 variações de −100% (38 no desvio contra a média
+ * do nicho, 14 no card de CPL da Análise da Conta — ex.: CDL, R$ 904,76 em 30 dias sem
+ * conversão) e 45 de 0% sem base. No ranking de evolução dos gestores, nenhuma: ele já exigia
+ * conversão.
  */
 export function variacaoPct(atual: number | null, anterior: number | null): number | null {
   if (atual === null || anterior === null || !(anterior > 0)) return null;
