@@ -981,6 +981,13 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   aprovar o cron da conciliação sem a composição. Visto reprovando com o nome fora do comentário;
   consertado para olhar só a chamada `comporEnvs(...)`, sem comentários; visto reprovando de novo
   com o nome de volta no comentário; e só então a composição entrou.
+  🔑 **As quatro falhas da família têm a mesma forma: a conferência olha TEXTO em vez de ESTRUTURA.**
+  Três no auditor de envs — o padrão de leitura que não previa desestruturação (12–14/09), a lista
+  de rotas de cron mantida à mão em vez de derivada de quem as chama (15/09) e o nome de uma
+  declaração achado num comentário (15/09) — e uma no teste da foto do fechamento: a palavra achada
+  dentro da frase que a nega (15/09). Em todas, o texto casou (ou deixou de casar) sem que a coisa
+  medida — a sintaxe, a chamada, quem chama, o sentido — tivesse sido olhada.
+  📌 A da palavra negada não foi no auditor, foi no teste da foto; a forma é a mesma, o dono não.
 - 🛑🛑 **ANTES DE LISTAR CAUSAS, VEJA SE A RELAÇÃO ENTRE AS POPULAÇÕES JÁ TORNA O NÚMERO
   IMPOSSÍVEL.** Subconjunto não pode ter mais elementos que o conjunto; soma de partes
   não passa do total; interseção não é maior que o menor dos dois. **Uma identidade
