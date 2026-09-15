@@ -57,7 +57,7 @@ export default function AnaliseConta({ conta }: { conta: ContaMap }) {
     if (!dados) return null;
     // ⚠️ O NICHO precisa de TODAS as contas, não só desta: média de um cliente
     // contra ele mesmo não é média.
-    const linha = analiseDaConta(dados.daily, dados.contas, conta.accountId, dias);
+    const linha = analiseDaConta(dados.daily, dados.contas, conta.accountId, dias, dados.leituraPorConta[conta.accountId] ?? null);
     const nichos = montarNichos(dados.daily, dados.contas, dias);
     const nicho = nichos.find((n) => n.clientes.some((c) => c.accountId === conta.accountId));
     const noNicho = nicho?.clientes.find((c) => c.accountId === conta.accountId) ?? null;
@@ -153,7 +153,9 @@ export default function AnaliseConta({ conta }: { conta: ContaMap }) {
               delta={linha.cplVar}
               titulo={linha.cpl === null ? explicaSemCpl(linha.gasto, linha.conversas) ?? undefined : undefined}
               // Sem CPL no período o "—" do número já diz tudo; o do Δ explica por que não compara.
-              motivo={linha.cpl === null ? "sem CPL neste período — não há o que comparar" : null}
+              motivo={linha.comparacaoIndisponivel
+                ? `comparação indisponível: ${linha.comparacaoIndisponivel}`
+                : linha.cpl === null ? "sem CPL neste período — não há o que comparar" : null}
               base={linha.cpl === null ? explicaSemCpl(linha.gasto, linha.conversas) ?? undefined : undefined}
               menorMelhor
               // ⚠️ Conta pausada: o Δ perde a cor. Variação entre dois períodos sem
@@ -166,6 +168,7 @@ export default function AnaliseConta({ conta }: { conta: ContaMap }) {
               valor={linha.gasto}
               formatar={brl}
               delta={linha.gastoVar}
+              motivo={linha.comparacaoIndisponivel ? `comparação indisponível: ${linha.comparacaoIndisponivel}` : null}
               neutralizar={conta.pausado ? "conta pausada" : null}
               rodape={`vs ${dias}d anteriores`}
             />
@@ -175,6 +178,7 @@ export default function AnaliseConta({ conta }: { conta: ContaMap }) {
               valor={linha.conversas}
               formatar={num}
               delta={linha.conversasVar}
+              motivo={linha.comparacaoIndisponivel ? `comparação indisponível: ${linha.comparacaoIndisponivel}` : null}
               neutralizar={conta.pausado ? "conta pausada" : null}
               rodape={`vs ${dias}d anteriores`}
             />

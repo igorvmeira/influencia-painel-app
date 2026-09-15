@@ -14,7 +14,7 @@ export const maxDuration = 60;
 //
 // Mês fechado nunca muda: o doc é imutável e sempre válido, então não há TTL.
 // Isso não é só otimização — a API do Meta retroage 37 meses, e o agregado só
-// guarda ~95 dias. Passado esse prazo, este doc é o ÚNICO lugar onde o histórico
+// guarda RETENCAO_DIAS dias (lib/agregadas.ts). Passado esse prazo, este doc é o ÚNICO lugar onde o histórico
 // de criativos sobrevive. Por isso guardamos TODOS os anúncios, não só os
 // extremos: mudar o critério depois (top 3, outro piso) não exige re-consulta,
 // e re-consultar deixa de ser possível.

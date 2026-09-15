@@ -1143,7 +1143,7 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   |---|---|---|
   | troca de gestor (estacionar e reativar incluídos) | Hotel Oscar e CAMPEZZA em 08/09; ISP4 estacionada e DRA. ANA PAULA e TRAJETO reativadas em 15/09 | agosto do LUCAS: CPL R$ 20,74 → R$ 21,36. Agosto do ISMAIL: R$ 14,71 → R$ 12,68 (−4,76% → −9,26%) sem a ISP4, e → R$ 12,75 (−8,74%) com a DRA. ANA PAULA. Agosto do VINÍCIUS: variação 5,10% → 5,13% |
   | correção de regra | base incompleta, 15/09 | selo de agosto ISMAIL → WEDER, com a carteira da manhã de 15/09 |
-  | janela de retenção (95 dias) | julho sem selo desde ~05/09 (estimado pela fórmula, não observado) | julho some da /gestores em 15/09. Agosto deixa de ser oferecido na 1ª sincronização de 05/10/2026 (calculado em 15/09). **Some a TELA, não o dado:** `metricasDiarias` guarda julho e agosto inteiros desde 02/04 (medido em 15/09: 2.352 e 2.346 linhas conta-dia, iguais ao agregado) |
+  | janela de retenção (95 dias; 122 desde 15/09) | julho sem selo desde ~05/09 (estimado pela fórmula, não observado) | julho some da /gestores em 15/09. Com 95 dias agosto sairia na sincronização de 05/10/2026; com a janela de 122 (no ar em 15/09) sai na de 01/11/2026 — **janela maior adia, não evita** (calculado em 15/09). **Some a TELA, não o dado:** `metricasDiarias` guarda julho e agosto inteiros desde 02/04 (medido em 15/09: 2.352 e 2.346 linhas conta-dia, iguais ao agregado) |
 
   📌 **AGOSTO/2026 FOI PAGO COM A RÉGUA ANTIGA DE BASE INCOMPLETA** (Igor, 15/09/2026), e o
   retroativo não se mexe. **O que a tela mostra de agosto depois de 15/09 NÃO é o que embasou

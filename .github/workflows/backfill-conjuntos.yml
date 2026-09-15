@@ -18,7 +18,7 @@ name: backfill-conjuntos
 # desperdiça o backfill das outras 116, e ainda fica visível o que precisa de repique.
 #
 # Reexecução pontual depois: chame o sync direto com
-#   /api/sync-meta?accountId=act_XXX&dias=95   (Authorization: Bearer <CRON_SECRET>)
+#   /api/sync-meta?accountId=act_XXX&dias=123   (Authorization: Bearer <CRON_SECRET>)
 
 on:
   workflow_dispatch:
@@ -42,8 +42,11 @@ jobs:
           set -uo pipefail   # SEM -e: uma conta que falha nao aborta o bloco
 
           BASE="https://influencia-painel-app.vercel.app/api/sync-meta"
-          # 95 = RETENCAO_DIAS (lib/agregadas.ts). Mais que isso o mesclarDias descarta.
-          DIAS=95
+          # 123 = RETENCAO_DIAS + 1 (lib/agregadas.ts), o mesmo da conta nova no sync-meta: a busca
+          # pede dias - 1 para tras. Mais que isso o mesclarDias descarta.
+          # ⚠️ Com a janela de 122 dias (15/09/2026), rodar isto ESTENDE os docs para tras e traz
+          # julho de volta a /gestores — mes pago. Nao rodar sem decisao.
+          DIAS=123
           LIMITE=1
           MAX_ITER=130
           OFFSET="${OFFSET_INICIAL:-0}"

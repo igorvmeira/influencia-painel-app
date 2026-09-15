@@ -131,7 +131,9 @@ export default function Gestores() {
 
   // Meses fechados que a retenção alcança. Só é OFERECIDO o mês que tem o anterior
   // inteiro na janela — sem ele não há comparação, só número solto.
-  const meses = useMemo(() => mesesDisponiveis(daily, contasAtivas), [daily, contasAtivas]);
+  // O primeiro dia lido para a carteira inteira (lib/data.ts) — a oferta não passa dele.
+  const inicioJanela = dados?.inicioJanela ?? null;
+  const meses = useMemo(() => mesesDisponiveis(daily, contasAtivas, inicioJanela), [daily, contasAtivas, inicioJanela]);
   const comparaveis = useMemo(() => meses.filter((m) => m.cobreMesAnterior), [meses]);
 
   /**
@@ -185,8 +187,8 @@ export default function Gestores() {
   }, [comparaveis, meses, sel, mesCompartilhado]);
 
   const janela = useMemo(
-    () => (sel ? janelaMesFechado(daily, contasAtivas, sel.ano, sel.mes) : null),
-    [daily, contasAtivas, sel]
+    () => (sel ? janelaMesFechado(daily, contasAtivas, sel.ano, sel.mes, inicioJanela) : null),
+    [daily, contasAtivas, sel, inicioJanela]
   );
 
   const painel = useMemo(
@@ -200,9 +202,9 @@ export default function Gestores() {
   const painelAnterior = useMemo(() => {
     if (!sel) return null;
     const a = mesAnteriorDe(sel.ano, sel.mes);
-    const j = janelaMesFechado(daily, contasAtivas, a.ano, a.mes);
+    const j = janelaMesFechado(daily, contasAtivas, a.ano, a.mes, inicioJanela);
     return j ? montarPainel(daily, contasAtivas, j.D, j.espec) : null;
-  }, [daily, contasAtivas, sel]);
+  }, [daily, contasAtivas, sel, inicioJanela]);
 
   // accountId -> números do mês anterior (para o Δ por conta).
   const anteriorPorConta = useMemo(() => {

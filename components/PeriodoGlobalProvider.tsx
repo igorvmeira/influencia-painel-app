@@ -85,7 +85,7 @@ export type JanelaDia = (typeof JANELAS_DIA)[number];
  *
  * ⚠️ AS DUAS PONTAS TÊM RÉGUAS DIFERENTES, e é isso que torna o aparo necessário:
  *   · /gestores  — só mês FECHADO, e só se o anterior inteiro couber na janela de
- *                  tráfego (~95 dias). São 3 ou 4 opções.
+ *                  tráfego (RETENCAO_DIAS, lib/agregadas.ts). Poucas opções.
  *   · /comercial — QUALQUER mês em que alguém entrou, inclusive o corrente. São 26,
  *                  a partir de 2024.
  * Ou seja a /comercial manda mês que a /gestores não aceita com frequência, não por

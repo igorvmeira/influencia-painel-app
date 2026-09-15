@@ -391,6 +391,34 @@ Duas pendências anotadas, nenhuma urgente:
   some a TELA, não o dado: `metricasDiarias` guarda julho e agosto inteiros desde 02/04/2026
   (2.352 e 2.346 linhas conta-dia, iguais ao agregado). Manter um mês pago à vista é outra obra —
   foto do fechamento, ou leitura sob demanda do granular para mês fora da janela. Sem decisão.
+- ✅ **Feito (15/09/2026): a janela de 122 dias, pelos motivos dela** (decisão do Igor: não conta
+  como solução do agosto). `RETENCAO_DIAS` passou a ser conferida no build contra a exigência das
+  telas no pior dia do calendário (`EXIGENCIAS_DA_TELA` em `lib/agregadas.ts`: dois meses fechados
+  na /gestores = 122 dias; 60d contra 60d = 120). O que mudou:
+  · a borda do que as telas oferecem (`inicioJanela`) é o primeiro dia LIDO para a carteira
+    inteira (`inicioDaCarteira` em `lib/data.ts`), não a menor data de qualquer conta nem a
+    retenção da sync. Doc parado não alarga mais a oferta, e /gestores, Início e Dashboard usam a
+    mesma borda;
+  · doc sem `lidoDesde` continua lido pela retenção LEGADA de 95 (`RETENCAO_LEGADO_DIAS`) — pela
+    janela nova ele afirmaria 27 dias que nenhum sync leu;
+  · conta nova busca 123 dias, um a mais, para o `lidoDesde` dela nascer no corte;
+  · o modal da conta perde a variação quando o painel não leu os dois períodos DAQUELA conta: hoje
+    o 60d mostra "—" com o motivo (exigiria dados desde 18/05, o painel lê desde 12/06);
+  · o calendário do Dashboard calcula os dias disponíveis em vez de afirmar "guarda os últimos N".
+  ⚠️ **Os docs NÃO foram estendidos para trás.** Crescem um dia por sincronização desde 12/06 e
+  chegam aos 122 em 12/10/2026; até lá o 60d do Dashboard continua sem comparação. Estender traria
+  julho de volta à /gestores — mês pago — e é decisão à parte (o `backfill-conjuntos` com
+  `dias=123` faria isso; está marcado para não rodar sem decisão).
+  Conferência antes×depois com o código de produção, no dado real: meses oferecidos, selo de agosto
+  (ISMAIL), pódio da Início, "Mês", calendário e comparação de 7/15/30/60d idênticos; o modal da
+  conta em 7/15/30d igual nas 84 contas ativas, e em 60d as 84 perdem a variação com o motivo.
+  Casos plantados (doc parado, conta nova truncada, exigência do calendário, doc legado, conta nova,
+  agosto em 05/10 e em 01/11, modal com leitura curta, parada e ausente): todos no esperado.
+- 📌 **Decidido (Igor, 15/09/2026): a foto do fechamento entra, com prazo em 01/10/2026** — o dia em
+  que setembro fecha, a primeira chance de fotografar um mês antes de ele ser pago. Desenho ainda
+  não decidido (o que guarda, quem tira, o que a tela mostra quando foto e cálculo divergem, e se a
+  foto é o que vale para bonificação). Medido em 15/09 com agosto: só por gestor 3,1 kB; com a
+  composição conta a conta 31,9 kB; com a série diária 453,8 kB (44% do limite de um documento).
 - 📌 **Depois dela: a saída/troca com data.** O painel reescreve mês fechado toda
   vez que uma conta sai ou troca de gestor, porque `montarPainel` soma cada conta inteira no
   gestor que ela tem hoje e as telas tiram a conta pausada de todos os meses. Não iniciada.

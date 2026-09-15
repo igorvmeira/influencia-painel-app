@@ -246,16 +246,18 @@ export function rankingEvolucaoGestores(
   daily: MetricaDiaria[],
   contasAtivas: ContaMap[],
   /** Janela de leitura por conta (`leituraPorConta`, lib/data.ts) — o insumo de `coberturaMes`. */
-  leituraPorConta: Record<string, JanelaLeitura>
+  leituraPorConta: Record<string, JanelaLeitura>,
+  /** O primeiro dia lido para a carteira inteira (`inicioJanela`, lib/data.ts) — limita a oferta. */
+  inicioJanela: string | null
 ): RankingEvolucao | null {
-  const comparaveis = mesesDisponiveis(daily, contasAtivas).filter((m) => m.cobreMesAnterior);
+  const comparaveis = mesesDisponiveis(daily, contasAtivas, inicioJanela).filter((m) => m.cobreMesAnterior);
   if (!comparaveis.length) return null;
 
   const { ano, mes } = comparaveis[0];
   const ant = mes === 1 ? { ano: ano - 1, mes: 12 } : { ano, mes: mes - 1 };
 
-  const jAtual = janelaMesFechado(daily, contasAtivas, ano, mes);
-  const jAnt = janelaMesFechado(daily, contasAtivas, ant.ano, ant.mes);
+  const jAtual = janelaMesFechado(daily, contasAtivas, ano, mes, inicioJanela);
+  const jAnt = janelaMesFechado(daily, contasAtivas, ant.ano, ant.mes, inicioJanela);
   if (!jAtual || !jAnt) return null;
 
   const pAtual = montarPainel(daily, contasAtivas, jAtual.D, jAtual.espec);

@@ -331,7 +331,7 @@ export default function Dashboard(
   // Modo mês (mês corrente 1..D vs mês anterior 1..D). No modo dia, jm é null.
   const modoMes = periodo === "Mês";
   const modoCustom = periodo === "Personalizado";
-  const jmMes = useMemo(() => (modoMes ? janelaMes(daily, contasAtivas) : null), [modoMes, daily, contasAtivas]);
+  const jmMes = useMemo(() => (modoMes ? janelaMes(daily, contasAtivas, inicioJanela) : null), [modoMes, daily, contasAtivas, inicioJanela]);
   const jmCustom = useMemo(
     () => (modoCustom
       ? janelaPersonalizada(
@@ -377,7 +377,8 @@ export default function Dashboard(
 
   // ---- Comparação indisponível: o período anterior não cabe no histórico ----
   // Regra da casa: melhor "—" do que número subestimado por falta de dado.
-  // Acontece no 60d (exigiria 120 dias; a janela tem ~95) e em personalizados longos.
+  // Acontece no 60d enquanto os docs não enchem (ele exige 120 dias; a janela chega a
+  // RETENCAO_DIAS, mas cresce um dia por sincronização desde 15/09/2026) e em personalizados longos.
   const motivoSemComparacao = useMemo(() => {
     if (!primeiroDia) return null;
     const desdeBR = (ymd: string) => ymdParaBR(ymd);
@@ -699,8 +700,12 @@ export default function Dashboard(
             <div className="pb-2 text-[11px] leading-relaxed" style={{ color: MUTED }}>
               {primeiroDia && ultimoDia && (
                 <p>
-                  Dá para escolher de {ymdParaBR(primeiroDia)} a {ymdParaBR(ultimoDia)} — o painel guarda
-                  os últimos {RETENCAO_DIAS} dias.
+                  {/* Os dias disponíveis se CALCULAM: a janela chega a RETENCAO_DIAS, mas os docs
+                      crescem um dia por sincronização desde 15/09/2026 — "guarda 122 dias" seria
+                      falso até eles encherem. */}
+                  Dá para escolher de {ymdParaBR(primeiroDia)} a {ymdParaBR(ultimoDia)}
+                  {" "}({Math.round((Date.parse(ultimoDia) - Date.parse(primeiroDia)) / 86400000) + 1} dias)
+                  {" "}— a janela do painel chega a {RETENCAO_DIAS} dias.
                 </p>
               )}
               {motivoBloqueio && <p style={{ color: TEXTO }}>{motivoBloqueio}</p>}

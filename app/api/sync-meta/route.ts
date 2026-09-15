@@ -30,12 +30,16 @@ const JANELA_DIAS = 30;
 // Teto de segurança da janela: acima da retenção do agregado não há ganho.
 const JANELA_MAX = 130;
 
-// Janela para conta NOVA (nunca sincronizada). Alinhada com a retenção do agregado:
-// puxar mais que RETENCAO_DIAS seria descartado pelo mesclarDias na hora de gravar.
-const JANELA_NOVA = RETENCAO_DIAS;
+// Janela para conta NOVA (nunca sincronizada). Alinhada com a retenção do agregado — e UM DIA
+// A MAIS: a busca pede `dias - 1` para trás, então com RETENCAO_DIAS exato o dia da fronteira
+// ficaria retido sem ter sido lido, e o `lidoDesde` da conta nova nasceria um dia depois do das
+// outras. Como 122 é a exigência exata do pior dia do calendário (lib/agregadas.ts), esse dia
+// de diferença faria a conta nova sair "incompleta" justamente nele. Mais que isso o
+// mesclarDias descarta ao gravar.
+const JANELA_NOVA = RETENCAO_DIAS + 1;
 
 // Quantas contas novas (janela cheia) podem rodar numa MESMA chamada.
-// Puxar ~95 dias é bem mais pesado que 30; se muitas contas novas entrarem juntas,
+// Puxar a janela cheia (~4 meses) é bem mais pesado que 30; se muitas contas novas entrarem juntas,
 // o bloco arriscaria estourar o tempo da função. As excedentes são ADIADAS —
 // deliberadamente NÃO sincronizadas neste bloco, e não sincronizadas com 30 dias.
 // Motivo: sincronizar com 30 criaria o doc agregado e a conta ficaria travada como
@@ -113,8 +117,8 @@ function conferir(
    * seria acusar a própria aritmética de janela.
    *
    * ⚠️ ESTE PARÂMETRO EXISTE PORQUE A MEDIÇÃO PEGOU UM OFF-BY-ONE MEU. `cutoffRetencao`
-   * guarda 95 dias; `buscarDiario`/`buscarDiarioPorConjunto` pedem `dias - 1` para trás,
-   * ou seja 94. O dia da fronteira sobrevive em `dias` e nunca tem conjunto — e a regra
+   * guarda RETENCAO_DIAS dias; `buscarDiario`/`buscarDiarioPorConjunto` pedem `dias - 1` para
+   * trás (com 95, eram 94). O dia da fronteira sobrevive em `dias` e nunca tem conjunto — e a regra
    * de "ausência com atividade é divergência" acusaria **51 dia-conta todo dia**, todos
    * na mesma data. Seria o alarme diário que vira ruído, criado dentro da conferência
    * feita para evitá-lo.
@@ -357,8 +361,8 @@ export async function GET(req: Request) {
      *
      * `porGrupoAte` fica um dia atrás do total (o parcial não é conferido, ver
      * `conferir`). `porGrupoDe` existe pelo motivo simétrico: o dia mais antigo de
-     * `dias` sobrevive um dia além do que a busca cobre (retenção de 95 vs janela de
-     * 94), então a quebra começa depois. Dizer só um dos dois lados faria quem consome
+     * `dias` sobrevive um dia além do que a busca cobre (a retenção guarda RETENCAO_DIAS e
+     * a busca pede um dia a menos), então a quebra começa depois. Dizer só um dos dois lados faria quem consome
      * supor que o outro coincide com `dias` — e comparar janelas diferentes é o erro que
      * a casa já pagou uma vez.
      */

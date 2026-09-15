@@ -37,7 +37,14 @@ export interface JanelaMes {
 }
 
 // Âncora (dia mais recente) e menor data, dos registros das contas informadas.
-function ancoraMin(daily: MetricaDiaria[], contas: ContaMap[]): { ancoraMs: number; minMs: number | null } {
+// `piso` = o primeiro dia que o painel leu para a carteira inteira (`inicioJanela`, lib/data.ts):
+// a menor data nunca fica antes dele. ⚠️ Sem o piso, a menor data sai de QUALQUER conta — e basta
+// um doc parado (a ISP4 guardando 31/05 em 15/09/2026) para a tela oferecer o que não leu.
+function ancoraMin(
+  daily: MetricaDiaria[],
+  contas: ContaMap[],
+  piso: string | null = null
+): { ancoraMs: number; minMs: number | null } {
   const set = new Set(contas.map((c) => c.accountId));
   let max = "", min = "";
   for (const m of daily) {
@@ -45,9 +52,10 @@ function ancoraMin(daily: MetricaDiaria[], contas: ContaMap[]): { ancoraMs: numb
     if (m.data > max) max = m.data;
     if (min === "" || m.data < min) min = m.data;
   }
+  const minEfetivo = min !== "" && piso && piso > min ? piso : min;
   return {
     ancoraMs: max ? Date.parse(max + "T00:00:00Z") : Date.now(),
-    minMs: min ? Date.parse(min + "T00:00:00Z") : null,
+    minMs: minEfetivo ? Date.parse(minEfetivo + "T00:00:00Z") : null,
   };
 }
 
@@ -81,8 +89,13 @@ export function intervaloLabel(
 }
 
 // Monta a janela do mês corrente (1..D) vs mês anterior (1..D). null se não há dados.
-export function janelaMes(daily: MetricaDiaria[], contas: ContaMap[]): JanelaMes | null {
-  const { ancoraMs, minMs } = ancoraMin(daily, contas);
+export function janelaMes(
+  daily: MetricaDiaria[],
+  contas: ContaMap[],
+  /** O primeiro dia lido para a carteira inteira (`inicioJanela`). Decide o `parcial`. */
+  piso: string | null
+): JanelaMes | null {
+  const { ancoraMs, minMs } = ancoraMin(daily, contas, piso);
   if (minMs === null) return null;
 
   const A = new Date(ancoraMs);
@@ -132,9 +145,9 @@ export function janelaMes(daily: MetricaDiaria[], contas: ContaMap[]): JanelaMes
 // ===========================================================================
 //
 // LIMITE DO HISTÓRICO: o painel lê `metricasAgregadas`, que é uma projeção com
-// JANELA MÓVEL de RETENCAO_DIAS (95) — ver lib/agregadas.ts. Não há dado mais
-// antigo que isso para a tela. Por isso o seletor de data TRAVA na primeira data
-// disponível e a tela diz qual é ("dados disponíveis a partir de DD/MM/AAAA").
+// JANELA MÓVEL de RETENCAO_DIAS — ver lib/agregadas.ts. Não há dado mais antigo que
+// isso para a tela. Por isso o seletor de data TRAVA no primeiro dia lido para a
+// carteira inteira (`inicioJanela`) e a tela diz qual é.
 //
 // SAÍDA DE EMERGÊNCIA (se um dia precisarem de período anterior à janela):
 // a coleção `metricasDiarias` guarda o histórico COMPLETO (desde 02/04) e nunca
@@ -173,8 +186,8 @@ export function primeiroDiaDisponivel(daily: MetricaDiaria[], contas: ContaMap[]
  * 83 contas ativas começavam em 11/06. O Dashboard escrevia "dados disponíveis a partir de
  * 31/05/2026", falso para 82 contas. É o mesmo mecanismo que fazia a /gestores oferecer
  * julho como comparável (ver CLAUDE.md, "o seletor lista o que consegue montar").
- * ⚠️ `mesesDisponiveis` ainda decide pelo mínimo global — mexer nele muda o selo de julho,
- * e isso está pendente de decisão.
+ * Desde 15/09/2026 `mesesDisponiveis`, `janelaMes` e `janelaMesFechado` usam o mesmo piso: a
+ * oferta da /gestores e a do Dashboard saem da mesma borda (`inicioDaCarteira`, lib/data.ts).
  */
 export function inicioDisponivel(daily: MetricaDiaria[], contas: ContaMap[], piso?: string | null): string | null {
   const primeiro = primeiroDiaDisponivel(daily, contas);
@@ -474,10 +487,12 @@ export function janelaMesFechado(
   daily: MetricaDiaria[],
   contas: ContaMap[],
   ano: number,
-  mes: number
+  mes: number,
+  /** O primeiro dia lido para a carteira inteira (`inicioJanela`). Decide o `parcial`. */
+  piso: string | null
 ): JanelaMes | null {
   if (!(mes >= 1 && mes <= 12)) return null;
-  const { ancoraMs, minMs } = ancoraMin(daily, contas);
+  const { ancoraMs, minMs } = ancoraMin(daily, contas, piso);
   if (minMs === null) return null;
 
   const D = diasNoMes(ano, mes);
@@ -621,11 +636,16 @@ export interface MesDisponivel {
  *
  * `cobreMesAnterior` é o que a tela precisa olhar antes de oferecer o mês no
  * seletor: sem o mês anterior inteiro não há comparação, só número solto.
- * Com RETENCAO_DIAS = 95 isso sempre cabe (pior caso do calendário = 91 dias),
- * mas a folga é de 4 dias — ver o piso em lib/agregadas.ts.
+ * A retenção (RETENCAO_DIAS em lib/agregadas.ts) é calculada para cobrir DOIS meses
+ * comparáveis no pior dia do calendário — ver `EXIGENCIAS_DA_TELA`.
+ *
+ * ⚠️ `piso` (o primeiro dia lido para a carteira inteira) impede a oferta de sair do MELHOR caso
+ * enquanto a cobertura é cobrada de TODAS as contas. Até 15/09/2026 a menor data vinha de
+ * qualquer conta, e o doc parado da ISP4 fazia a /gestores oferecer julho com 81 de 83 contas
+ * incompletas (ver CLAUDE.md, *O SELETOR LISTA O QUE CONSEGUE MONTAR*).
  */
-export function mesesDisponiveis(daily: MetricaDiaria[], contas: ContaMap[]): MesDisponivel[] {
-  const { ancoraMs, minMs } = ancoraMin(daily, contas);
+export function mesesDisponiveis(daily: MetricaDiaria[], contas: ContaMap[], piso: string | null): MesDisponivel[] {
+  const { ancoraMs, minMs } = ancoraMin(daily, contas, piso);
   if (minMs === null) return [];
 
   const A = new Date(ancoraMs);

@@ -1,8 +1,8 @@
 import {
-  ClienteNicho, ContaMap, Detalhe, LinhaCliente, LinhaGestor, LinhaNicho,
+  ClienteNicho, ContaMap, Detalhe, JanelaLeitura, LinhaCliente, LinhaGestor, LinhaNicho,
   MetricaDiaria, Painel, PontoCpl, Tipo, Totais,
 } from "./types";
-import { EspecJanela } from "./periodo";
+import { EspecJanela, ymdParaBR } from "./periodo";
 import { cplDe as cpl, variacaoPct as variacao, compararCpl } from "./cpl";
 
 const DIA_MS = 86400000;
@@ -197,6 +197,11 @@ export interface AnaliseDaConta {
   gastoVar: number | null;
   conversasVar: number | null;
   cplVar: number | null;
+  /**
+   * Por que as três variações são `null` mesmo com número dos dois lados — o painel não leu
+   * esta conta nos dois períodos inteiros. null quando a comparação existe.
+   */
+  comparacaoIndisponivel: string | null;
   /** false = não houve gasto nem conversão em nenhum dos dois lados. */
   temDado: boolean;
 }
@@ -221,7 +226,9 @@ export function analiseDaConta(
   daily: MetricaDiaria[],
   contas: ContaMap[],
   accountId: string,
-  periodoDias: number
+  periodoDias: number,
+  /** A janela de leitura DESTA conta (`leituraPorConta`, lib/data.ts). */
+  leitura: JanelaLeitura | null
 ): AnaliseDaConta {
   const mapaConta = new Map(contas.map((c) => [c.accountId, c]));
   const registros = daily.filter((m) => mapaConta.has(m.accountId));
@@ -230,15 +237,34 @@ export function analiseDaConta(
   const atual = somasPorJanela(registros, ancoraMs, 0, periodoDias - 1).get(accountId) ?? somaZero();
   const ant = somasPorJanela(registros, ancoraMs, periodoDias, periodoDias * 2 - 1).get(accountId) ?? somaZero();
 
+  /**
+   * ⚠️ A COMPARAÇÃO SÓ EXISTE SE O PAINEL LEU OS DOIS PERÍODOS DESTA CONTA. Até 15/09/2026 o
+   * 60d comparava contra 60 dias anteriores dos quais só 35 estavam na janela, e a variação
+   * saía sem aviso: soma de 35 dias lida como soma de 60. A pergunta é da CONTA, não da carteira
+   * — é a leitura dela que diz se os dois lados existem, a mesma régua de `coberturaMes`.
+   */
+  const exigidoYmd = new Date(ancoraMs - (periodoDias * 2 - 1) * DIA_MS).toISOString().slice(0, 10);
+  const ancoraYmd = new Date(ancoraMs).toISOString().slice(0, 10);
+  const comparacaoIndisponivel =
+    leitura === null
+      ? "sem registro de leitura desta conta — não dá para saber se os dois períodos estão inteiros"
+      : leitura.desde > exigidoYmd
+        ? `exigiria dados desde ${ymdParaBR(exigidoYmd)}, e o painel lê esta conta desde ${ymdParaBR(leitura.desde)}`
+        : leitura.ate < ancoraYmd
+          ? `o painel leu esta conta só até ${ymdParaBR(leitura.ate)}`
+          : null;
+  const semBase = comparacaoIndisponivel !== null;
+
   const conv = atual.conversas;
   const convAnt = ant.conversas;
   return {
     gasto: atual.gasto,
     conversas: conv,
     cpl: cpl(atual.gasto, conv),
-    gastoVar: variacao(atual.gasto, ant.gasto),
-    conversasVar: variacao(conv, convAnt),
-    cplVar: variacao(cpl(atual.gasto, conv), cpl(ant.gasto, convAnt)),
+    gastoVar: semBase ? null : variacao(atual.gasto, ant.gasto),
+    conversasVar: semBase ? null : variacao(conv, convAnt),
+    cplVar: semBase ? null : variacao(cpl(atual.gasto, conv), cpl(ant.gasto, convAnt)),
+    comparacaoIndisponivel,
     temDado: atual.gasto > 0 || conv > 0 || ant.gasto > 0 || convAnt > 0,
   };
 }

@@ -5,32 +5,80 @@ import { GrupoDia, JanelaLeitura, MetricaDiaria } from "./types";
 // intacta). Reduz a leitura do painel de ~4.6k docs para ~85 (um por conta).
 export const COL_AGREGADAS = "metricasAgregadas";
 
-// Dias retidos no doc agregado. O painel olha até ~83 dias atrás (offset de 56 na
-// comparação "2 meses atrás", lib/painel.ts) — 95 dá margem, igual ao cutoff do getDadosDiarios.
-export const RETENCAO_DIAS = 95;
+const DIA_MS = 86400000;
+const ymd = (d: Date) => d.toISOString().slice(0, 10);
 
-// ⚠️ PISO DA RETENÇÃO — NÃO BAIXAR DE 91.
-// A tela "Análise de Gestores" compara MÊS FECHADO vs MÊS FECHADO, então a janela
-// precisa alcançar o dia 1 do mês RETRASADO. Pior caso do calendário (último dia de
-// um mês, com dois meses de 31 dias antes): (31-1) + 31 + 30 = 91 dias. Acontece em
-// jan, mai, jul, ago, set, out e dez — 7 meses do ano.
-// Com RETENCAO_DIAS = 95 a folga é de apenas 4 dias. Baixar para 90 quebraria a
-// comparação em silêncio: a tela mostraria um mês retrasado truncado.
-// Se precisar mesmo reduzir, ajuste antes a tela (lib/periodo.ts: mesesDisponiveis
-// já avisa quando a janela não cobre, mas a comparação simplesmente deixa de existir).
-export const RETENCAO_MINIMA = 91;
-if (RETENCAO_DIAS < RETENCAO_MINIMA) {
+/**
+ * O que cada tela pede da janela. Mudar uma tela obriga a mudar aqui — e o build confere
+ * (`retencaoExigidaDias`, logo abaixo).
+ */
+export const EXIGENCIAS_DA_TELA = {
+  /** /gestores: meses fechados comparáveis oferecidos — cada um exige o anterior INTEIRO. */
+  mesesFechadosComparaveis: 2,
+  /** Dashboard e Análise da Conta: o maior período comparado com o anterior de mesmo tamanho. */
+  maiorPeriodoDias: 60,
+} as const;
+
+/**
+ * Dias retidos no doc agregado — a exigência das telas no pior dia do calendário.
+ *
+ * Até 15/09/2026 eram 95, de uma conta que só olhava o ÚLTIMO mês fechado (piso de 91). A
+ * /gestores oferece dois, e o Dashboard compara 60 dias contra os 60 anteriores: com 95, o
+ * segundo mês dependia de sorte e o 60d nunca teve comparação. Medido em 15/09/2026 (dia a dia
+ * de 2026 a 2030): dois meses exigem 122, o 60d exige 120.
+ *
+ * ⚠️ JANELA MAIOR NÃO SEGURA MÊS PAGO NA TELA — só adia. Com 122, agosto/2026 sai da /gestores
+ * na sincronização de 01/11/2026 (com 95 era 05/10). Manter mês pago à vista é outra obra:
+ * ver CLAUDE.md, *MÊS PAGO NÃO É MÊS EXIBIDO*.
+ *
+ * Custo (medido em 15/09/2026): leituras por carga iguais, um doc por conta; a série enviada à
+ * tela vai de ~1,02 MB a ~1,31 MB quando os docs encherem; o maior doc, de ~34,8 kB a ~44 kB.
+ * ⚠️ Os docs NÃO foram estendidos para trás: crescem um dia por sincronização desde 12/06/2026
+ * e chegam aos 122 dias em 12/10/2026. Estender traria julho de volta à /gestores — mês pago —
+ * e é decisão à parte.
+ */
+export const RETENCAO_DIAS = 122;
+
+/**
+ * A retenção com que foram podados os docs que ainda não têm `lidoDesde` (todo doc gravado
+ * antes de 15/09/2026). ⚠️ NÃO troque por RETENCAO_DIAS: deduzir a leitura desses docs pela
+ * janela nova afirmaria 27 dias que nenhum sync leu — o furo exato que o `lidoDesde` fecha.
+ */
+export const RETENCAO_LEGADO_DIAS = 95;
+const cutoffLegado = (agora: number) => ymd(new Date(agora - RETENCAO_LEGADO_DIAS * DIA_MS));
+
+/**
+ * Pior caso do calendário (2026–2030), em dias entre a sincronização e o primeiro dia que
+ * precisa estar retido. A âncora é a VÉSPERA da sincronização: o dia em que ela roda é parcial
+ * e sai dos dados.
+ */
+export function retencaoExigidaDias(): number {
+  const diasNoMes = (a: number, m: number) => new Date(Date.UTC(a, m, 0)).getUTCDate();
+  // N dias contra os N anteriores: da sincronização até âncora − (2N − 1) são 2N dias.
+  let pior = 2 * EXIGENCIAS_DA_TELA.maiorPeriodoDias;
+  for (let s = Date.UTC(2026, 0, 1); s < Date.UTC(2031, 0, 1); s += DIA_MS) {
+    const anc = new Date(s - DIA_MS);
+    let a = anc.getUTCFullYear();
+    let m = anc.getUTCMonth() + 1;
+    // Último mês fechado: o da âncora só quando ela é o último dia dele.
+    if (anc.getUTCDate() !== diasNoMes(a, m)) { m -= 1; if (m === 0) { m = 12; a -= 1; } }
+    // O mais antigo oferecido é o N-ésimo mês fechado, e ele exige o anterior inteiro.
+    m -= EXIGENCIAS_DA_TELA.mesesFechadosComparaveis;
+    while (m <= 0) { m += 12; a -= 1; }
+    const dias = Math.round((s - Date.UTC(a, m - 1, 1)) / DIA_MS);
+    if (dias > pior) pior = dias;
+  }
+  return pior;
+}
+
+if (RETENCAO_DIAS < retencaoExigidaDias()) {
   // Lançar no carregamento do módulo é proposital: quebra o `next build`, que é o
   // lugar mais barato para descobrir. Comentário protege quem lê; isto protege quem não lê.
   throw new Error(
-    `RETENCAO_DIAS=${RETENCAO_DIAS} é menor que o piso ${RETENCAO_MINIMA}. ` +
-    "A comparação mês-fechado vs mês-fechado da Análise de Gestores exige alcançar " +
-    "o dia 1 do mês retrasado (pior caso do calendário = 91 dias). Ver lib/agregadas.ts."
+    `RETENCAO_DIAS=${RETENCAO_DIAS} é menor que a exigência das telas (${retencaoExigidaDias()} dias ` +
+    "no pior dia do calendário). Ver EXIGENCIAS_DA_TELA em lib/agregadas.ts."
   );
 }
-
-const DIA_MS = 86400000;
-const ymd = (d: Date) => d.toISOString().slice(0, 10);
 
 /** Granularidade nova: um doc por conjunto-dia. Coleção PRÓPRIA — ver MetricaConjunto. */
 export const COL_CONJUNTOS = "metricasConjuntos";
@@ -64,7 +112,7 @@ export interface DocAgregado {
    *
    * ⚠️ Ela é MENOR que `dias` nos dois lados, por motivos distintos:
    *   · no topo, porque o dia mais recente é parcial e não é conferido;
-   *   · na base, porque a retenção guarda 95 dias e a busca pede 94 — o dia da fronteira
+   *   · na base, porque a retenção guarda um dia a mais do que a busca pede — o dia da fronteira
    *     sobrevive em `dias` e nunca tem quebra. Ele sai sozinho no dia seguinte.
    */
   porGrupoDe?: string | null;
@@ -100,7 +148,7 @@ export function cutoffRetencao(agora: number = Date.now()): string {
  *   · conta que ficou sem ser lida por mais tempo do que a busca diária cobre — sobra um
  *     buraco, e a leitura contínua recomeça no início da busca nova.
  *
- * ⚠️ DOC SEM O CAMPO usa a retenção da última leitura. Não é suposição: medido em
+ * ⚠️ DOC SEM O CAMPO usa a retenção LEGADA (95 dias) da última leitura. Não é suposição: medido em
  * 15/09/2026, das 124 contas nenhuma tem série antes desse dia, e nas 18 ativas cuja série
  * começa depois dele a Meta confirma zero no buraco. O campo entra na primeira reescrita.
  */
@@ -116,7 +164,8 @@ export function lidoDesdeAposSync(p: {
   let desde = p.inicioBusca;
   const tAntes = p.atualizadoEmAntes ? Date.parse(p.atualizadoEmAntes) : NaN;
   if (p.docExistia && !Number.isNaN(tAntes)) {
-    const antes = p.lidoDesdeAntes ?? cutoffRetencao(tAntes);
+    // Doc sem o campo foi podado com a retenção LEGADA, nunca com a atual (RETENCAO_LEGADO_DIAS).
+    const antes = p.lidoDesdeAntes ?? cutoffLegado(tAntes);
     // Contínua quando a busca nova alcança o DIA da leitura anterior: aquele dia foi lido
     // pela metade, então só conta como lido se for relido agora.
     const continua = p.inicioBusca <= ymd(new Date(tAntes));
@@ -141,7 +190,8 @@ export function janelaDeLeitura(
     timeZone: fuso, year: "numeric", month: "2-digit", day: "2-digit",
   }).format(new Date(t));
   const vespera = ymd(new Date(Date.parse(`${diaDaLeitura}T00:00:00Z`) - DIA_MS));
-  return { desde: doc?.lidoDesde ?? cutoffRetencao(t), ate: vespera };
+  // Sem `lidoDesde`: a retenção LEGADA da última leitura — nunca a atual (ver RETENCAO_LEGADO_DIAS).
+  return { desde: doc?.lidoDesde ?? cutoffLegado(t), ate: vespera };
 }
 
 // Mescla dias frescos sobre os antigos (upsert por data — fresco vence), descarta o
