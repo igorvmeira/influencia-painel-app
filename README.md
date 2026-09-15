@@ -318,6 +318,24 @@ Duas pendências anotadas, nenhuma urgente:
   antes e depois: agosto ISMAIL nas duas versões, julho sem selo nas duas** (nenhum gestor
   elegível), e a Início concorda em agosto. Caso plantado — só o gestor sem variação é
   elegível: antes ele levava o selo, agora ninguém leva.
+- 📌 **NÃO MEDIDO (15/09/2026): quanto o GitHub demora para COMEÇAR uma execução disparada à
+  mão.** A opção escolhida para o horário do sync (cron da Vercel às 06:00 de Brasília
+  dispara o `sync-meta` por `workflow_dispatch`) parte de uma premissa: o atraso documentado
+  pelo GitHub é do AGENDAMENTO (`schedule`), não do disparo. **Se o disparo também entrar em
+  fila por horas, a opção não resolve nada.**
+  Referência antes dela: 65 execuções agendadas, atraso de 0h29 a 11h46 depois das 09:00 UTC;
+  desde 27/08 nenhuma começou antes de 09:29 em Brasília.
+  **Como medir, a partir do primeiro dia no ar:** cada execução disparada imprime um aviso
+  com o instante em que o GitHub aceitou o disparo e quantos segundos levou para começar; a
+  API pública de execuções (`/actions/workflows/sync-meta.yml/runs?event=workflow_dispatch`)
+  dá `created_at` e `run_started_at`; e `sistema/disparoWorkflows` no Firestore guarda a hora
+  em que a Vercel disparou e a resposta do GitHub.
+  **Critério, em 7 dias no ar:** disparo aceito até 09:05 UTC e execução começando até 09:15
+  UTC em todos os dias. Se não cumprir, a opção volta à mesa — e a tela continua dizendo a
+  verdade no meio-tempo ("entra assim que a sincronização de hoje rodar").
+- 📌 **Decisão pendente (15/09/2026): `sync-comercial` e `sync-planilha` continuam INDEPENDENTES**
+  do `sync-meta`, no agendamento próprio do GitHub. Encadear ao fim do `sync-meta` criaria um
+  ponto único de falha entre fontes que não dependem uma da outra (Xmax, planilha e Meta).
 - 📌 **Decisão (14/09/2026): não medir criativo ao vivo com 5+ conversões e gasto zero.** Era o
   único caso em que o CPL 0 abria o ranking de criativos do Dashboard em 1º, em dourado, e
   medir custa uma chamada à Meta por conta.

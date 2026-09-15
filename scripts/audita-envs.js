@@ -35,6 +35,9 @@ const ROTAS_DE_CRON = [
   "app/api/sync-planilha/route.ts",
   "app/api/sync-meta/route.ts",
   "app/api/comercial/sync/route.ts",
+  // Chamada pelo cron da Vercel (vercel.json). Entrou aqui só depois de a verificação 1b
+  // reprovar a ausência dela — em 15/09/2026, a primeira versão desta lista não a tinha.
+  "app/api/cron/dispara/[workflow]/route.ts",
 ];
 
 /**
@@ -217,6 +220,71 @@ for (const f of todos) {
     console.log(`   ok  ${f} (${relevantes.sort().join(", ")})`);
   }
 }
+
+// ---------------------------------------------------------------------------
+// 1b. QUEM É ROTA DE CRON se decide por QUEM A CHAMA — não pela lista lembrada à mão
+// ---------------------------------------------------------------------------
+// ⚠️ `ROTAS_DE_CRON` é lista mantida à mão, e lista à mão envelhece calada: em 15/09/2026 a
+// rota nova do disparo pela Vercel (`app/api/cron/dispara/[workflow]`) entrou sem entrar
+// na lista, e a verificação 2 respondeu "Tudo certo" sem nunca tê-la olhado. Agora quem
+// define "rota de cron" é o agendador: os `crons` do vercel.json e as URLs de API dos
+// workflows que têm `schedule`. Rota chamada por agendador e ausente da lista REPROVA.
+function rotaDoCaminho(caminho) {
+  const partes = caminho.split("?")[0].replace(/^\/+|\/+$/g, "").split("/");
+  function busca(dir, i) {
+    if (i === partes.length) {
+      const f = `${dir}/route.ts`;
+      return fs.existsSync(path.join(RAIZ, f)) ? f : null;
+    }
+    const exato = `${dir}/${partes[i]}`;
+    if (fs.existsSync(path.join(RAIZ, exato))) {
+      const r = busca(exato, i + 1);
+      if (r) return r;
+    }
+    if (!fs.existsSync(path.join(RAIZ, dir))) return null;
+    for (const e of fs.readdirSync(path.join(RAIZ, dir), { withFileTypes: true })) {
+      if (e.isDirectory() && /^\[[^\]]+\]$/.test(e.name)) {
+        const r = busca(`${dir}/${e.name}`, i + 1);
+        if (r) return r;
+      }
+    }
+    return null;
+  }
+  return busca("app", 0);
+}
+console.log("\n1b) Toda rota chamada por agendador está em ROTAS_DE_CRON?\n");
+const chamadasAgendadas = [];
+if (fs.existsSync(path.join(RAIZ, "vercel.json"))) {
+  try {
+    for (const c of JSON.parse(lerArquivo("vercel.json")).crons ?? []) chamadasAgendadas.push({ origem: "vercel.json", caminho: c.path });
+  } catch (e) {
+    aviso(`vercel.json não pôde ser lido como JSON (${e.message}) — os crons dele não foram conferidos`);
+  }
+}
+const DIR_WF = ".github/workflows";
+if (fs.existsSync(path.join(RAIZ, DIR_WF))) {
+  for (const f of fs.readdirSync(path.join(RAIZ, DIR_WF))) {
+    if (!/\.ya?ml$/.test(f)) continue;
+    const src = lerArquivo(`${DIR_WF}/${f}`);
+    if (!/^\s*schedule:/m.test(src)) continue; // só o que roda sozinho
+    for (const m of src.matchAll(/https?:\/\/[^\s"'$]+?(\/api\/[A-Za-z0-9_\-\/]+)/g)) {
+      chamadasAgendadas.push({ origem: f, caminho: m[1] });
+    }
+  }
+}
+const rotasVistas = new Set();
+for (const ch of chamadasAgendadas) {
+  const rota = rotaDoCaminho(ch.caminho);
+  if (!rota) { aviso(`${ch.origem} chama ${ch.caminho}, que não corresponde a nenhuma rota do app`); continue; }
+  if (rotasVistas.has(rota)) continue;
+  rotasVistas.add(rota);
+  if (!ROTAS_DE_CRON.includes(rota)) {
+    aviso(`${rota} é chamada por ${ch.origem} e NÃO está em ROTAS_DE_CRON — a verificação 2 não a olharia`);
+  } else {
+    console.log(`   ok  ${rota} (chamada por ${ch.origem})`);
+  }
+}
+if (!chamadasAgendadas.length) aviso("nenhuma chamada agendada encontrada — a lista de rotas de cron não pôde ser conferida");
 
 // ---------------------------------------------------------------------------
 // 2. ROTA DE CRON: confere TODAS as envs alcançáveis pelo grafo dela?

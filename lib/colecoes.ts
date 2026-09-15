@@ -49,6 +49,15 @@ export const COL_SISTEMA = "sistema";
 export const DOC_SYNC_META = "sync";
 
 /**
+ * Registro do DISPARO dos workflows pelo cron da Vercel (um campo por workflow).
+ *
+ * ⚠️ Existe porque o cron da Vercel descarta a resposta da rota: sem este documento, um
+ * disparo recusado pelo GitHub (token expirado, permissão faltando) só apareceria no log da
+ * Vercel, que guarda poucos dias. Escrito por `app/api/cron/dispara/[workflow]`.
+ */
+export const DOC_DISPARO_WORKFLOWS = "disparoWorkflows";
+
+/**
  * Cursor do sync do comercial (Xmax).
  *
  * ⚠️ Existia como `const DOC_SYNC` PRIVADO em `app/api/comercial/backfill` e como

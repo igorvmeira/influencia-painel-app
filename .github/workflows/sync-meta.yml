@@ -1,16 +1,101 @@
 name: sync-meta
 
+# ⚠️ QUEM DISPARA ISTO NO HORÁRIO É O CRON DA VERCEL (vercel.json → /api/cron/dispara/sync-meta,
+# 09:00 UTC = 06:00 em Brasília), por workflow_dispatch. Decisão de 15/09/2026: o agendamento
+# do GitHub atrasava de 0h29 a 11h46 (65 execuções medidas), e toda manhã a tela mostrava
+# anteontem. A Vercel só dispara; a execução e a conferência do retorno continuam aqui.
+#
+# O `schedule` abaixo virou REDE DE SEGURANÇA: se o disparo das 06:00 não chegar (token
+# expirado, GitHub fora), esta execução atrasada ainda roda o sync — e avisa que o disparo
+# faltou. Se o disparo chegou, ela não roda de novo.
+
 on:
   schedule:
-    # Todos os dias às 09:00 UTC
-    - cron: "0 9 * * *"
+    # 11:17 UTC = 08:17 em Brasília. Fora da virada da hora, que é onde o GitHub mais atrasa.
+    - cron: "17 11 * * *"
   workflow_dispatch:
+    inputs:
+      origem:
+        description: "Quem disparou (vercel-cron quando é o cron; manual quando é uma pessoa)"
+        required: false
+        default: "manual"
+
+# ⚠️ Nunca dois syncs ao mesmo tempo: o disparo da Vercel e a rede (ou um disparo manual) na
+# mesma hora esperam um pelo outro em vez de gravar em paralelo.
+concurrency:
+  group: sync-meta
+  cancel-in-progress: false
+
+permissions:
+  actions: read
+  contents: read
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
+      - name: Rede de segurança — o sync de hoje já foi disparado?
+        id: rede
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENTO: ${{ github.event_name }}
+          ORIGEM: ${{ inputs.origem }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          API="https://api.github.com/repos/${REPO}/actions"
+
+          if [ "$EVENTO" != "schedule" ]; then
+            # Disparo direto (Vercel ou pessoa): roda. E registra quanto o GitHub levou entre
+            # ACEITAR o disparo e COMEÇAR esta execução — a medida que não existia quando a
+            # opção foi escolhida (ver README, pendência de 15/09/2026).
+            RUN=$(curl -sS -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" "${API}/runs/${RUN_ID}" || echo "{}")
+            CRIADO=$(echo "$RUN" | jq -r '.created_at // empty')
+            if [ -n "$CRIADO" ]; then
+              FILA=$(( $(date -u +%s) - $(date -u -d "$CRIADO" +%s) ))
+              ALVO=$(date -u -d "$(date -u -d "$CRIADO" +%F)T09:00:00Z" +%s)
+              DEPOIS_DAS_9=$(( $(date -u -d "$CRIADO" +%s) - ALVO ))
+              echo "::notice::Disparo (${ORIGEM:-sem origem}) aceito pelo GitHub em ${CRIADO}; esta execução começou ${FILA}s depois. Aceite ${DEPOIS_DAS_9}s após 09:00 UTC."
+            fi
+            echo "rodar=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # ⚠️ A REDE DECIDE PELO REGISTRO DAS EXECUÇÕES, NUNCA PELA HORA DO ÚLTIMO DADO. Um sync
+          # que demorou aparece como "in_progress" aqui — pela hora (ou pelo sistema/sync.atualizadoEm,
+          # que é gravado a cada bloco), ele pareceria não ter rodado e a rede dispararia outro.
+          HOJE=$(TZ=America/Sao_Paulo date +%F)
+          RESP=$(curl -sS -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" \
+            "${API}/workflows/sync-meta.yml/runs?event=workflow_dispatch&per_page=30" || echo "")
+          if [ -z "$RESP" ] || ! echo "$RESP" | jq -e '.workflow_runs' > /dev/null 2>&1; then
+            echo "::warning::A rede não conseguiu ler o registro das execuções — roda o sync por garantia (o sync é idempotente)."
+            echo "rodar=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Execuções disparadas HOJE (dia em Brasília, pelo instante em que o GitHub aceitou o disparo).
+          DE_HOJE=$(echo "$RESP" | jq -c --arg hoje "$HOJE" \
+            '[.workflow_runs[] | select((.created_at | fromdateiso8601 - 10800 | strftime("%Y-%m-%d")) == $hoje)]')
+          QTD=$(echo "$DE_HOJE" | jq 'length')
+          # Vale como "já rodou": em fila, em andamento ou concluída com sucesso.
+          VALIDA=$(echo "$DE_HOJE" | jq -r \
+            '[.[] | select(.status != "completed" or .conclusion == "success")] | first
+             | if . then "execução \(.id) — \(.status)/\(.conclusion // "em curso"), aceita às \(.created_at | fromdateiso8601 - 10800 | strftime("%H:%M")) de Brasília" else "" end')
+
+          if [ -n "$VALIDA" ]; then
+            echo "::notice::O sync de hoje já foi disparado (${VALIDA}). A rede não roda de novo."
+            echo "rodar=false" >> "$GITHUB_OUTPUT"
+          elif [ "$QTD" != "0" ]; then
+            echo "::warning::Houve ${QTD} disparo(s) hoje e nenhum terminou com sucesso — a rede roda o sync de novo."
+            echo "rodar=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::O disparo das 06:00 NÃO CHEGOU: nenhuma execução por workflow_dispatch hoje. Conferir sistema/disparoWorkflows no Firestore e o GITHUB_DISPATCH_TOKEN na Vercel. A rede roda o sync agora."
+            echo "rodar=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Rodar sync-meta incremental
+        if: steps.rede.outputs.rodar == 'true'
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |

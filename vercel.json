@@ -1,1 +1,8 @@
-{}
+{
+  "crons": [
+    {
+      "path": "/api/cron/dispara/sync-meta",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}
