@@ -912,6 +912,29 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   auditor nunca viu o trio para perguntar por ele. O dano veio da DECLARAÇÃO que o auditor
   cego aprovou. **Acertar sem ter olhado não é conferência — é sorte com carimbo**, e o
   carimbo é o que faz ninguém olhar de novo.
+  🛑 **E A SEGUNDA NA MESMA FERRAMENTA, TRÊS DIAS DEPOIS (15/09/2026).** O `audita-envs.js`
+  conferia as rotas de cron por uma lista `ROTAS_DE_CRON` mantida à mão. A rota nova do
+  disparo pela Vercel (`app/api/cron/dispara/[workflow]`) entrou no código sem entrar na
+  lista, e a verificação respondeu "Tudo certo" sem nunca tê-la lido. A régua da primeira
+  vez ("dizer onde a cobertura acaba") valia para os PADRÕES de leitura de env — e a lista de
+  rotas era outra cobertura, com o mesmo defeito, que ninguém tinha olhado.
+  A saída foi estrutural: rota de cron passou a ser a que um agendador CHAMA (`crons` do
+  `vercel.json` e URLs de API dos workflows com `schedule`), e rota chamada e ausente da
+  lista reprova.
+  📌 **As três de cobertura aparente total, sem misturar famílias:** (1) a desestruturação do
+  Firebase que o auditor não lia (12–14/09); (2) a lista fixa de rotas (15/09) — as duas
+  conferências AUTOMÁTICAS, na mesma ferramenta; e (3) o cache de criativos (14/09), que não
+  era conferência automática: era uma FONTE cega por construção lida como prova por duas
+  pessoas (ver *FONTE QUE NÃO CONSEGUE CONTER O CASO*). O mecanismo é o mesmo — o que não
+  entra no recorte não aparece como falta —; quem aprovou é que muda.
+  🔧 **A régua que isso deixa, e que as anteriores não tinham: não basta ter visto a
+  conferência reprovar UMA vez — é preciso vê-la reprovar o caso NOVO, o que acabou de ser
+  escrito.** O plantio de 12/09 provava que o auditor pegava a desestruturação; não dizia
+  nada sobre uma rota que só existiria três dias depois. Por isso a verificação 1b rodou
+  ANTES de a rota entrar na lista, reprovou citando a rota pelo nome, e só então a rota
+  entrou. **Toda vez que o código ganha um caso que uma conferência deveria cobrir — rota,
+  campo, ramo, conta —, a conferência é vista falhando NESSE caso antes de ser vista
+  passando.**
 - ⚠️ **ATUALIZAR A CONFERÊNCIA É PARTE DA MUDANÇA, NÃO ETAPA POSTERIOR.** Conferência que
   não acompanha a regra vira ruído (acusa o que está certo) ou falso negativo (aprova o que
   está errado) — e nos dois casos ela para de valer justamente quando mais precisaria.
