@@ -304,6 +304,22 @@ Duas pendências anotadas, nenhuma urgente:
   "regra única" do painel. Em 14/09 eram **41 contas no balde PAUSADO** entrando no que a IA
   descreve: nos totais, no CPL geral e como se "PAUSADO" fosse um gestor. Frase de IA
   ninguém confere contra a tela, então a divergência não aparece sozinha.
+- 📌 **Pendência (14/09/2026): `lib/destaques.ts` tem cópia própria de `cplDe`.** Ela exige
+  conversão e NÃO exige gasto, ao contrário de `lib/cpl.ts`. Gestor com conversões e gasto
+  zero no mês teria CPL 0 e variação −100%, entraria no pódio da Início como a maior melhora
+  e, com 100+ conversões, passaria na elegibilidade do selo. **Medido em 14/09/2026: nenhum
+  gestor com conversão e gasto zero, em nenhuma janela** — trocar pela função de `lib/cpl.ts`
+  não muda número nenhum hoje. Não feito sem aprovação porque é o código do selo.
+  Consequência de deixar: a /gestores (já protegida) e a Início podem divergir no dia em que o
+  caso aparecer.
+- 📌 **Decisão (14/09/2026): não medir criativo ao vivo com 5+ conversões e gasto zero.** Era o
+  único caso em que o CPL 0 abria o ranking de criativos do Dashboard em 1º, em dourado, e
+  medir custa uma chamada à Meta por conta.
+  ⚠️ **O cache de mês fechado NÃO mostra que o caso não existe — ele não consegue mostrar:**
+  `buscarCriativosPeriodo` descarta anúncio sem gasto antes de gravar. O cache só prova que o
+  melhor/pior dos meses já gravados na /gestores não muda.
+  **O que autoriza não medir é outro motivo:** desde `96fcbee` a tela trata o caso certo se ele
+  vier (fim da lista, sem posição, com o motivo escrito). Medir diria QUANTOS, não se está certo.
 - **Login (fase 2)**: Firebase Auth + leitura por usuário; liberar leitura na
   `firestore.rules` e usar `lib/firebaseClient.ts`.
 

@@ -1273,10 +1273,29 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   "consertar" o infinito para 0 e deixar o −100% passar, e os dois são mentira com cara de
   dado. **Quem ordena por variação põe o `null` no FIM nas duas direções**
   (`compararVariacao` em `lib/cpl.ts`), senão a lista abre com ele.
-  ⚠️ **E o ranking do selo escapou por acaso, não por desenho.** O filtro `conversas > 0`
-  foi posto para barrar volume, não ausência: um gestor com conversão atribuída e gasto zero
-  passaria por ele e cairia em −100%. É a régua "regra que funciona por acaso" (ver *O QUE
-  NÃO É CONFERIDO NÃO É GRAVADO*) — hoje a proteção é `variacaoPct`, não o filtro.
+  🛑 **E O RANKING DO SELO ESCAPOU POR EFEITO COLATERAL — e proteção que funciona por efeito
+  colateral não é proteção.** O filtro `conversas > 0` da fila do selo (`components/
+  Gestores.tsx`, desde o commit `1d94cfb`, 02/08/2026) nasceu para "sem conversões no mês —
+  CPL indefinido": era uma guarda contra ausência, com o INSUMO errado. Conversão presente
+  não garante CPL presente, e ele deixava passar os dois lados:
+  · **gasto zero com conversão** → CPL 0 → −100%. Passa no `conversas > 0` e passa no piso de
+    volume (`PISO_CONVERSOES_GESTOR`, 100), que é OUTRA barreira, em `elegibilidadeDestaque`;
+  · **sem CPL no mês anterior** → 0%, "estável". O filtro nem olha o anterior.
+  Nenhum dos dois aconteceu em julho nem em agosto (medido em 14/09/2026). Quem os mantinha
+  fora era o DADO — nenhum gestor com 100+ conversões e gasto zero —, não o código.
+  📌 **Correção de um erro meu:** eu tinha escrito aqui que o filtro "foi posto para barrar
+  volume", e a frase voltou como régua ("afrouxar o volume mínimo deixa o −100% entrar").
+  Aberto o commit que o criou, o motivo era CPL indefinido; o volume mínimo é o piso de 100,
+  noutra função. Afrouxar o piso não abriria a porta — ela já estava aberta pelo lado do gasto.
+  🔧 **O que mudou em 14/09/2026:** na /gestores a proteção passou a ser `variacaoPct`, que
+  devolve `null` para as duas ausências por desenho — e continua valendo se o filtro sair.
+  **O que NÃO mudou:** `lib/destaques.ts` tem cópia própria de `cplDe` que exige conversão e
+  não exige gasto, e ela alimenta o pódio da Início e a decomposição da /gestores. Ali o lado
+  do gasto zero segue aberto — sem caso hoje e sem trava (pendência no `README.md`). É a
+  mesma regra morando em dois lugares, e só um deles foi consertado.
+  🔑 **A régua: quando uma proteção parece funcionar, aponte a LINHA que a garante.** Se a
+  resposta for um filtro posto por outro motivo, ou uma propriedade do dado de hoje, ela não
+  existe. O teste é imaginar o filtro removido — e procurar a mesma conta em outro arquivo.
 - ⚠️ **DUAS RÉGUAS PARA O MESMO DADO É DESENHO, NÃO DUPLICAÇÃO — quando respondem a
   perguntas diferentes.** "Quantas contas estão perto do teto de gasto" (ESTADO) e "quais
   exigem alguém fazer algo hoje" (AÇÃO) saem dos mesmos dois campos e não são a mesma

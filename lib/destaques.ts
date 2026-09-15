@@ -85,6 +85,10 @@ export interface Destaques {
   somaConfere: boolean;
 }
 
+// ⚠️ CÓPIA DA REGRA DE CPL, e DIFERENTE da de lib/cpl.ts: esta exige conversão e NÃO exige
+// gasto. Gestor com conversões e gasto zero teria CPL 0 e variação −100% aqui — no pódio da
+// Início e na decomposição da /gestores —, enquanto a fila do selo da /gestores já devolve
+// `null`. Medido em 14/09/2026: nenhum caso. Pendência no README ("cópia própria de cplDe").
 const cplDe = (gasto: number, conv: number): number | null => (conv > 0 ? gasto / conv : null);
 
 const DIA_MS = 86400000;
