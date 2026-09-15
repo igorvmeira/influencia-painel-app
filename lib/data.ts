@@ -1,11 +1,11 @@
 import { getDb } from "./firebaseAdmin";
 import { mockDiario, mockLimites, mockContas } from "./mock";
-import { COL_AGREGADAS, cutoffRetencao } from "./agregadas";
+import { COL_AGREGADAS, cutoffRetencao, janelaDeLeitura } from "./agregadas";
 // ⚠️ Este arquivo LÊ o doc que app/api/sync-meta ESCREVE. Os dois diziam "sync" à mão:
 // um erro de digitação em qualquer um dos lados não daria erro — criaria um documento
 // novo, o outro leria vazio, e o painel passaria a dizer que nunca sincronizou.
 import { COL_LIMITES, COL_SISTEMA, DOC_SYNC_META } from "./colecoes";
-import { ContaMap, LimiteConta, MetricaDiaria } from "./types";
+import { ContaMap, JanelaLeitura, LimiteConta, MetricaDiaria } from "./types";
 import { MARCA } from "./brand";
 import { diaParcialDe } from "./periodo";
 
@@ -34,6 +34,14 @@ export interface DadosDiarios {
    * (a ISP4 guardava 31/05 com as outras 82 contas começando em 11/06, medido em 15/09/2026).
    */
   inicioJanela: string | null;
+  /**
+   * De que dia a que dia o painel LEU cada conta (accountId → janela), tirado do doc agregado
+   * (`janelaDeLeitura`, lib/agregadas.ts). É o insumo da régua de mês incompleto
+   * (`coberturaMes`). Conta sem doc agregado não aparece — e sai como "sem registro de leitura".
+   * ⚠️ Não se deduz do `daily`: dia sem linha é dia sem entrega, e só a janela separa isso de
+   * dia que o painel não leu.
+   */
+  leituraPorConta: Record<string, JanelaLeitura>;
 }
 
 // De-para indexado por accountId (chave única). Ignora docs repetidos do mesmo
@@ -94,7 +102,14 @@ export async function getDadosDiarios(): Promise<DadosDiarios> {
   const db = getDb();
   if (!db) {
     const mock = mockDiario();
-    return { ...mock, ...separarDiaParcial(mock.daily, null), fonte: "mock", ultimaSync: null, limites: mockLimites, inicioJanela: null };
+    const sep = separarDiaParcial(mock.daily, null);
+    // Mock não tem doc agregado: toda conta é "lida" do primeiro ao último dia gerado.
+    const datas = sep.daily.map((m) => m.data).sort();
+    const leituraMock: JanelaLeitura | null = datas.length ? { desde: datas[0], ate: datas[datas.length - 1] } : null;
+    const leituraPorConta = Object.fromEntries(
+      leituraMock ? mock.contas.map((c) => [c.accountId, leituraMock]) : []
+    ) as Record<string, JanelaLeitura>;
+    return { ...mock, ...sep, fonte: "mock", ultimaSync: null, limites: mockLimites, inicioJanela: null, leituraPorConta };
   }
   if (cacheDados && Date.now() < cacheDados.expira) return cacheDados.dados;
 
@@ -119,7 +134,14 @@ export async function getDadosDiarios(): Promise<DadosDiarios> {
   const instanteSync = ultimaSync ? Date.parse(ultimaSync) : NaN;
   const inicioJanela = Number.isNaN(instanteSync) ? null : cutoffRetencao(instanteSync);
 
-  const dados: DadosDiarios = { daily, contas, fonte: "firestore", ultimaSync, limites, ultimoDiaCompleto, diaParcial, inicioJanela };
+  // O doc agregado tem o id da conta (sync-meta grava `doc(c.accountId)`).
+  const leituraPorConta: Record<string, JanelaLeitura> = {};
+  for (const d of aggSnap.docs) {
+    const j = janelaDeLeitura(d.data() as { lidoDesde?: string | null; atualizadoEm?: string | null }, MARCA.fuso);
+    if (j) leituraPorConta[d.id] = j;
+  }
+
+  const dados: DadosDiarios = { daily, contas, fonte: "firestore", ultimaSync, limites, ultimoDiaCompleto, diaParcial, inicioJanela, leituraPorConta };
   cacheDados = { dados, expira: Date.now() + TTL_MS };
   return dados;
 }

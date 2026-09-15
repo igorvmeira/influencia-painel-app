@@ -139,6 +139,22 @@ export interface MetricaDiaria {
 }
 
 /**
+ * De que dia a que dia o painel CONSEGUIU LER uma conta — publicado pelo servidor
+ * (`leituraPorConta` em lib/data.ts), a partir do doc agregado.
+ *
+ * ⚠️ NÃO é "de quando a quando a conta tem dado". Dia sem linha DENTRO desta janela é dia
+ * sem entrega (a Meta não devolve linha para dia sem gasto), e isso é dado. Dia FORA dela é
+ * dia que o painel não leu, e isso é falta de dado. A régua de mês incompleto
+ * (`coberturaMes` em lib/periodo.ts) existe para separar os dois.
+ */
+export interface JanelaLeitura {
+  /** Primeiro dia lido (YYYY-MM-DD). */
+  desde: string;
+  /** Último dia lido INTEIRO (YYYY-MM-DD) — a véspera da última leitura, que é parcial. */
+  ate: string;
+}
+
+/**
  * Uma linha CONJUNTO-DIA — a granularidade nova, trazida por `level=adset`.
  *
  * ⚠️ COLEÇÃO PRÓPRIA (`metricasConjuntos`), nunca dentro de `metricasDiarias`. Duas

@@ -1,4 +1,4 @@
-import { GrupoDia, MetricaDiaria } from "./types";
+import { GrupoDia, JanelaLeitura, MetricaDiaria } from "./types";
 
 // Item 3 — projeção read-otimizada: 1 doc por conta na coleção `metricasAgregadas`,
 // com a série diária daquela conta. Derivado de `metricasDiarias` (fonte granular,
@@ -69,11 +69,79 @@ export interface DocAgregado {
    */
   porGrupoDe?: string | null;
   porGrupoAte?: string | null;
+  /**
+   * Primeiro dia que este doc GARANTE ter lido da Meta, sem buraco até a última leitura.
+   * Gravado pelo sync a partir de 15/09/2026 — ver `lidoDesdeAposSync`. Ausente em doc que
+   * ainda não foi reescrito desde então; quem lê cai na retenção (`janelaDeLeitura`).
+   */
+  lidoDesde?: string | null;
 }
 
 // Data-limite (YYYY-MM-DD) da retenção: dias anteriores são descartados do agregado.
 export function cutoffRetencao(agora: number = Date.now()): string {
   return ymd(new Date(agora - RETENCAO_DIAS * DIA_MS));
+}
+
+/**
+ * O primeiro dia que o doc agregado GARANTE ter lido, depois de uma execução do sync.
+ *
+ * 🛑 POR QUE ESTE CAMPO EXISTE. Em 15/09/2026 a régua de mês incompleto (`coberturaMes`)
+ * trocou a pergunta "a série da conta começa no dia 1?" por "o painel leu a conta desde o
+ * dia 1?". A antiga chamava de incompleta a conta que só começou a veicular no meio do mês
+ * (18 contas ativas em 15/09, e nas 18 a Meta devolve gasto e impressões zero no buraco).
+ * Só que a pergunta nova tem um furo que a antiga não tinha: se o doc nasceu TRUNCADO, o
+ * buraco do começo parece "não veiculava" e o mês passa por completo — e a régua antiga
+ * pegava esse caso de graça. Deduzir a leitura da retenção seria proteção pelo dado: vale
+ * enquanto nenhum doc nascer truncado. Este campo é a linha que barra o caso.
+ *
+ * Os dois jeitos de um doc guardar menos que a retenção:
+ *   · conta NOVA sincronizada com `?dias=N` pequeno — o doc nasce com N dias e nunca mais
+ *     pede a janela cheia, porque já "tem histórico";
+ *   · conta que ficou sem ser lida por mais tempo do que a busca diária cobre — sobra um
+ *     buraco, e a leitura contínua recomeça no início da busca nova.
+ *
+ * ⚠️ DOC SEM O CAMPO usa a retenção da última leitura. Não é suposição: medido em
+ * 15/09/2026, das 124 contas nenhuma tem série antes desse dia, e nas 18 ativas cuja série
+ * começa depois dele a Meta confirma zero no buraco. O campo entra na primeira reescrita.
+ */
+export function lidoDesdeAposSync(p: {
+  docExistia: boolean;
+  lidoDesdeAntes: string | null | undefined;
+  atualizadoEmAntes: string | null | undefined;
+  /** Primeiro dia pedido à Meta nesta execução (YYYY-MM-DD, a aritmética das buscas). */
+  inicioBusca: string;
+  agora: number;
+}): string {
+  const piso = cutoffRetencao(p.agora);
+  let desde = p.inicioBusca;
+  const tAntes = p.atualizadoEmAntes ? Date.parse(p.atualizadoEmAntes) : NaN;
+  if (p.docExistia && !Number.isNaN(tAntes)) {
+    const antes = p.lidoDesdeAntes ?? cutoffRetencao(tAntes);
+    // Contínua quando a busca nova alcança o DIA da leitura anterior: aquele dia foi lido
+    // pela metade, então só conta como lido se for relido agora.
+    const continua = p.inicioBusca <= ymd(new Date(tAntes));
+    if (continua && antes < desde) desde = antes;
+  }
+  // Sem leitura contínua (doc existia sem data válida, ou buraco), vale só a busca de agora.
+  return desde < piso ? piso : desde;
+}
+
+/**
+ * A janela de leitura de um doc agregado: de `lidoDesde` até a VÉSPERA da última leitura —
+ * o dia em que o sync roda é gravado pela metade (ver `separarDiaParcial` em lib/data.ts).
+ * null quando o doc não diz quando foi lido; aí ninguém pode afirmar mês completo.
+ */
+export function janelaDeLeitura(
+  doc: { lidoDesde?: string | null; atualizadoEm?: string | null } | undefined,
+  fuso: string
+): JanelaLeitura | null {
+  const t = doc?.atualizadoEm ? Date.parse(doc.atualizadoEm) : NaN;
+  if (Number.isNaN(t)) return null;
+  const diaDaLeitura = new Intl.DateTimeFormat("en-CA", {
+    timeZone: fuso, year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(new Date(t));
+  const vespera = ymd(new Date(Date.parse(`${diaDaLeitura}T00:00:00Z`) - DIA_MS));
+  return { desde: doc?.lidoDesde ?? cutoffRetencao(t), ate: vespera };
 }
 
 // Mescla dias frescos sobre os antigos (upsert por data — fresco vence), descarta o

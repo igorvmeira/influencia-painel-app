@@ -5,7 +5,7 @@ import { classificarFalha, falhaEmMassa, MarcaCiente, tipoDoErro, Veredito } fro
 import { MARCA } from "@/lib/brand";
 import { buscarDiario, buscarLimiteConta, buscarDiarioPorConjunto, somarPorGrupoDia, somarPorDia } from "@/lib/meta";
 import { ContaMap, GrupoDia, MetricaDiaria } from "@/lib/types";
-import { COL_AGREGADAS, COL_CONJUNTOS, RETENCAO_DIAS, cutoffRetencao, mesclarDias, mesclarGrupos } from "@/lib/agregadas";
+import { COL_AGREGADAS, COL_CONJUNTOS, RETENCAO_DIAS, cutoffRetencao, lidoDesdeAposSync, mesclarDias, mesclarGrupos } from "@/lib/agregadas";
 import { checarCronSecret } from "@/lib/cronAuth";
 import { descobrirContas, ENVS_META } from "@/lib/descobrirContas";
 import { ENVS_FIREBASE_ADMIN } from "@/lib/firebaseAdmin";
@@ -249,7 +249,7 @@ export async function GET(req: Request) {
   // o progresso já feito. Em paralelo para caber no tempo limite.
   async function processarConta(c: ContaMap): Promise<{
     accountId: string; cliente: string; registros: number;
-    diasNoAgregado: number; maisAntigo: string | null;
+    diasNoAgregado: number; maisAntigo: string | null; lidoDesde: string;
     janelaUsada: number; janelaCheia: boolean;
     conjuntos: number; grupos: number;
     conferencia: { diasConferidos: number; divergencias: Divergencia[] };
@@ -365,9 +365,23 @@ export async function GET(req: Request) {
     const porGrupoAte = porGrupo.length ? porGrupo[porGrupo.length - 1].data : null;
     const porGrupoDe = porGrupo.length ? porGrupo[0].data : null;
 
+    /**
+     * DESDE QUANDO ESTE DOC GARANTE TER LIDO A CONTA — insumo da régua de mês incompleto.
+     * Ver `lidoDesdeAposSync` (lib/agregadas.ts): sem ele, doc nascido truncado passaria por
+     * mês completo. O início da busca usa a MESMA aritmética de `desdeConjunto` acima.
+     */
+    const agoraGravacao = Date.now();
+    const lidoDesde = lidoDesdeAposSync({
+      docExistia: aggSnap.exists,
+      lidoDesdeAntes: aggSnap.exists ? (aggSnap.data()?.lidoDesde as string | null | undefined) : null,
+      atualizadoEmAntes: aggSnap.exists ? (aggSnap.data()?.atualizadoEm as string | undefined) : null,
+      inicioBusca: new Date(agoraGravacao - (janelaDaConta - 1) * 86400000).toISOString().slice(0, 10),
+      agora: agoraGravacao,
+    });
+
     await aggRef.set({
-      accountId: c.accountId, dias, porGrupo, porGrupoDe, porGrupoAte,
-      atualizadoEm: new Date().toISOString(),
+      accountId: c.accountId, dias, porGrupo, porGrupoDe, porGrupoAte, lidoDesde,
+      atualizadoEm: new Date(agoraGravacao).toISOString(),
     });
 
     // Teto de gasto (spend_cap) e gasto acumulado (amount_spent) da conta, para o
@@ -396,6 +410,7 @@ export async function GET(req: Request) {
       registros: registros.length,
       diasNoAgregado: dias.length,
       maisAntigo: dias.length ? dias[0].data : null, // mesclarDias devolve ordenado asc
+      lidoDesde,
       janelaUsada: janelaDaConta,
       janelaCheia: semHistorico,
       conjuntos: conjuntos.length,

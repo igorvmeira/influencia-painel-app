@@ -1,4 +1,4 @@
-import { ContaMap, LinhaCliente, MetricaDiaria } from "./types";
+import { ContaMap, JanelaLeitura, LinhaCliente, MetricaDiaria } from "./types";
 import { JanelaMes, coberturaMes, janelaMesFechado, mesesDisponiveis } from "./periodo";
 import { montarPainel } from "./painel";
 import { cplDe, compararVariacao } from "./cpl";
@@ -153,6 +153,10 @@ export interface Elegibilidade {
  * 2. BASE ÍNTEGRA: nenhuma conta com mês incompleto pode estar PESANDO na
  *    variação. Ter conta incompleta irrelevante (abaixo do piso de conversões)
  *    não desqualifica — ela não move o número.
+ *    "Incompleta" = o painel não LEU o mês inteiro dela (`coberturaMes`). Até 15/09/2026
+ *    era "a série começa depois do dia 1", e isso barrava conta que só começou a veicular
+ *    no meio do mês: em agosto/2026 foram 9 falsos positivos, e o selo foi para outro
+ *    gestor. Agosto foi PAGO com essa régua — ver CLAUDE.md, *MÊS PAGO NÃO É MÊS EXIBIDO*.
  *
  * Quando o 1º em evolução é inelegível, o selo passa para o próximo elegível e
  * ele exibe o aviso âmbar no lugar (a tela cuida dessa parte).
@@ -240,7 +244,9 @@ export interface RankingEvolucao {
  */
 export function rankingEvolucaoGestores(
   daily: MetricaDiaria[],
-  contasAtivas: ContaMap[]
+  contasAtivas: ContaMap[],
+  /** Janela de leitura por conta (`leituraPorConta`, lib/data.ts) — o insumo de `coberturaMes`. */
+  leituraPorConta: Record<string, JanelaLeitura>
 ): RankingEvolucao | null {
   const comparaveis = mesesDisponiveis(daily, contasAtivas).filter((m) => m.cobreMesAnterior);
   if (!comparaveis.length) return null;
@@ -259,8 +265,9 @@ export function rankingEvolucaoGestores(
   // torna a evolução da conta enganosa, e é o que barra o selo.
   const incompletas = new Set<string>();
   for (const c of contasAtivas) {
-    const a = coberturaMes(daily, c.accountId, ano, mes);
-    const b = coberturaMes(daily, c.accountId, ant.ano, ant.mes);
+    const leitura = leituraPorConta[c.accountId] ?? null;
+    const a = coberturaMes(daily, c.accountId, ano, mes, leitura);
+    const b = coberturaMes(daily, c.accountId, ant.ano, ant.mes, leitura);
     if (a.primeiroDiaSerie !== null && (!a.completo || !b.completo)) incompletas.add(c.accountId);
   }
 

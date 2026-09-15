@@ -4,12 +4,12 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useDadosPainel } from "@/lib/useDadosPainel";
 import { montarPainel } from "@/lib/painel";
-import { janelaMesFechado, mesesDisponiveis, coberturaMes, ymdParaBR, rotuloMes } from "@/lib/periodo";
+import { janelaMesFechado, mesesDisponiveis, coberturaMes, rotuloFaltaCobertura, ymdParaBR, rotuloMes } from "@/lib/periodo";
 import type { MesDisponivel } from "@/lib/periodo";
 import { usePeriodoGlobal, MES_NENHUM } from "./PeriodoGlobalProvider";
 import { brl, brlDec, num } from "@/lib/format";
 import { TEMA } from "@/lib/brand";
-import { ContaMap, LinhaCliente } from "@/lib/types";
+import { ContaMap, JanelaLeitura, LinhaCliente } from "@/lib/types";
 // ⚠️ LIMIAR VIVO NÃO SE ESCREVE EM PROSA. Os dois textos abaixo diziam "~95 dias"
 // à mão; se a retenção mudar, a frase continua afirmando o número velho com a
 // autoridade de texto escrito. Só o VALOR viaja — nenhuma regra vem junto.
@@ -45,12 +45,16 @@ const MUTED = TEMA.muted;
 const RED = TEMA.negativo;
 const AMBAR = TEMA.atencao;
 
-// Uma conta entra na contagem de "mês incompleto" quando falta o começo do mês
-// ANALISADO ou do mês de COMPARAÇÃO — nos dois casos a evolução dela é enganosa.
+// Uma conta entra na contagem de "mês incompleto" quando o painel não LEU o mês inteiro
+// dela — no mês ANALISADO ou no de COMPARAÇÃO. A régua mora em `coberturaMes`.
 const TOOLTIP_INCOMPLETO =
-  "Contas cuja série de dados começa depois do dia 1 do mês analisado ou do mês de "
-  + "comparação. O total do mês delas fica subestimado, então a evolução não é "
-  + "confiável. Expanda o gestor para ver quais são.";
+  "Contas que o painel não conseguiu ler no mês inteiro — analisado ou de comparação: a "
+  + "leitura começa depois do dia 1 ou parou antes do fim. O total do mês delas fica "
+  + "subestimado, então a evolução não é confiável. Conta que só começou a veicular no meio "
+  + "do mês NÃO entra aqui: dia sem entrega é dado. Expanda o gestor para ver quais são.";
+
+// Referência estável para quando os dados ainda não chegaram (dependência de useMemo).
+const SEM_LEITURA: Record<string, JanelaLeitura> = {};
 
 // Mês anterior a (ano, mes), tratando a virada de ano.
 const mesAnteriorDe = (ano: number, mes: number) => (mes === 1 ? { ano: ano - 1, mes: 12 } : { ano, mes: mes - 1 });
@@ -216,13 +220,18 @@ export default function Gestores() {
 
   // Contagem de contas com mês incompleto, POR GESTOR. Aparece já nesta etapa: sem
   // isso alguém bate o olho no comparativo e tira conclusão de base incompleta.
+  // A janela em que o painel LEU cada conta — é ela, não o começo da série, que diz se o mês
+  // está incompleto (ver `coberturaMes`).
+  const leituraPorConta = dados?.leituraPorConta ?? SEM_LEITURA;
+
   const incompletasPorGestor = useMemo(() => {
     const mapa = new Map<string, { total: number; incompletas: number; nomes: string[] }>();
     if (!sel) return mapa;
     const ant = mesAnteriorDe(sel.ano, sel.mes);
     for (const c of contasAtivas) {
-      const a = coberturaMes(daily, c.accountId, sel.ano, sel.mes);
-      const b = coberturaMes(daily, c.accountId, ant.ano, ant.mes);
+      const leitura = leituraPorConta[c.accountId] ?? null;
+      const a = coberturaMes(daily, c.accountId, sel.ano, sel.mes, leitura);
+      const b = coberturaMes(daily, c.accountId, ant.ano, ant.mes, leitura);
       const semDadoNenhum = a.primeiroDiaSerie === null;
       const incompleta = !semDadoNenhum && (!a.completo || !b.completo);
       const reg = mapa.get(c.gestor) ?? { total: 0, incompletas: 0, nomes: [] };
@@ -231,26 +240,28 @@ export default function Gestores() {
       mapa.set(c.gestor, reg);
     }
     return mapa;
-  }, [daily, contasAtivas, sel]);
+  }, [daily, contasAtivas, sel, leituraPorConta]);
 
   // Cobertura por CONTA (accountId → detalhe), consumida pela expansão.
   const coberturaPorConta = useMemo(() => {
-    const m = new Map<string, { incompleta: boolean; desde: string | null; semDado: boolean }>();
+    const m = new Map<string, { incompleta: boolean; rotulo: string | null; semDado: boolean }>();
     if (!sel) return m;
     const ant = mesAnteriorDe(sel.ano, sel.mes);
     for (const c of contasAtivas) {
-      const a = coberturaMes(daily, c.accountId, sel.ano, sel.mes);
-      const b = coberturaMes(daily, c.accountId, ant.ano, ant.mes);
+      const leitura = leituraPorConta[c.accountId] ?? null;
+      const a = coberturaMes(daily, c.accountId, sel.ano, sel.mes, leitura);
+      const b = coberturaMes(daily, c.accountId, ant.ano, ant.mes, leitura);
       const semDado = a.primeiroDiaSerie === null;
+      const incompleta = !semDado && (!a.completo || !b.completo);
       m.set(c.accountId, {
         semDado,
-        incompleta: !semDado && (!a.completo || !b.completo),
-        // Mostra a partir de quando existe dado — o "desde" que a tela exibe.
-        desde: a.completo ? (b.completo ? null : b.primeiroDiaSerie) : a.primeiroDiaSerie,
+        incompleta,
+        // O que falta, dito pela régua ("dados a partir de 12/06", "dados até 02/09").
+        rotulo: incompleta ? (rotuloFaltaCobertura(a) ?? rotuloFaltaCobertura(b)) : null,
       });
     }
     return m;
-  }, [daily, contasAtivas, sel]);
+  }, [daily, contasAtivas, sel, leituraPorConta]);
 
   // ---- Cálculo POR GESTOR, elevado para cá ----
   // Fica no topo por dois motivos: o premiado só se decide olhando todos, e assim
@@ -613,7 +624,7 @@ function DetalheGestor({
 }: {
   clientes: LinhaCliente[];
   anteriorPorConta: Map<string, { gasto: number; conversas: number; cpl: number | null }>;
-  coberturaPorConta: Map<string, { incompleta: boolean; desde: string | null; semDado: boolean }>;
+  coberturaPorConta: Map<string, { incompleta: boolean; rotulo: string | null; semDado: boolean }>;
   contaPorId: Map<string, ContaMap>;
   ano: number;
   mes: number;
@@ -714,7 +725,7 @@ function DetalheGestor({
             const temBase = !cob?.incompleta && !!ant && ant.cpl !== null && c.cplSemanal !== null;
             const delta = temBase ? variacaoPct(c.cplSemanal, ant!.cpl) : null;
             const motivo = cob?.incompleta
-              ? `Mês incompleto${cob.desde ? ` — dados a partir de ${ymdParaBR(cob.desde)}` : ""}. Sem base de comparação confiável.`
+              ? `Mês incompleto${cob.rotulo ? ` — ${cob.rotulo}` : ""}. Sem base de comparação confiável.`
               : !ant || ant.cpl === null
                 ? `Sem CPL no mês anterior${ant ? ` (${explicaSemCpl(ant.gasto, ant.conversas)})` : ""} — não há o que comparar.`
                 : c.cplSemanal === null
@@ -738,7 +749,7 @@ function DetalheGestor({
                     {cob?.incompleta && (
                       <span className="rounded-md px-1.5 py-0.5 text-[11px] font-medium"
                         style={{ background: TEMA.limiteFundo, color: AMBAR }}>
-                        {cob.desde ? `dados a partir de ${ymdParaBR(cob.desde)}` : "mês incompleto"}
+                        {cob.rotulo ?? "mês incompleto"}
                       </span>
                     )}
                     {troca && (

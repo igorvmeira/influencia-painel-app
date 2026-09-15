@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { mensagemErro } from "./erros";
 import { buscarJson } from "./buscaAutenticada";
-import { ContaMap, LimiteConta, MetricaDiaria } from "./types";
+import { ContaMap, JanelaLeitura, LimiteConta, MetricaDiaria } from "./types";
 
 export interface DadosPainel {
   daily: MetricaDiaria[];
@@ -17,6 +17,8 @@ export interface DadosPainel {
   diaParcial: string | null;
   /** Primeiro dia garantido pela janela da última sync (lib/data.ts). */
   inicioJanela: string | null;
+  /** De que dia a que dia o painel leu cada conta (lib/data.ts) — insumo de `coberturaMes`. */
+  leituraPorConta: Record<string, JanelaLeitura>;
 }
 
 // Cache de SESSÃO (módulo): busca /api/painel uma vez e reusa entre as telas

@@ -1,4 +1,4 @@
-import { ContaMap, MetricaDiaria } from "./types";
+import { ContaMap, JanelaLeitura, MetricaDiaria } from "./types";
 
 // Cálculo da janela "mês corrente vs mês anterior" — mesmo intervalo de dias
 // (1..D, onde D = dia do último dado). Puro; usado por kpis.ts, painel.ts e o
@@ -520,7 +520,10 @@ export function janelaMesFechado(
 
 /** Cobertura de UMA conta num mês — o detector de "mês incompleto". */
 export interface CoberturaMes {
-  completo: boolean;        // a série da conta alcança o dia 1 do mês?
+  completo: boolean;        // o painel LEU a conta do começo ao fim do mês?
+  /** Por que não está completo; null quando está. Ver `rotuloFaltaCobertura`. */
+  falta: "inicio" | "fim" | "semLeitura" | null;
+  leitura: JanelaLeitura | null;
   primeiroDiaSerie: string | null; // primeiro dia COM DADO da conta (série inteira)
   primeiroDiaMes: string;   // "YYYY-MM-01"
   diasComDado: number;      // dias do mês com registro
@@ -528,22 +531,38 @@ export interface CoberturaMes {
 }
 
 /**
- * A conta tem o mês INTEIRO disponível, ou a série dela começa no meio dele?
+ * O painel tem o mês INTEIRO desta conta — ou faltou dado?
  *
- * O teste é contra o primeiro dia da série INTEIRA da conta, não contra a presença
- * do dia 1: dia sem registro pode ser simplesmente dia sem veiculação (a API não
- * devolve linha para dia sem entrega), o que é um dado legítimo. Já uma série que
- * COMEÇA depois do dia 1 significa que não temos o começo do mês — aí o total do
- * mês fica subestimado e não pode ser apresentado como fechado.
+ * 🛑 A PERGUNTA É "O PAINEL LEU?", NÃO "A CONTA VEICULOU?". Dia sem linha dentro da janela
+ * de leitura é dia sem entrega (a Meta não devolve linha para dia sem gasto): dado
+ * legítimo, e o total do mês está certo. Falta de dado é o mês sair da janela — a leitura
+ * começa depois do dia 1, ou parou antes do fim.
  *
- * Caso real medido em 02/08/2026: 9 contas com série começando em 05/06 ou 19/06,
- * que apareceriam com "junho completo" falso.
+ * ⚠️ ATÉ 15/09/2026 O TESTE ERA "A SÉRIE DA CONTA COMEÇA ATÉ O DIA 1?", e ele confundia os
+ * dois. Conta que começou (ou voltou) a veicular no meio do mês saía incompleta: medido em
+ * 15/09/2026, 18 contas ativas com a série começando depois do início da leitura, e nas 18
+ * a Meta devolve gasto e impressões ZERO no buraco — falso positivo em todas. Em agosto eram
+ * 9, e barravam o selo do WEDER. E errava para o outro lado: conta cuja leitura PAROU no
+ * meio do mês (doc não reescrito — a ISP4 desde 03/09) passava por completa, porque o teste
+ * só olhava o começo.
+ *
+ * O caso que criou o teste antigo (02/08/2026: 9 contas com série começando em 05/06 ou
+ * 19/06, "junho completo" falso) continua pego, desde que a janela diga a verdade sobre o
+ * começo da leitura — e isso é o `lidoDesde` do doc (`lidoDesdeAposSync`, lib/agregadas.ts),
+ * não a retenção.
+ *
+ * O FIM exigido é o último dia do mês ou o último dia com dado da carteira, o que vier antes:
+ * mês em curso não é incompleto por não ter acabado; é incompleto quando ESTA conta parou
+ * antes das outras.
+ *
+ * `leitura` null → não completo. Sem saber o que foi lido, ninguém afirma mês fechado.
  */
 export function coberturaMes(
   daily: MetricaDiaria[],
   accountId: string,
   ano: number,
-  mes: number
+  mes: number,
+  leitura: JanelaLeitura | null
 ): CoberturaMes {
   const D = diasNoMes(ano, mes);
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -551,20 +570,40 @@ export function coberturaMes(
   const ultimoDiaMes = `${ano}-${pad(mes)}-${pad(D)}`;
 
   let primeiroDaSerie = "";
+  let ultimoDaCarteira = "";
   let diasComDado = 0;
   for (const m of daily) {
-    if (m.accountId !== accountId || !m.data) continue;
+    if (!m.data) continue;
+    if (m.data > ultimoDaCarteira) ultimoDaCarteira = m.data;
+    if (m.accountId !== accountId) continue;
     if (primeiroDaSerie === "" || m.data < primeiroDaSerie) primeiroDaSerie = m.data;
     if (m.data >= primeiroDiaMes && m.data <= ultimoDiaMes) diasComDado++;
   }
 
+  const fimExigido = ultimoDaCarteira !== "" && ultimoDaCarteira < ultimoDiaMes ? ultimoDaCarteira : ultimoDiaMes;
+  const falta: CoberturaMes["falta"] =
+    leitura === null ? "semLeitura"
+      : leitura.desde > primeiroDiaMes ? "inicio"
+        : leitura.ate < fimExigido ? "fim"
+          : null;
+
   return {
-    completo: primeiroDaSerie !== "" && primeiroDaSerie <= primeiroDiaMes,
+    completo: falta === null,
+    falta,
+    leitura,
     primeiroDiaSerie: primeiroDaSerie || null,
     primeiroDiaMes,
     diasComDado,
     diasNoMes: D,
   };
+}
+
+/** O que falta, em texto curto para a tela — "dados a partir de 12/06". null quando completo. */
+export function rotuloFaltaCobertura(c: CoberturaMes): string | null {
+  if (c.falta === "inicio" && c.leitura) return `dados a partir de ${ymdParaBR(c.leitura.desde)}`;
+  if (c.falta === "fim" && c.leitura) return `dados até ${ymdParaBR(c.leitura.ate)}`;
+  if (c.falta === "semLeitura") return "sem registro de leitura";
+  return null;
 }
 
 /** Um mês fechado que a janela de retenção alcança. */

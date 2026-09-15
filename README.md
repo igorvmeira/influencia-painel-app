@@ -333,22 +333,52 @@ Duas pendências anotadas, nenhuma urgente:
   **Critério, em 7 dias no ar:** disparo aceito até 09:05 UTC e execução começando até 09:15
   UTC em todos os dias. Se não cumprir, a opção volta à mesa — e a tela continua dizendo a
   verdade no meio-tempo ("entra assim que a sincronização de hoje rodar").
-- 📌 **Pendência (15/09/2026): a ISP4 (ISMAIL) SAIU da carteira** (confirmado pelo Igor em
-  15/09) — foi a saída que retirou o acesso: a Meta responde #200 desde 04/09. A planilha a
-  marca como "0 - PAUSADO" (lida em 11/09), mas isso NÃO provava a saída: na planilha
-  PAUSADO é relação comercial, e 11 contas PAUSADO lá seguiam veiculando em 10/09 (ver
-  `lib/conciliaPlanilha.ts`). Setembro sem ela é o número certo: não há o que faltar depois
-  da saída.
-  **O caminho para tirá-la vai para a conversa com o Thiago, porque o único que resolve
-  mexe em agosto.** Simulado em 15/09/2026 com o código real:
-  · estacionar → ISMAIL agosto R$ 14,71 → R$ 12,68 e julho R$ 15,45 → R$ 13,97; variação
-    −4,76% → −9,26%, e ele passa o WEDER. Régua de hoje: selo segue ISMAIL. Régua corrigida:
-    selo **WEDER → ISMAIL**;
-  · lápide em `sistema/contasRemovidas` ou renovar a marca de ciente → agosto intacto (nenhum
-    código de número lê as duas), mas nenhuma resolve: a conta segue "ativa" e o sync volta a
-    ficar vermelho quando a marca vence.
-  Marca de "sem acesso, ciente" em `sistema/falhasCientes` **válida até 18/09/2026**, motivo
-  "cliente saiu da carteira, acesso retirado pelo dono".
+- ✅ **Resolvido (15/09/2026): a régua de base incompleta barrava conta que só começou a
+  veicular no meio do mês.** Ela perguntava "a série da conta começa no dia 1?"; agora pergunta
+  "o painel LEU a conta do começo ao fim do mês?" (`coberturaMes` em `lib/periodo.ts`, com a
+  janela de leitura de cada conta publicada em `leituraPorConta` por `lib/data.ts`).
+  Medido antes de mudar: 18 contas ativas com a série começando depois do início da leitura, e
+  nas 18 a Meta devolve gasto e impressões ZERO no buraco; nenhuma conta ativa com buraco de 30
+  dias ou mais no meio da série. Em agosto eram 9 falsos positivos, e eles tiravam do selo
+  WEDER, ANDRÉ, VINÍCIUS, JOÃO PEDRO e DANIEL. A régua nova também pega o que a antiga deixava
+  passar: conta cuja leitura PAROU antes do fim do mês.
+  ⚠️ **O conserto abria um furo, fechado no mesmo commit:** doc agregado nascido truncado (conta
+  nova sincronizada com `?dias=N`) pareceria "não veiculava". O sync passa a gravar `lidoDesde`
+  (`lidoDesdeAposSync` em `lib/agregadas.ts`); doc sem o campo cai na retenção, o que a medição
+  acima valida para os docs de hoje.
+  Conferência antes×depois com o código compilado e o dado real: números dos gestores
+  idênticos; julho sem mudança (81 incompletas nas duas, sem selo); selo de agosto ISMAIL →
+  WEDER com a carteira da manhã. Casos plantados — começou no meio, doc truncado, leitura parou,
+  sem leitura, mês em curso, gestor elegível e inelegível pelos dois lados, sete caminhos do
+  `lidoDesde`: todos no esperado. **Agosto foi pago com a régua antiga** — ver CLAUDE.md, *MÊS
+  PAGO NÃO É MÊS EXIBIDO*.
+  📌 **NÃO CONFERIDO AINDA:** que o sync grava `lidoDesde` de fato. Só o sync grava o campo, e
+  nenhuma execução rodou com o código novo. Conferir na próxima: os docs de
+  `metricasAgregadas` reescritos têm `lidoDesde` (presença, não valor).
+- ✅ **Resolvido (15/09/2026): a ISP4 (ISMAIL) saiu da carteira e foi ESTACIONADA** (decisão do
+  Igor em 15/09: agosto já foi pago, a conta pode ser tratada). Foi a saída que retirou o acesso
+  (#200 desde 04/09); o "0 - PAUSADO" da planilha não provava a saída — lá PAUSADO é relação
+  comercial, e 11 contas assim seguiam veiculando em 10/09 (ver `lib/conciliaPlanilha.ts`).
+  **Caminho usado: estacionar** — a mesma gravação da `/carteira` (gestor PAUSADO, `pausado`
+  true, entrada no `gestorHistorico` com `por` dizendo que foi script), com prévia e leitura de
+  volta; coleção inteira sem divergência entre gestor PAUSADO e `pausado`. A marca de ciente em
+  `sistema/falhasCientes` foi removida: conta pausada é falha esperada.
+  **Lápide não:** `sistema/contasRemovidas` só é lida para conta FORA do cadastro (fila de
+  contas, conciliação da planilha, descoberta), e a ISP4 continua cadastrada — seria um
+  registro que nenhum código consulta. Renovar a marca também não resolvia: a conta seguia
+  ativa nos números.
+  ⚠️ **O que mudou na tela:** agosto do ISMAIL de CPL R$ 14,71 para R$ 12,68 (variação −4,76%
+  → −9,26%), julho de R$ 15,45 para R$ 13,97; com a régua nova, o selo de agosto é do ISMAIL.
+  E **julho deixou de ser oferecido na /gestores**: aparecia só porque o doc parado da ISP4
+  guardava dados desde 31/05; sem ela, nenhuma conta ativa tem junho inteiro na janela.
+  A `/conciliacao` passa a listar a ISP4 entre as estacionadas com "planilha diz dono ISMAIL" —
+  é sugestão, não escrita; enquanto a linha estiver na aba do ISMAIL, ela fica lá.
+- 📌 **Próxima obra (15/09/2026): a saída/troca com data.** O painel reescreve mês fechado toda
+  vez que uma conta sai ou troca de gestor, porque `montarPainel` soma cada conta inteira no
+  gestor que ela tem hoje e as telas tiram a conta pausada de todos os meses. Não iniciada.
+  ⚠️ **Ela não fecha o problema inteiro:** correção de regra e a janela de 95 dias continuam
+  mudando mês fechado na tela. Só uma foto do fechamento faria da tela um registro — não
+  existe, sem decisão. Ver CLAUDE.md, *MÊS PAGO NÃO É MÊS EXIBIDO*.
 - 📌 **Decisão pendente (15/09/2026): `sync-comercial` e `sync-planilha` continuam INDEPENDENTES**
   do `sync-meta`, no agendamento próprio do GitHub. Encadear ao fim do `sync-meta` criaria um
   ponto único de falha entre fontes que não dependem uma da outra (Xmax, planilha e Meta).

@@ -1108,8 +1108,9 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   PEDRO mudaram. **O agosto do LUCAS na tela foi de CPL R$ 20,74 para R$ 21,36** (1.549 →
   1.474 conversões) por causa do estacionamento de duas contas, e **a tela não avisa
   isso** — nem na hora do clique, nem depois, para quem abre agosto. A ordem do selo de
-  agosto não mudou (WEDER em 1º nas duas leituras); o número do LUCAS mudou. Em aberto:
-  se a bonificação de agosto foi fechada antes ou depois de 08/09 (pergunta ao Thiago).
+  agosto não mudou (WEDER em 1º nas duas leituras); o número do LUCAS mudou.
+  📌 **Fechado em 15/09/2026 (Igor):** agosto já estava pago e o retroativo não se mexe. O
+  que isso significa para quem abrir agosto na tela está em *MÊS PAGO NÃO É MÊS EXIBIDO*.
   📌 **O "antes" foi RECONSTRUÍDO** com os dados de 14/09, atribuindo as duas contas ao
   gestor anterior — não é foto do que a tela mostrava em 07/09. E nem essa reconstrução é
   a atribuição certa: a Hotel Oscar foi do LUCAS até 27/07 e do JOÃO PEDRO depois, e
@@ -1129,6 +1130,54 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   reescreve o mês do gestor é a troca do gestor**, que o estacionar já fazia; gravar
   `pausado` junto só mudou ~0,5% do total da carteira. Esperar teria preservado a coisa
   errada — e só a medição separou as duas.
+
+## MÊS PAGO NÃO É MÊS EXIBIDO — o painel não guarda o que mostrou
+- 🛑🛑 **A TELA É O ESTADO ATUAL DO CÁLCULO, NÃO O REGISTRO DA DECISÃO. Toda correção de
+  regra muda o passado na tela sem mudar o que já foi pago — e, sem foto do fechamento,
+  nada no painel diz o que ele mostrava no dia em que se decidiu.**
+  É a conclusão de três dias de investigação (13 a 15/09/2026), e vale mais que cada
+  conserto que saiu deles: todos estavam certos, e cada um reescreveu um mês fechado.
+  **Três mecanismos mudam mês fechado na tela sem ninguém abrir aquele mês:**
+
+  | mecanismo | caso real | o que mudou na tela |
+  |---|---|---|
+  | troca de gestor (estacionar incluído) | Hotel Oscar e CAMPEZZA em 08/09; ISP4 em 15/09 | agosto do LUCAS: CPL R$ 20,74 → R$ 21,36. Agosto do ISMAIL: R$ 14,71 → R$ 12,68 (−4,76% → −9,26%) |
+  | correção de regra | base incompleta, 15/09 | selo de agosto ISMAIL → WEDER, com a carteira da manhã de 15/09 |
+  | janela de retenção (95 dias) | julho sem selo desde ~05/09 (estimado pela fórmula, não observado) | julho some da /gestores em 15/09. Agosto deixa de ser comparável na 1ª sincronização de 05/10/2026 (calculado em 15/09) |
+
+  📌 **AGOSTO/2026 FOI PAGO COM A RÉGUA ANTIGA DE BASE INCOMPLETA** (Igor, 15/09/2026), e o
+  retroativo não se mexe. **O que a tela mostra de agosto depois de 15/09 NÃO é o que embasou
+  o pagamento.** Com o dado de 15/09:
+
+  | leitura de agosto | selo | ISMAIL em agosto |
+  |---|---|---|
+  | régua antiga, ISP4 na carteira | ISMAIL | CPL R$ 14,71 · −4,76% |
+  | régua nova, ISP4 na carteira | WEDER (−7,81%) | CPL R$ 14,71 · −4,76% |
+  | **régua nova, ISP4 estacionada — a tela depois de 15/09** | **ISMAIL** | **CPL R$ 12,68 · −9,26%** |
+
+  ⚠️ **O NOME NO SELO VOLTOU A SER O MESMO — e é por isso que esta nota precisa existir.** Quem
+  comparar o pagamento com a tela vai ver ISMAIL nos dois e concluir que batem. Não batem: na
+  régua antiga o ISMAIL levou porque o WEDER, 1º em evolução, foi barrado por dois falsos
+  positivos (WELL e AZM, contas que só começaram a veicular em agosto); na tela de hoje ele
+  leva por ter a maior queda, −9,26%, que só existe sem a ISP4. **Mesmo nome, outro motivo,
+  outro número.** Coincidência que parece conferência é o pior caso desta família.
+  🕳️ **E nenhuma das três linhas é foto do dia do pagamento.** A data em que agosto foi
+  decidido não está no painel, e a carteira de agosto já tinha mudado em 08/09. As linhas são
+  o dado de 15/09 recalculado — reconstrução, não registro (ver *NÚMERO DE MÊS FECHADO QUE
+  MUDA*, logo acima).
+  🔑 **Por que não se resolve consertando caso a caso.** A saída com data acaba com o primeiro
+  mecanismo e não toca nos outros dois: correção de regra e janela continuam reescrevendo o
+  passado. Só a **foto do fechamento** torna a tela um registro. Ela seria o resultado do mês
+  gravado uma vez, quando o mês fecha, e nunca recalculado: números por gestor, elegibilidade,
+  selo, carteira e versão da régua. **Não existe em 15/09/2026, e não há decisão sobre ela.**
+  ⚠️ **A régua, enquanto a foto não existir:**
+  1. **Mês exibido não é mês pago.** A pergunta "o que embasou o pagamento" não se responde
+     abrindo a tela; responde-se com o registro de quem pagou, fora do painel.
+  2. **Correção de regra que alimenta pagamento sai com o antes×depois dos meses já pagos,
+     datado e registrado AQUI, antes do deploy.** Depois dele, o "antes" só existe
+     reconstruído — e reconstrução com a carteira do dia, não com a do pagamento.
+  3. **O registro diz o que a tela vai passar a mostrar**, para quem abrir aquele mês depois
+     não ler a mudança como erro — nem a coincidência como confirmação.
 
 ## Módulo de IA (premium, opcional)
 - Assistente de IA entra como **módulo premium**, **desligável por env** (off por padrão).

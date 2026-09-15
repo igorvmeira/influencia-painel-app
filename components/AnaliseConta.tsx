@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useDadosPainel } from "@/lib/useDadosPainel";
 import { analiseDaConta, montarNichos } from "@/lib/painel";
-import { coberturaMes } from "@/lib/periodo";
+import { coberturaMes, rotuloFaltaCobertura } from "@/lib/periodo";
 import { brl, brlDec, num } from "@/lib/format";
 import { TEMA } from "@/lib/brand";
 import { ContaMap } from "@/lib/types";
@@ -69,7 +69,10 @@ export default function AnaliseConta({ conta }: { conta: ContaMap }) {
   const cobertura = useMemo(() => {
     if (!dados) return null;
     const hoje = new Date();
-    return coberturaMes(dados.daily, conta.accountId, hoje.getFullYear(), hoje.getMonth() + 1);
+    return coberturaMes(
+      dados.daily, conta.accountId, hoje.getFullYear(), hoje.getMonth() + 1,
+      dados.leituraPorConta[conta.accountId] ?? null
+    );
   }, [dados, conta.accountId]);
 
   if (erro) {
@@ -105,9 +108,9 @@ export default function AnaliseConta({ conta }: { conta: ContaMap }) {
       {cobertura && !cobertura.completo && !conta.pausado && (
         <div className="mb-4 rounded-lg px-4 py-3 text-[12.5px] leading-relaxed"
           style={{ background: TEMA.limiteFundo, color: AMBER }}>
-          <b>⚠ Mês incompleto.</b> A série desta conta começa depois do dia 1
-          {cobertura.primeiroDiaSerie ? ` (${cobertura.primeiroDiaSerie})` : ""} — o mesmo aviso
-          que a Análise de Gestores dá. Comparar contra o mês anterior mede base diferente.
+          <b>⚠ Mês incompleto.</b> O painel não conseguiu ler este mês inteiro desta conta
+          {rotuloFaltaCobertura(cobertura) ? ` (${rotuloFaltaCobertura(cobertura)})` : ""} — o mesmo
+          aviso que a Análise de Gestores dá. Comparar contra o mês anterior mede base diferente.
         </div>
       )}
 

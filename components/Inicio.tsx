@@ -105,7 +105,7 @@ export default function Inicio() {
   }, [orientacoes, contasAtivas]);
 
   const evolucao = useMemo(
-    () => (dados ? rankingEvolucaoGestores(daily, contasAtivas) : null),
+    () => (dados ? rankingEvolucaoGestores(daily, contasAtivas, dados.leituraPorConta) : null),
     [dados, daily, contasAtivas]
   );
 
