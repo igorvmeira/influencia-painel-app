@@ -584,9 +584,11 @@ export default function Dashboard(
   const det = detalhes.find((d) => d.gestor === gestorSel) ?? detalhes[0];
 
   // Ordenação + busca da tabela de clientes.
+  // Abre por CPL do MENOR para o maior (Roberto; aprovado pelo Igor em 15/09/2026, depois do conserto
+  // do CPL-zero — sem ele, conta sem conversão abriria a lista com CPL 0). Sem CPL fica no fim.
   const [busca, setBusca] = useState("");
-  const [ordCol, setOrdCol] = useState<ColCliente>("gasto");
-  const [ordDir, setOrdDir] = useState<"asc" | "desc">("desc");
+  const [ordCol, setOrdCol] = useState<ColCliente>("cplSemanal");
+  const [ordDir, setOrdDir] = useState<"asc" | "desc">("asc");
 
   const clientes = useMemo(() => {
     const base = (det?.clientes ?? []).filter((c) =>
@@ -607,7 +609,8 @@ export default function Dashboard(
 
   function ordenar(col: ColCliente) {
     if (col === ordCol) setOrdDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setOrdCol(col); setOrdDir(col === "cliente" || col === "tipo" ? "asc" : "desc"); }
+    // Texto e CPL começam do menor (CPL menor é o melhor); gasto e conversões, do maior.
+    else { setOrdCol(col); setOrdDir(col === "cliente" || col === "tipo" || col === "cplSemanal" ? "asc" : "desc"); }
   }
 
   const seta = (col: ColCliente) => (ordCol === col ? (ordDir === "asc" ? " ↑" : " ↓") : "");
