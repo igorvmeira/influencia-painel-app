@@ -25,6 +25,8 @@ import { usePeriodoGlobal, type JanelaDia } from "./PeriodoGlobalProvider";
 import Sparkline from "./Sparkline";
 import KpiCard from "./KpiCard";
 import DeltaChip from "./DeltaChip";
+import CplValor from "./CplValor";
+import { compararCpl, explicaSemCpl } from "@/lib/cpl";
 import BarraDado from "./BarraDado";
 import Modal from "./Modal";
 import OrientacaoDoCliente from "./OrientacaoDoCliente";
@@ -75,8 +77,8 @@ interface AlertaCard {
   accountId?: string;  // limite → para a barrinha de uso
   usoPct?: number;     // limite → %
   restante?: number;   // limite → R$
-  cpl?: number;        // CPL → R$
-  cplVar?: number;     // CPL → variação %
+  cpl?: number | null;    // CPL → R$ (null = sem CPL, ver lib/cpl.ts)
+  cplVar?: number | null; // CPL → variação % (null = sem base)
 }
 
 // Formata o horário do último sync no fuso de Brasília (pt-BR).
@@ -466,17 +468,18 @@ export default function Dashboard(
   // coleta de reach/impressions começou para explicar o "—" dessas duas colunas.
   // Ficou órfão quando Alcance e Impressões saíram da exibição — era o único uso.
 
-  // Ranking de gestores por CPL (menor = melhor).
+  // Ranking de gestores por CPL (menor = melhor). Sem CPL vai para o FIM — antes era 0 e
+  // abria o ranking com o selo "melhor" (lib/cpl.ts).
   const ranking = useMemo(
-    () => [...data.gestores].sort((a, b) => a.cpl - b.cpl),
+    () => [...data.gestores].sort((a, b) => compararCpl(a, b)),
     [data.gestores]
   );
-  const maxCpl = Math.max(1, ...ranking.map((g) => g.cpl));
-  const subindo = data.gestores.filter((g) => g.cplVar > 0);
-  // Gestores com CPL absoluto acima do limiar (em R$).
-  const cplAlto = data.gestores.filter((g) => g.cpl >= CPL_ALERTA);
+  const maxCpl = Math.max(1, ...ranking.map((g) => g.cpl ?? 0));
+  const subindo = data.gestores.filter((g) => g.cplVar !== null && g.cplVar > 0);
+  // Gestores com CPL absoluto acima do limiar (em R$). Sem CPL não é "alto".
+  const cplAlto = data.gestores.filter((g) => g.cpl !== null && g.cpl >= CPL_ALERTA);
   // Pior gestor por CPL (para o card vermelho da faixa "Precisa de atenção").
-  const piorCpl = cplAlto.length ? cplAlto.reduce((a, b) => (b.cpl > a.cpl ? b : a)) : null;
+  const piorCpl = cplAlto.length ? cplAlto.reduce((a, b) => ((b.cpl ?? 0) > (a.cpl ?? 0) ? b : a)) : null;
 
   // Contas perto do teto de gasto (para os alertas e as barrinhas de uso).
   // Só contas ativas — uma pausada não está gastando, não pode disparar alerta.
@@ -567,6 +570,11 @@ export default function Dashboard(
     );
     const dir = ordDir === "asc" ? 1 : -1;
     return [...base].sort((a, b) => {
+      // CPL tem ordem própria: sem CPL no FIM nas duas direções (lib/cpl.ts). Pela regra
+      // genérica abaixo, `null` cairia na comparação de texto.
+      if (ordCol === "cplSemanal") {
+        return compararCpl({ cpl: a.cplSemanal, gasto: a.gasto }, { cpl: b.cplSemanal, gasto: b.gasto }, ordDir);
+      }
       const va = a[ordCol], vb = b[ordCol];
       if (typeof va === "number" && typeof vb === "number") return (va - vb) * dir;
       return String(va).localeCompare(String(vb)) * dir;
@@ -836,7 +844,11 @@ export default function Dashboard(
           rotulo="CPL médio"
           valor={kpis.cpl.valor}
           formatar={brlDec}
-          titulo={`${brlDec(kpis.cpl.valor)} · base: ${num(kpis.cpl.base)} resultados no período (leads + conversas)`}
+          titulo={kpis.cpl.valor === null
+            ? `Sem CPL no período: ${explicaSemCpl(kpis.gasto.valor, kpis.cpl.base)}`
+            : `${brlDec(kpis.cpl.valor)} · base: ${num(kpis.cpl.base)} resultados no período (leads + conversas)`}
+          // O motivo ESCRITO no card, não só no tooltip.
+          base={kpis.cpl.valor === null ? explicaSemCpl(kpis.gasto.valor, kpis.cpl.base) ?? undefined : undefined}
           delta={kpis.cpl.delta}
           menorMelhor
           destaque
@@ -891,7 +903,7 @@ export default function Dashboard(
                 </p>
                 {piorCpl && (
                   <p className="mt-0.5 text-[12px] tabular-nums" style={{ color: MUTED }}>
-                    Pior: {piorCpl.nome} · {brlDec(piorCpl.cpl)}
+                    Pior: {piorCpl.nome} · <CplValor cpl={piorCpl.cpl} gasto={piorCpl.gasto} conversas={piorCpl.conversas} />
                   </p>
                 )}
               </button>
@@ -977,8 +989,10 @@ export default function Dashboard(
         <div className="mb-10 rounded-xl p-5" style={{ background: CARD }}>
           <div ref={refRanking} className="flex flex-col gap-2.5">
             {ranking.map((g, i) => {
-              const melhor = i === 0;
-              const largura = Math.max(6, (g.cpl / maxCpl) * 100);
+              // Sem CPL vem no fim e não leva selo nem barra: comprimento zero é "sem
+              // valor", e "melhor" é o menor CPL que EXISTE.
+              const melhor = i === 0 && g.cpl !== null;
+              const largura = g.cpl === null ? 0 : Math.max(6, (g.cpl / maxCpl) * 100);
               // Cor da barra reusa CPL_ALERTA: vermelho acima do teto; amarelo só no
               // melhor saudável; neutro nos demais saudáveis.
               // ⚠️ O neutro era `barraNeutra`, que é TRILHO — 1,47:1 sobre o card. Aqui
@@ -986,7 +1000,7 @@ export default function Dashboard(
               // 3:1 da WCAG 1.4.11 e a maioria das barras sumiria. `sparkline` é o
               // token de dado neutro (3,19:1). Token legítimo no contexto errado é o
               // defeito que nenhum grep acha — ver CLAUDE.md.
-              const acimaDoTeto = g.cpl >= CPL_ALERTA;
+              const acimaDoTeto = g.cpl !== null && g.cpl >= CPL_ALERTA;
               const corBarra = acimaDoTeto ? RED : melhor ? YELLOW : TEMA.dadoNeutro;
               return (
                 <div key={g.nome} className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -1025,13 +1039,18 @@ export default function Dashboard(
                     degrade={melhor && !acimaDoTeto}
                     entrou={entrouRanking}
                     indice={i}
-                    titulo={`${g.nome}: ${brlDec(g.cpl)}`}
+                    titulo={`${g.nome}: ${g.cpl === null ? "sem CPL no período" : brlDec(g.cpl)}`}
                   />
                   <div className="ml-auto flex shrink-0 flex-col items-end sm:ml-0 sm:w-52">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium tabular-nums font-mono" style={{ color: TEMA.texto }}>{brlDec(g.cpl)}</span>
-                      {g.cplVar === 0 ? (
-                        <span className="text-xs font-medium" style={{ color: MUTED }} title="sem histórico suficiente pra comparar">—</span>
+                      <span className="text-sm font-medium tabular-nums font-mono" style={{ color: TEMA.texto }}>
+                        <CplValor cpl={g.cpl} gasto={g.gasto} conversas={g.conversas} />
+                      </span>
+                      {/* ⚠️ Antes o teste era `cplVar === 0`, que juntava "sem base" com
+                          "variação real de 0%". Agora sem base é `null`, e 0% é número. */}
+                      {g.cplVar === null ? (
+                        <span className="text-xs font-medium" style={{ color: MUTED, cursor: "help" }}
+                          title={g.cpl === null ? "sem CPL no período — não há o que comparar" : "sem CPL no período anterior — não há o que comparar"}>—</span>
                       ) : (
                         <Trend v={g.cplVar} menorMelhor />
                       )}
@@ -1099,7 +1118,7 @@ export default function Dashboard(
                     <XAxis dataKey="semana" tick={{ fontSize: 12, fill: MUTED }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 11, fill: MUTED }} axisLine={false} tickLine={false} tickFormatter={(v) => "R$ " + v} />
                     <Tooltip
-                      formatter={(v: number) => brlDec(v)}
+                      formatter={(v) => (typeof v === "number" ? brlDec(v) : "sem CPL na semana")}
                       contentStyle={{ background: INK, border: `1px solid ${LINE}`, borderRadius: 8, color: TEMA.texto }}
                       labelStyle={{ color: MUTED }}
                     />
@@ -1343,8 +1362,10 @@ function AlertaCardRow({ a, limite }: { a: AlertaCard; limite?: LimiteConta }) {
           </>
         ) : (
           <>
-            <span className="text-sm font-medium tabular-nums font-mono text-brand-ink">{brlDec(a.cpl ?? 0)}</span>
-            <Trend v={a.cplVar ?? 0} menorMelhor />
+            <span className="text-sm font-medium tabular-nums font-mono text-brand-ink">{a.cpl == null ? "—" : brlDec(a.cpl)}</span>
+            {a.cplVar == null
+              ? <span className="text-xs font-medium" style={{ color: MUTED, cursor: "help" }} title="sem CPL no período anterior — não há o que comparar">—</span>
+              : <Trend v={a.cplVar} menorMelhor />}
           </>
         )}
       </div>
@@ -1419,7 +1440,9 @@ function LinhaClienteRow({ c, ordem, limite, orientacao, par, onVerOrientacao }:
       </td>
       <td className="px-4 py-3 text-right tabular-nums font-mono" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>{brl(c.gasto)}</td>
       <td className="px-4 py-3 text-right tabular-nums font-mono" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>{num(c.conversas)}</td>
-      <td className="px-4 py-3 text-right tabular-nums font-mono" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>{brlDec(c.cplSemanal)}</td>
+      <td className="px-4 py-3 text-right tabular-nums font-mono" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>
+        <CplValor cpl={c.cplSemanal} gasto={c.gasto} conversas={c.conversas} />
+      </td>
       {/* Alcance/Impressões retirados da exibição (ver <thead>). c.reach e
           c.impressions continuam chegando preenchidos em LinhaCliente. */}
       <td className="px-4 py-3" style={{ borderBottom: `1px solid ${LINE}` }}>

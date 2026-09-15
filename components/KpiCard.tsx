@@ -23,7 +23,12 @@ export default function KpiCard({
   sub, destaque = false, titulo, contexto, neutralizar, rodape, motivo, grande = false,
 }: {
   rotulo: string;
-  valor: number;
+  /**
+   * ⚠️ `null` = O NÚMERO NÃO EXISTE (ex.: CPL sem conversão, ver lib/cpl.ts). O card
+   * mostra "—" e o `titulo` explica; nunca passa por `formatar(0)`, que afirmaria um
+   * valor que não houve.
+   */
+  valor: number | null;
   formatar: (n: number) => string;
   /** Segunda linha do rótulo (ex.: "formulário + WhatsApp"). */
   sub?: string;
@@ -44,8 +49,11 @@ export default function KpiCard({
    * referência faz isso e é justamente a parte frágil que decidimos não copiar.
    */
   grande?: boolean;
-  /** Série da mini-linha. Menos de 2 pontos: a sparkline some, o card fica. */
-  serie?: number[];
+  /**
+   * Série da mini-linha. Menos de 2 pontos com valor: a sparkline some, o card fica.
+   * ⚠️ `null` num ponto QUEBRA a linha — dia sem valor vira buraco, nunca zero.
+   */
+  serie?: (number | null)[];
   /**
    * Variação em %. `null` = há comparação, mas não foi possível calcular (mostra
    * "—"). **Omitir** = a métrica não tem comparação nenhuma, e aí o chip nem
@@ -70,7 +78,8 @@ export default function KpiCard({
   /** Segunda dimensão da mesma métrica (ex.: o MRR ao lado da contagem). */
   secundario?: string;
 }) {
-  const pontos = serie && serie.length >= 2 ? serie : null;
+  const comValor = serie ? serie.filter((v) => v !== null).length : 0;
+  const pontos = serie && comValor >= 2 ? serie : null;
   /**
    * ⚠️ `motivo` FORÇA o "—". Sem isto, uma tela poderia passar `motivo` (a razão
    * de não haver comparação) E um `delta` calculado contra base incompleta — e o
@@ -101,17 +110,29 @@ export default function KpiCard({
         </div>
         {sub && <div className="text-[11px]" style={{ color: TEMA.muted }}>{sub}</div>}
 
-        <NumeroAnimado
-          valor={valor}
-          formatar={formatar}
-          title={titulo}
-          className={`mt-2.5 block font-semibold tracking-[-0.02em] tabular-nums ${
-            grande ? "text-[34px] leading-none" : "text-[26px] leading-[1.1]"
-          }`}
-          // ⚠️ Ouro ESCURO no destaque, nunca o dourado puro como texto pequeno —
-          // e aqui o número é grande o bastante para a regra dos 18px valer.
-          style={{ color: destaque ? TEMA.ouroTexto : TEMA.texto }}
-        />
+        {valor === null ? (
+          <span
+            title={titulo}
+            className={`mt-2.5 block font-semibold tracking-[-0.02em] ${
+              grande ? "text-[34px] leading-none" : "text-[26px] leading-[1.1]"
+            }`}
+            style={{ color: TEMA.muted, cursor: titulo ? "help" : undefined }}
+          >
+            —
+          </span>
+        ) : (
+          <NumeroAnimado
+            valor={valor}
+            formatar={formatar}
+            title={titulo}
+            className={`mt-2.5 block font-semibold tracking-[-0.02em] tabular-nums ${
+              grande ? "text-[34px] leading-none" : "text-[26px] leading-[1.1]"
+            }`}
+            // ⚠️ Ouro ESCURO no destaque, nunca o dourado puro como texto pequeno —
+            // e aqui o número é grande o bastante para a regra dos 18px valer.
+            style={{ color: destaque ? TEMA.ouroTexto : TEMA.texto }}
+          />
+        )}
 
         {secundario && (
           <div className="mt-1 text-[13px] font-medium tabular-nums" style={{ color: TEMA.destaque }}>
@@ -163,19 +184,36 @@ export default function KpiCard({
  * `preserveAspectRatio="none"` estica no eixo X; `vector-effect` mantém a
  * espessura da linha constante apesar do esticamento — sem isso a linha
  * engrossaria em cards largos e afinaria nos estreitos.
+ *
+ * ⚠️ `null` QUEBRA A LINHA em trechos: o dia sem valor vira buraco. Ligar por cima dele
+ * desenharia uma tendência que ninguém mediu, e pôr o ponto no zero afirmaria um valor.
  */
-function SerieDeFundo({ pontos }: { pontos: number[] }) {
-  const max = Math.max(...pontos);
-  const min = Math.min(...pontos);
+function SerieDeFundo({ pontos }: { pontos: (number | null)[] }) {
+  const validos = pontos.filter((v): v is number => v !== null);
+  const max = Math.max(...validos);
+  const min = Math.min(...validos);
   const span = max - min || 1;
   const L = 300, A = 60;
-  const xy = pontos.map((v, i) => {
+  const trechos: { x: number; y: number }[][] = [];
+  let atual: { x: number; y: number }[] = [];
+  pontos.forEach((v, i) => {
+    if (v === null) {
+      if (atual.length) trechos.push(atual);
+      atual = [];
+      return;
+    }
     const x = (i / (pontos.length - 1)) * L;
     const y = A - ((v - min) / span) * (A * 0.8) - A * 0.1;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
+    atual.push({ x, y });
   });
-  const linha = `M${xy.join(" L")}`;
-  const area = `${linha} L${L},${A} L0,${A} Z`;
+  if (atual.length) trechos.push(atual);
+
+  const caminho = (t: { x: number; y: number }[]) => `M${t.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" L")}`;
+  const linha = trechos.map(caminho).join(" ");
+  const area = trechos
+    .filter((t) => t.length >= 2)
+    .map((t) => `${caminho(t)} L${t[t.length - 1].x.toFixed(1)},${A} L${t[0].x.toFixed(1)},${A} Z`)
+    .join(" ");
 
   return (
     <svg

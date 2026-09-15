@@ -8,6 +8,8 @@ import { brl, brlDec, num } from "@/lib/format";
 import { TEMA } from "@/lib/brand";
 import { ContaMap } from "@/lib/types";
 import KpiCard from "./KpiCard";
+import CplValor from "./CplValor";
+import { explicaSemCpl } from "@/lib/cpl";
 import DeltaChip from "./DeltaChip";
 import SecaoHeader from "./SecaoHeader";
 import CriativosDaConta from "./CriativosDaConta";
@@ -146,6 +148,10 @@ export default function AnaliseConta({ conta }: { conta: ContaMap }) {
               valor={linha.cpl}
               formatar={brlDec}
               delta={linha.cplVar}
+              titulo={linha.cpl === null ? explicaSemCpl(linha.gasto, linha.conversas) ?? undefined : undefined}
+              // Sem CPL no período o "—" do número já diz tudo; o do Δ explica por que não compara.
+              motivo={linha.cpl === null ? "sem CPL neste período — não há o que comparar" : null}
+              base={linha.cpl === null ? explicaSemCpl(linha.gasto, linha.conversas) ?? undefined : undefined}
               menorMelhor
               // ⚠️ Conta pausada: o Δ perde a cor. Variação entre dois períodos sem
               // veiculação é ruído de arredondamento, não desempenho.
@@ -183,18 +189,24 @@ export default function AnaliseConta({ conta }: { conta: ContaMap }) {
                 <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
                   <div>
                     <div className="text-[11px] uppercase tracking-[0.13em]" style={{ color: MUTED }}>CPL desta conta</div>
-                    <div className="text-[20px] font-semibold tabular-nums" style={{ color: TEMA.texto }}>{brlDec(noNicho.cpl)}</div>
+                    <div className="text-[20px] font-semibold tabular-nums" style={{ color: TEMA.texto }}>
+                      <CplValor cpl={noNicho.cpl} gasto={noNicho.gasto} conversas={noNicho.conversas} />
+                    </div>
                   </div>
                   <div>
                     <div className="text-[11px] uppercase tracking-[0.13em]" style={{ color: MUTED }}>Média do nicho</div>
-                    <div className="text-[20px] font-semibold tabular-nums" style={{ color: MUTED }}>{brlDec(nicho.cpl)}</div>
+                    <div className="text-[20px] font-semibold tabular-nums" style={{ color: MUTED }}>
+                      <CplValor cpl={nicho.cpl} gasto={nicho.gasto} conversas={nicho.conversas} />
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {/* `menorMelhor`: estar ACIMA da média de CPL é ruim. */}
                     <DeltaChip delta={noNicho.desvioPct} menorMelhor
+                      motivo={noNicho.desvioPct === null ? "sem CPL desta conta ou do nicho — não há desvio para medir" : null}
                       contexto={`CPL desta conta contra a média de ${nicho.nicho}`} />
                     <span className="text-[11.5px]" style={{ color: MUTED }}>
-                      {noNicho.desvioPct === 0 ? "na média" : noNicho.desvioPct > 0 ? "acima da média" : "abaixo da média"}
+                      {noNicho.desvioPct === null ? "sem comparação"
+                        : noNicho.desvioPct === 0 ? "na média" : noNicho.desvioPct > 0 ? "acima da média" : "abaixo da média"}
                     </span>
                   </div>
                 </div>

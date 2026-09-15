@@ -3,12 +3,13 @@ import {
   MetricaDiaria, Painel, PontoCpl, Tipo, Totais,
 } from "./types";
 import { EspecJanela } from "./periodo";
+import { cplDe as cpl, variacaoPct as variacao, compararCpl } from "./cpl";
 
 const DIA_MS = 86400000;
 
-const cpl = (gasto: number, conversas: number) => (conversas > 0 ? gasto / conversas : 0);
-const variacao = (atual: number, anterior: number) =>
-  anterior > 0 ? Math.round(((atual - anterior) / anterior) * 100) : 0;
+// ⚠️ CPL e variação vêm de lib/cpl.ts e devolvem `null` quando não existem — nunca 0.
+// Até 14/09/2026 moravam aqui e devolviam 0, e zero é o MENOR CPL possível: a conta que
+// gastou sem converter aparecia como a mais barata de qualquer lista ordenada.
 
 const conversasDe = (m: MetricaDiaria) => m.leadsForm + m.convWhats;
 
@@ -105,7 +106,7 @@ export function montarPainel(
     gasto += a.gasto; b2b += a.leadsForm; b2c += a.convWhats;
 
     const g = porGestor.get(c.gestor)
-      ?? { nome: c.gestor, gasto: 0, conversas: 0, b2b: 0, b2c: 0, cpl: 0, cplVar: 0 };
+      ?? { nome: c.gestor, gasto: 0, conversas: 0, b2b: 0, b2c: 0, cpl: null, cplVar: null };
     g.gasto += a.gasto; g.b2b += a.leadsForm; g.b2c += a.convWhats; g.conversas += a.conversas;
     porGestor.set(c.gestor, g);
 
@@ -164,8 +165,8 @@ export function montarPainel(
       const dois = janelaCpl(registros, ids, diasAtras, semFim + 56, semFim + 6 + 56);
       cplSemanal.push({
         semana: `Sem ${p}`,
-        atual: Math.round(atual * 100) / 100,
-        doisMesesAtras: Math.round(dois * 100) / 100,
+        atual: atual === null ? null : Math.round(atual * 100) / 100,
+        doisMesesAtras: dois === null ? null : Math.round(dois * 100) / 100,
       });
     }
 
@@ -191,10 +192,11 @@ export function montarPainel(
 export interface AnaliseDaConta {
   gasto: number;
   conversas: number;
-  cpl: number;
-  gastoVar: number;
-  conversasVar: number;
-  cplVar: number;
+  /** `null` = sem CPL no período. Variações `null` = sem base comparável. Ver lib/cpl.ts. */
+  cpl: number | null;
+  gastoVar: number | null;
+  conversasVar: number | null;
+  cplVar: number | null;
   /** false = não houve gasto nem conversão em nenhum dos dois lados. */
   temDado: boolean;
 }
@@ -267,7 +269,7 @@ export function montarNichos(
       gasto: a.gasto,
       conversas: a.conversas,
       cpl: cpl(a.gasto, a.conversas),
-      desvioPct: 0,
+      desvioPct: null, // preenchido abaixo, quando o CPL do nicho existir
     });
     grupos.set(nicho, g);
   }
@@ -277,9 +279,10 @@ export function montarNichos(
     const clientes = g.clientes
       .map((cl) => ({
         ...cl,
-        desvioPct: cplNicho > 0 ? Math.round(((cl.cpl - cplNicho) / cplNicho) * 100) : 0,
+        // Sem CPL de um dos lados não há desvio — `null`, não "0% = na média".
+        desvioPct: variacao(cl.cpl, cplNicho),
       }))
-      .sort((x, y) => x.cpl - y.cpl);
+      .sort((x, y) => compararCpl(x, y));
     return {
       nicho,
       clientesCount: g.clientes.length,
@@ -288,7 +291,7 @@ export function montarNichos(
       cpl: cplNicho,
       clientes,
     };
-  }).sort((a, b) => a.cpl - b.cpl);
+  }).sort((a, b) => compararCpl(a, b));
 }
 
 /**
@@ -336,10 +339,13 @@ export interface DestaqueNicho {
 export function destaquesVsNicho(nichos: LinhaNicho[]): DestaqueNicho[] {
   const out: DestaqueNicho[] = [];
   for (const n of nichos) {
-    if (!(n.cpl > 0)) continue; // nicho sem CPL não tem média para comparar
+    if (n.cpl === null) continue; // nicho sem CPL não tem média para comparar
     for (const c of n.clientes) {
       if (c.conversas < MIN_CONVERSAS_DESTAQUE_NICHO) continue;
       if (c.gasto < MIN_GASTO_DESTAQUE_NICHO) continue; // ver o comentário do piso duplo
+      // Redundante com o piso duplo (gasto e conversas > 0 garantem CPL) — fica para o
+      // tipo fechar sem `!`, e para o dia em que alguém mexer nos pisos.
+      if (c.cpl === null || c.desvioPct === null) continue;
       out.push({
         accountId: c.accountId,
         cliente: c.cliente,
@@ -378,7 +384,7 @@ function janelaCpl(
   diasAtras: (data: string) => number,
   dMin: number,
   dMax: number
-): number {
+): number | null {
   let gasto = 0, conversas = 0;
   for (const m of registros) {
     if (!ids.has(m.accountId)) continue;

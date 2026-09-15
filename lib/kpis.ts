@@ -1,6 +1,7 @@
 import { ContaMap, MetricaDiaria } from "./types";
 import { brl, num } from "./format";
 import { JanelaMes } from "./periodo";
+import { cplDe, variacaoPct } from "./cpl";
 
 // Camada de APRESENTAÇÃO dos KPIs. Não recalcula métrica de negócio: usa os
 // mesmos registros diários e a MESMA janela do painel (âncora + [0..N-1] atual
@@ -17,7 +18,12 @@ export interface Kpis {
   gasto: KpiCard;
   leads: KpiCard;        // leadsForm (formulário)
   conversas: KpiCard;    // convWhats (WhatsApp)
-  cpl: KpiCard & { base: number }; // CPL total = gasto ÷ (leadsForm+convWhats); base = total de resultados
+  /**
+   * CPL total = gasto ÷ (leadsForm+convWhats); base = total de resultados.
+   * ⚠️ `valor` e cada ponto da `serie` são `null` quando não há CPL (lib/cpl.ts) — nunca 0.
+   * O dia sem conversão virava ponto no chão da sparkline e puxava a "tendência" para baixo.
+   */
+  cpl: Omit<KpiCard, "valor" | "serie"> & { valor: number | null; serie: (number | null)[]; base: number };
 }
 
 // Dia mais recente presente nos registros, em ms (cai para hoje se não houver).
@@ -64,7 +70,7 @@ function calcKpis(
   const lA = soma(aIni, aFim, (a) => a.l), lP = soma(pIni, pFim, (a) => a.l);
   const wA = soma(aIni, aFim, (a) => a.w), wP = soma(pIni, pFim, (a) => a.w);
   const rA = lA + wA, rP = lP + wP; // resultados totais (base do CPL)
-  const cA = rA > 0 ? gA / rA : 0, cP = rP > 0 ? gP / rP : 0;
+  const cA = cplDe(gA, rA), cP = cplDe(gP, rP);
 
   return {
     gasto: { valor: gA, delta: deltaPct(gA, gP), serie: serie((a) => a.g) },
@@ -72,10 +78,10 @@ function calcKpis(
     conversas: { valor: wA, delta: deltaPct(wA, wP), serie: serie((a) => a.w) },
     cpl: {
       valor: cA,
-      // CPL sobre o TOTAL (não muda a base). null quando não há CPL anterior.
-      delta: cP > 0 ? Math.round(((cA - cP) / cP) * 100) : null,
+      // CPL sobre o TOTAL (não muda a base). null quando falta CPL de qualquer lado.
+      delta: variacaoPct(cA, cP),
       base: rA,
-      serie: offsetsSerie.map((d) => { const a = porDia.get(d); return a && a.l + a.w > 0 ? a.g / (a.l + a.w) : 0; }),
+      serie: offsetsSerie.map((d) => { const a = porDia.get(d); return a ? cplDe(a.g, a.l + a.w) : null; }),
     },
   };
 }
@@ -142,7 +148,7 @@ export function serieGrafico(daily: MetricaDiaria[], contas: ContaMap[], periodo
       continue;
     }
     const total = a.l + a.w;
-    out.push({ data: rot, gasto: a.g, leadsForm: a.l, convWhats: a.w, total, cpl: total > 0 ? a.g / total : null, temDados: true });
+    out.push({ data: rot, gasto: a.g, leadsForm: a.l, convWhats: a.w, total, cpl: cplDe(a.g, total), temDados: true });
   }
   return out;
 }
@@ -169,7 +175,7 @@ export function serieGraficoMes(daily: MetricaDiaria[], contas: ContaMap[], jm: 
       continue;
     }
     const total = a.l + a.w;
-    out.push({ data: rot, gasto: a.g, leadsForm: a.l, convWhats: a.w, total, cpl: total > 0 ? a.g / total : null, temDados: true, ghost });
+    out.push({ data: rot, gasto: a.g, leadsForm: a.l, convWhats: a.w, total, cpl: cplDe(a.g, total), temDados: true, ghost });
   }
   return out;
 }

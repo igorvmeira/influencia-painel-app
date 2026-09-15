@@ -192,12 +192,14 @@ export interface GrupoDia {
 export interface Totais {
   gasto: number;
   conversas: number;
-  cpl: number;
+  /** `null` = sem CPL (sem conversão ou sem gasto) — nunca 0. Ver lib/cpl.ts. */
+  cpl: number | null;
   b2b: number;
   b2c: number;
-  gastoVar: number;
-  conversasVar: number;
-  cplVar: number;
+  /** Variações em %: `null` quando não há base comparável — nunca 0, que se lê "estável". */
+  gastoVar: number | null;
+  conversasVar: number | null;
+  cplVar: number | null;
 }
 
 export interface LinhaGestor {
@@ -206,14 +208,15 @@ export interface LinhaGestor {
   conversas: number;
   b2b: number;
   b2c: number;
-  cpl: number;
-  cplVar: number;
+  cpl: number | null;
+  cplVar: number | null;
 }
 
 export interface PontoCpl {
   semana: string;
-  atual: number;
-  doisMesesAtras: number;
+  /** `null` = semana sem CPL: vira BURACO na linha, nunca um ponto no zero. */
+  atual: number | null;
+  doisMesesAtras: number | null;
 }
 
 export interface LinhaCliente {
@@ -222,7 +225,8 @@ export interface LinhaCliente {
   tipo: Tipo;
   gasto: number;
   conversas: number;
-  cplSemanal: number;
+  /** `null` = sem CPL no período (lib/cpl.ts). O nome diz "semanal" por herança; é o CPL da janela. */
+  cplSemanal: number | null;
   // ---------------------------------------------------------------------------
   // NÃO EXIBIDOS na tela desde 29/07/2026 — retirados do Dashboard a pedido do
   // Roberto. O cálculo AQUI e em lib/painel.ts (Soma.reach/reachDias e
@@ -272,8 +276,9 @@ export interface ClienteNicho {
   cliente: string;
   gasto: number;
   conversas: number;
-  cpl: number;
-  desvioPct: number; // vs CPL médio do nicho; positivo = acima (pior)
+  cpl: number | null;
+  /** vs CPL médio do nicho; positivo = acima (pior). `null` = sem CPL de um dos lados. */
+  desvioPct: number | null;
 }
 
 export interface LinhaNicho {
@@ -281,7 +286,7 @@ export interface LinhaNicho {
   clientesCount: number;
   gasto: number;
   conversas: number;
-  cpl: number;
+  cpl: number | null;
   clientes: ClienteNicho[];
 }
 

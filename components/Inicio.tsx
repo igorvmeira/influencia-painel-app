@@ -76,9 +76,10 @@ export default function Inicio() {
         gestor: d.gestor,
         gasto: c.gasto,
         conversas: c.conversas,
-        // ⚠️ null, não zero: sem conversa o CPL é INDEFINIDO. `cplSemanal` devolve
-        // 0 nesse caso, e 0 aqui faria a conta parecer a mais barata da carteira.
-        cpl: c.conversas > 0 ? c.gasto / c.conversas : null,
+        // ⚠️ null, não zero: sem conversa o CPL é INDEFINIDO. Até 14/09/2026 esta tela
+        // recalculava aqui porque o `cplSemanal` devolvia 0; agora ele já vem `null` da
+        // fonte (lib/cpl.ts), e a regra deixa de morar em dois lugares.
+        cpl: c.cplSemanal,
       }))
     );
   }, [painel]);

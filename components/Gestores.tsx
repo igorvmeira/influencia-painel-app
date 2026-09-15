@@ -25,6 +25,8 @@ import SecaoHeader from "./SecaoHeader";
 import IndicadorFrescor from "./IndicadorFrescor";
 import DeltaChip from "./DeltaChip";
 import CardGestor from "./CardGestor";
+import CplValor from "./CplValor";
+import { compararVariacao, explicaSemCpl, variacaoPct } from "@/lib/cpl";
 import SlopeCpl from "./SlopeCpl";
 import BarraSplit from "./BarraSplit";
 
@@ -200,7 +202,7 @@ export default function Gestores() {
 
   // accountId -> números do mês anterior (para o Δ por conta).
   const anteriorPorConta = useMemo(() => {
-    const m = new Map<string, { gasto: number; conversas: number; cpl: number }>();
+    const m = new Map<string, { gasto: number; conversas: number; cpl: number | null }>();
     for (const d of painelAnterior?.detalhes ?? []) {
       for (const c of d.clientes) {
         m.set(c.accountId, { gasto: c.gasto, conversas: c.conversas, cpl: c.cplSemanal });
@@ -293,7 +295,9 @@ export default function Gestores() {
     if (!painel) return null;
     const ord = [...painel.gestores]
       .filter((g) => g.conversas > 0)
-      .sort((a, b) => a.cplVar - b.cplVar); // menor variação = melhor evolução
+      // menor variação = melhor evolução. Sem variação (`null`: sem CPL num dos meses) vai
+      // para o FIM — antes era 0 e entrava no meio da fila como "estável".
+      .sort((a, b) => compararVariacao(a.cplVar, b.cplVar));
     return ord.find((g) => porGestor.get(g.nome)?.elegivel)?.nome ?? null;
   }, [painel, porGestor]);
 
@@ -308,8 +312,10 @@ export default function Gestores() {
       const ant = painelAnterior?.gestores.find((x) => x.nome === g.nome);
       return {
         nome: g.nome,
+        // `?? 0` aqui NÃO afirma CPL zero: o SlopeCpl descarta ponto ≤ 0 (escala log), e é
+        // essa a forma de dizer "sem CPL" para ele.
         cplAnterior: ant?.cpl ?? 0,
-        cplAtual: g.cpl,
+        cplAtual: g.cpl ?? 0,
         volumeBaixo: g.conversas < PISO_CONVERSOES_GESTOR,
         conversas: g.conversas,
       };
@@ -323,10 +329,11 @@ export default function Gestores() {
   const gestoresPorEvolucao = useMemo(() => {
     if (!painel) return [];
     return [...painel.gestores].sort((a, b) => {
-      if (a.conversas === 0 && b.conversas === 0) return b.gasto - a.gasto;
-      if (a.conversas === 0) return 1;
-      if (b.conversas === 0) return -1;
-      return a.cplVar - b.cplVar; // menor variação = maior queda = melhor
+      // Sem evolução definida (sem CPL neste mês OU no anterior) vai para o fim, o de
+      // maior gasto primeiro. Até 14/09/2026 só "sem conversão" ia para o fim; quem não
+      // tinha CPL no mês anterior ficava com variação 0 e no meio da fila.
+      if (a.cplVar === null && b.cplVar === null) return b.gasto - a.gasto;
+      return compararVariacao(a.cplVar, b.cplVar); // menor variação = maior queda = melhor
     });
   }, [painel]);
 
@@ -542,12 +549,14 @@ export default function Gestores() {
                         {num(g.conversas)}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums font-mono font-semibold" style={{ borderBottom: `1px solid ${LINE}`, color: TEMA.texto }}>
-                        {g.conversas > 0 ? brlDec(g.cpl) : "—"}
+                        <CplValor cpl={g.cpl} gasto={g.gasto} conversas={g.conversas} />
                       </td>
                       <td className="px-4 py-3 text-right" style={{ borderBottom: `1px solid ${LINE}` }}>
                         {/* menorMelhor: CPL caindo é bom → verde */}
-                        <DeltaChip delta={g.conversas > 0 ? g.cplVar : null} menorMelhor
-                          motivo={g.conversas > 0 ? null : "sem conversões no mês — CPL indefinido"} />
+                        <DeltaChip delta={g.cpl === null ? null : g.cplVar} menorMelhor
+                          motivo={g.cpl === null
+                            ? explicaSemCpl(g.gasto, g.conversas)
+                            : g.cplVar === null ? "sem CPL no mês anterior — não há o que comparar" : null} />
                       </td>
                       <td className="px-4 py-3" style={{ borderBottom: `1px solid ${LINE}`, color: MUTED }}>
                         <span className="tabular-nums">{cob?.total ?? 0}</span> contas
@@ -607,7 +616,7 @@ function DetalheGestor({
   destaques, b2b, b2c, labelAnterior, labelAtual,
 }: {
   clientes: LinhaCliente[];
-  anteriorPorConta: Map<string, { gasto: number; conversas: number; cpl: number }>;
+  anteriorPorConta: Map<string, { gasto: number; conversas: number; cpl: number | null }>;
   coberturaPorConta: Map<string, { incompleta: boolean; desde: string | null; semDado: boolean }>;
   contaPorId: Map<string, ContaMap>;
   ano: number;
@@ -706,14 +715,14 @@ function DetalheGestor({
             // Δ só existe com base comparável: mês completo dos DOIS lados e
             // conversões nos dois meses. Fora disso é "—" com o motivo — nunca
             // número limpo sobre base quebrada.
-            const temBase = !cob?.incompleta && !!ant && ant.conversas > 0 && c.conversas > 0;
-            const delta = temBase ? Math.round(((c.cplSemanal - ant!.cpl) / ant!.cpl) * 100) : null;
+            const temBase = !cob?.incompleta && !!ant && ant.cpl !== null && c.cplSemanal !== null;
+            const delta = temBase ? variacaoPct(c.cplSemanal, ant!.cpl) : null;
             const motivo = cob?.incompleta
               ? `Mês incompleto${cob.desde ? ` — dados a partir de ${ymdParaBR(cob.desde)}` : ""}. Sem base de comparação confiável.`
-              : !ant || ant.conversas === 0
-                ? "Sem conversões no mês anterior — não há CPL para comparar."
-                : c.conversas === 0
-                  ? "Sem conversões neste mês — CPL indefinido."
+              : !ant || ant.cpl === null
+                ? `Sem CPL no mês anterior${ant ? ` (${explicaSemCpl(ant.gasto, ant.conversas)})` : ""} — não há o que comparar.`
+                : c.cplSemanal === null
+                  ? `Sem CPL neste mês: ${explicaSemCpl(c.gasto, c.conversas)}.`
                   : null;
 
             return (
@@ -723,7 +732,7 @@ function DetalheGestor({
                 <td className="py-2 pr-3 text-right tabular-nums font-mono" style={{ color: TEMA.texto }}>{brl(c.gasto)}</td>
                 <td className="py-2 pr-3 text-right tabular-nums font-mono" style={{ color: TEMA.texto }}>{num(c.conversas)}</td>
                 <td className="py-2 pr-3 text-right tabular-nums font-mono" style={{ color: TEMA.texto }}>
-                  {c.conversas > 0 ? brlDec(c.cplSemanal) : "—"}
+                  <CplValor cpl={c.cplSemanal} gasto={c.gasto} conversas={c.conversas} />
                 </td>
                 <td className="py-2 pr-3 text-right">
                   <DeltaChip delta={delta} menorMelhor motivo={motivo} />

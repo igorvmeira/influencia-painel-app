@@ -6,6 +6,7 @@ import { brl, brlDec, num, pct } from "@/lib/format";
 import { TEMA } from "@/lib/brand";
 import { useEntrada } from "@/lib/useEntrada";
 import BarraDado from "./BarraDado";
+import CplValor from "./CplValor";
 
 // Cores lidas dos design tokens (fonte única em lib/brand.ts).
 const INK = TEMA.fundo;
@@ -22,7 +23,11 @@ export default function NichosSection({ nichos }: { nichos: LinhaNicho[] }) {
   const [nichoA, setNichoA] = useState(nomes[0] ?? "");
   const [nichoB, setNichoB] = useState(nomes[1] ?? nomes[0] ?? "");
 
-  const maxCpl = useMemo(() => Math.max(1, ...nichos.map((n) => n.cpl)), [nichos]);
+  // ⚠️ A escala e os selos "melhor"/"pior" olham só os nichos COM CPL. Os sem CPL vêm
+  // no fim da lista (lib/cpl.ts) e não podem ser "o pior" — pior é um CPL alto, não a
+  // ausência de CPL.
+  const comCpl = useMemo(() => nichos.filter((n) => n.cpl !== null), [nichos]);
+  const maxCpl = useMemo(() => Math.max(1, ...comCpl.map((n) => n.cpl ?? 0)), [comCpl]);
   // ⚠️ Antes do early return: ganchos não podem ficar atrás de condicional.
   const { ref, entrou } = useEntrada<HTMLDivElement>();
 
@@ -44,10 +49,11 @@ export default function NichosSection({ nichos }: { nichos: LinhaNicho[] }) {
       <div className="rounded-xl p-5" style={{ background: CARD }}>
         <div ref={ref} className="flex flex-col gap-4">
           {nichos.map((n, i) => {
-            // Nichos vêm ordenados por CPL crescente: primeiro = melhor, último = pior.
-            const melhor = i === 0;
-            const pior = nichos.length > 1 && i === nichos.length - 1;
-            const largura = Math.max(6, (n.cpl / maxCpl) * 100);
+            // Nichos vêm ordenados por CPL crescente, os sem CPL no fim: primeiro com
+            // CPL = melhor, último com CPL = pior.
+            const melhor = n.cpl !== null && n === comCpl[0];
+            const pior = n.cpl !== null && comCpl.length > 1 && n === comCpl[comCpl.length - 1];
+            const largura = n.cpl === null ? 0 : Math.max(6, (n.cpl / maxCpl) * 100);
             // ⚠️ Mesma correção do ranking de gestores: a barra é DADO (o comprimento
             // codifica o CPL), então o neutro precisa dos 3:1 da WCAG 1.4.11.
             // `barraNeutra` é trilho e dá 1,47:1 sobre o card — sumiria.
@@ -77,7 +83,8 @@ export default function NichosSection({ nichos }: { nichos: LinhaNicho[] }) {
                   )}
                 </div>
                 {/* Trilho passa de `borda` (token de superfície) para `barraNeutra`
-                    (token de sulco), junto com a animação de entrada. */}
+                    (token de sulco), junto com a animação de entrada. Sem CPL, o
+                    trilho fica vazio: comprimento zero é "sem valor", não "barato". */}
                 <BarraDado
                   className="order-last h-2.5 w-full overflow-hidden rounded-full sm:order-none sm:w-auto sm:flex-1"
                   pct={largura}
@@ -85,10 +92,12 @@ export default function NichosSection({ nichos }: { nichos: LinhaNicho[] }) {
                   degrade={melhor}
                   entrou={entrou}
                   indice={i}
-                  titulo={`${n.nicho}: ${brlDec(n.cpl)}`}
+                  titulo={`${n.nicho}: ${n.cpl === null ? "sem CPL no período" : brlDec(n.cpl)}`}
                 />
                 <div className="ml-auto flex shrink-0 flex-col items-end sm:ml-0 sm:w-44">
-                  <span className="text-sm font-medium tabular-nums text-brand-ink">{brlDec(n.cpl)}</span>
+                  <span className="text-sm font-medium tabular-nums text-brand-ink">
+                    <CplValor cpl={n.cpl} gasto={n.gasto} conversas={n.conversas} />
+                  </span>
                   <span className="text-[11px]" style={{ color: MUTED }}>
                     {n.clientesCount} {n.clientesCount === 1 ? "cliente" : "clientes"} · {brl(n.gasto)}
                   </span>
@@ -123,7 +132,10 @@ export default function NichosSection({ nichos }: { nichos: LinhaNicho[] }) {
         <div className="rounded-xl p-5" style={{ background: CARD }}>
           <div className="mb-4 flex items-center justify-between border-b pb-3" style={{ borderColor: LINE }}>
             <span className="text-sm text-brand-ink">
-              Média do nicho <span className="font-semibold" style={{ color: TEMA.ouroTexto }}>{brlDec(sel.cpl)}</span>
+              Média do nicho{" "}
+              <span className="font-semibold" style={{ color: TEMA.ouroTexto }}>
+                <CplValor cpl={sel.cpl} gasto={sel.gasto} conversas={sel.conversas} />
+              </span>
             </span>
             <span className="text-[12px]" style={{ color: MUTED }}>
               {sel.clientesCount} {sel.clientesCount === 1 ? "cliente" : "clientes"} · {brl(sel.gasto)}
@@ -132,10 +144,13 @@ export default function NichosSection({ nichos }: { nichos: LinhaNicho[] }) {
 
           <div className="flex flex-col gap-2.5">
             {sel.clientes.map((c) => {
-              const acima = c.desvioPct > 0;
-              const cor = c.desvioPct === 0 ? MUTED : acima ? RED : GREEN;
-              const seta = c.desvioPct > 0 ? "▲" : c.desvioPct < 0 ? "▼" : "•";
-              const rotulo = c.desvioPct === 0 ? "na média" : acima ? "acima" : "abaixo";
+              // ⚠️ Sem CPL (do cliente ou do nicho) não há desvio: "sem CPL", nunca "na
+              // média" — 0% se lê como empate com a média.
+              const semDesvio = c.desvioPct === null;
+              const acima = !semDesvio && c.desvioPct! > 0;
+              const cor = semDesvio || c.desvioPct === 0 ? MUTED : acima ? RED : GREEN;
+              const seta = semDesvio ? "•" : c.desvioPct! > 0 ? "▲" : c.desvioPct! < 0 ? "▼" : "•";
+              const rotulo = semDesvio ? "sem CPL" : c.desvioPct === 0 ? "na média" : acima ? "acima" : "abaixo";
               return (
                 <div key={c.accountId} className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-2">
@@ -143,10 +158,12 @@ export default function NichosSection({ nichos }: { nichos: LinhaNicho[] }) {
                     <span className="text-sm text-brand-ink">{c.cliente}</span>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="text-sm tabular-nums text-brand-ink">{brlDec(c.cpl)}</span>
+                    <span className="text-sm tabular-nums text-brand-ink">
+                      <CplValor cpl={c.cpl} gasto={c.gasto} conversas={c.conversas} motivo={false} />
+                    </span>
                     <span className="inline-flex w-28 items-center justify-end gap-1 text-xs font-medium" style={{ color: cor }}>
                       <span style={{ fontSize: 9 }}>{seta}</span>
-                      {pct(c.desvioPct)} {rotulo}
+                      {semDesvio ? rotulo : `${pct(c.desvioPct!)} ${rotulo}`}
                     </span>
                   </div>
                 </div>
@@ -166,7 +183,13 @@ export default function NichosSection({ nichos }: { nichos: LinhaNicho[] }) {
             <Seletor valor={nichoA} onChange={setNichoA} opcoes={nomes} />
             <Seletor valor={nichoB} onChange={setNichoB} opcoes={nomes} />
           </div>
-          <LinhaComp label="CPL médio" a={brlDec(nA.cpl)} b={brlDec(nB.cpl)} melhor={nA.cpl === nB.cpl ? 0 : nA.cpl < nB.cpl ? -1 : 1} />
+          <LinhaComp
+            label="CPL médio"
+            a={nA.cpl === null ? "—" : brlDec(nA.cpl)}
+            b={nB.cpl === null ? "—" : brlDec(nB.cpl)}
+            // Sem CPL de um dos lados não há "melhor": não se compara com ausência.
+            melhor={nA.cpl === null || nB.cpl === null || nA.cpl === nB.cpl ? 0 : nA.cpl < nB.cpl ? -1 : 1}
+          />
           <LinhaComp label="Conversas" a={num(nA.conversas)} b={num(nB.conversas)} melhor={nA.conversas === nB.conversas ? 0 : nA.conversas > nB.conversas ? -1 : 1} />
           <LinhaComp label="Gasto" a={brl(nA.gasto)} b={brl(nB.gasto)} melhor={0} />
           <LinhaComp label="Clientes" a={String(nA.clientesCount)} b={String(nB.clientesCount)} melhor={0} ultima />

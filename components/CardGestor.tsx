@@ -2,6 +2,7 @@
 
 import { TEMA } from "@/lib/brand";
 import { brlDec, num } from "@/lib/format";
+import { explicaSemCpl, rotuloSemCpl } from "@/lib/cpl";
 import Sparkline from "./Sparkline";
 import DeltaChip from "./DeltaChip";
 
@@ -21,8 +22,10 @@ export default function CardGestor({
   premiado, motivoInelegivel, contasTotal, contasIncompletas, onClick, aberto,
 }: {
   nome: string;
-  cpl: number;
-  cplVar: number;
+  /** `null` = sem CPL no mês (sem conversão ou sem gasto). Ver lib/cpl.ts. */
+  cpl: number | null;
+  /** `null` = sem base no mês anterior. */
+  cplVar: number | null;
   conversas: number;
   gasto: number;
   serieCpl: number[];
@@ -35,9 +38,10 @@ export default function CardGestor({
   onClick: () => void;
   aberto: boolean;
 }) {
-  const semConversao = conversas === 0;
   // CPL caindo é BOM: a cor da linha acompanha a semântica, não o sinal.
-  const corLinha = semConversao ? TEMA.dadoNeutro : cplVar < 0 ? TEMA.positivo : cplVar > 0 ? TEMA.negativo : TEMA.dadoNeutro;
+  const corLinha = cpl === null || cplVar === null
+    ? TEMA.dadoNeutro
+    : cplVar < 0 ? TEMA.positivo : cplVar > 0 ? TEMA.negativo : TEMA.dadoNeutro;
 
   return (
     <button
@@ -93,14 +97,20 @@ export default function CardGestor({
         <div>
           <span className="block text-[10px] uppercase tracking-wider" style={{ color: MUTED }}>CPL do mês</span>
           <span className="block text-[28px] font-semibold leading-none tracking-tight tabular-nums" style={{ color: TEMA.texto }}>
-            {semConversao ? "—" : brlDec(cpl)}
+            {cpl === null ? "—" : brlDec(cpl)}
           </span>
+          {/* O motivo ESCRITO, não só no tooltip — tooltip não existe no celular. */}
+          {cpl === null && (
+            <span className="mt-1 block text-[11px]" style={{ color: MUTED }}>{rotuloSemCpl(gasto, conversas)}</span>
+          )}
         </div>
         <div className="flex flex-col items-end gap-1.5">
           <DeltaChip
-            delta={semConversao ? null : cplVar}
+            delta={cpl === null ? null : cplVar}
             menorMelhor
-            motivo={semConversao ? "sem conversões no mês — CPL indefinido" : null}
+            motivo={cpl === null
+              ? explicaSemCpl(gasto, conversas)
+              : cplVar === null ? "sem CPL no mês anterior — não há o que comparar" : null}
           />
           {/* Sparkline mostra a FORMA da tendência; o número acima é o valor real. */}
           <span title="Tendência diária do CPL no mês (picos suavizados). O valor exibido é o CPL real do mês.">

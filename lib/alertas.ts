@@ -187,9 +187,10 @@ export function resumoAtencao(
   periodoDias: number
 ): ResumoAtencao {
   const painel = montarPainel(daily, contasAtivas, periodoDias);
-  const cplAlto = painel.gestores.filter((g) => g.cpl >= CPL_ALERTA);
+  // CPL indefinido (`null`) não é "alto" — fica fora, como na tela. Ver lib/cpl.ts.
+  const cplAlto = painel.gestores.filter((g) => g.cpl !== null && g.cpl >= CPL_ALERTA);
   const perto = contasPertoDoLimite(contasAtivas, limites);
-  const piorCpl = cplAlto.length ? cplAlto.reduce((a, b) => (b.cpl > a.cpl ? b : a)) : null;
+  const piorCpl = cplAlto.length ? cplAlto.reduce((a, b) => ((b.cpl ?? 0) > (a.cpl ?? 0) ? b : a)) : null;
   const piorLim = perto.length ? perto[0] : null; // já ordenado da mais crítica
 
   return {
