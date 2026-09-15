@@ -968,6 +968,19 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
     checando a regra antiga, reprovando dois níveis que estavam certos.
   **Antes de confiar num verde ou investigar um vermelho, releia o que o teste assume.** O
   primeiro suspeito de uma divergência é a régua, não o código medido.
+- ⚠️ **CONFERÊNCIA POR BUSCA DE PALAVRA QUEBRA QUANDO O CONTEÚDO FALA SOBRE O ASSUNTO QUE ELA
+  PROCURA.** Caso real (15/09/2026): o teste da foto do fechamento procurava "errada" nos textos
+  de divergência, para garantir que nenhum dizia que a foto está errada — e o texto certo diz
+  justamente *"isso não quer dizer que a foto está errada"*. Reprovou o texto correto, pelo motivo
+  errado. 🔧 **Busca de palavra confere FORMA, não SENTIDO.** Quando o conteúdo pode negar, citar
+  ou explicar a palavra procurada, a conferência declara as frases legítimas e procura no que
+  sobra — ou confere a estrutura (qual causa, quais itens) em vez do texto.
+  🛑 **E no mesmo dia, na ferramenta de conferência.** O `scripts/audita-envs.js` dava a declaração
+  de um módulo por composta quando o nome `ENVS_X` aparecia em QUALQUER lugar do arquivo da rota.
+  Um comentário escrito antes de compor — "(`ENVS_ADMIN_CARTEIRA`, composta abaixo)" — fez ele
+  aprovar o cron da conciliação sem a composição. Visto reprovando com o nome fora do comentário;
+  consertado para olhar só a chamada `comporEnvs(...)`, sem comentários; visto reprovando de novo
+  com o nome de volta no comentário; e só então a composição entrou.
 - 🛑🛑 **ANTES DE LISTAR CAUSAS, VEJA SE A RELAÇÃO ENTRE AS POPULAÇÕES JÁ TORNA O NÚMERO
   IMPOSSÍVEL.** Subconjunto não pode ter mais elementos que o conjunto; soma de partes
   não passa do total; interseção não é maior que o menor dos dois. **Uma identidade

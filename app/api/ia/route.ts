@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { getAuthAdmin } from "@/lib/firebaseAdmin";
 import { montarContextoIA } from "@/lib/iaContexto";
 import { MARCA } from "@/lib/brand";
+import { lerListaDeEmails } from "@/lib/listaDeEmails";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -49,11 +50,10 @@ interface Mensagem { role: "user" | "assistant"; content: string }
 //
 // FALHA FECHADO: sem a env, ninguém passa. Preferi arriscar "a IA parou de
 // responder para o Igor" a arriscar "a IA responde para todo mundo".
+// A FORMA de ler é a mesma das listas da carteira (lib/listaDeEmails.ts); a LISTA é outra decisão
+// e continua na env dela.
 function emailsPermitidos(): string[] {
-  return (process.env.IA_EMAILS_PERMITIDOS || "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
+  return lerListaDeEmails(process.env.IA_EMAILS_PERMITIDOS);
 }
 
 export async function POST(req: Request) {

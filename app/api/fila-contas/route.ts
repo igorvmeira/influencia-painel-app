@@ -7,6 +7,7 @@ import { descobrirContas, sondarIdentidade, sondarGasto } from "@/lib/descobrirC
 // à mão OITO vezes — na mesma linha em que usava a constante do documento. Participava
 // da decisão para o nome do doc e não para o da coleção.
 import { COL_SISTEMA, DOC_FILA, DOC_IGNORADAS, DOC_REMOVIDAS } from "@/lib/colecoes";
+import { emailsAdminCarteira } from "@/lib/listaDeEmails";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -15,15 +16,11 @@ export const maxDuration = 60;
 /**
  * ⚠️ NÃO EXPORTE: route file do Next só aceita os exports que ele conhece (GET, POST,
  * dynamic, runtime, maxDuration…). Exportar daqui reprova no `next build` — e o
- * `tsc --noEmit` PASSA, então só o build acusa. O `scripts/audita-envs.js` lê o texto
- * do arquivo, não o módulo, então a declaração local serve igual.
+ * `tsc --noEmit` PASSA, então só o build acusa.
+ * Desde 15/09/2026 esta rota não lê env nenhuma direto: a lista de quem entra
+ * (`FILA_EMAILS_PERMITIDOS`) é lida e declarada em lib/listaDeEmails.ts. Continua OPCIONAL — a
+ * tela FALHA FECHADO sem ela (vazia = ninguém entra), que é o desenho.
  */
-/**
- * Envs que esta rota lê direto.
- * ⚠️ OPCIONAL: a tela FALHA FECHADO sem ela (vazia = ninguém entra), que é o desenho.
- * Torná-la obrigatória faria a rota 503 num estado que é deliberado.
- */
-const ENVS_FILA = { obrigatorias: [], opcionais: ["FILA_EMAILS_PERMITIDOS"] } as const;
 
 // Orçamento da busca sob demanda ("procurar agora"). Maior que o do sync porque
 // aqui existe uma pessoa esperando na tela, e nada mais divide a chamada.
@@ -54,13 +51,9 @@ const DIAS_GASTO_POR_ID = 120;
  * ⚠️ TELA DE ADMIN — allowlist por env, o MESMO padrão temporário que trancou o
  * /api/ia. Cadastrar conta muda o que o painel inteiro mede; esconder o item de
  * menu não é proteção, então a checagem é aqui no servidor.
- * PROVISÓRIO até o sistema de papéis existir.
+ * PROVISÓRIO até o sistema de papéis existir. A lista é a da carteira (lib/listaDeEmails.ts) — a
+ * mesma da /conciliacao e do fechamento de mês.
  */
-function emailsPermitidos(): string[] {
-  return (process.env.FILA_EMAILS_PERMITIDOS || "")
-    .split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
-}
-
 async function autenticar(req: Request): Promise<{ email: string } | null> {
   const h = req.headers.get("authorization") || "";
   const token = h.startsWith("Bearer ") ? h.slice(7) : "";
@@ -76,7 +69,7 @@ async function autenticar(req: Request): Promise<{ email: string } | null> {
 
 /** Falha FECHADO: env ausente = ninguém entra. */
 function autorizado(email: string): boolean {
-  const permitidos = emailsPermitidos();
+  const permitidos = emailsAdminCarteira();
   return permitidos.length > 0 && permitidos.includes(email);
 }
 

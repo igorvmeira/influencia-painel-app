@@ -305,12 +305,19 @@ for (const rota of ROTAS_DE_CRON) {
       if (!e.startsWith("NEXT_PUBLIC_")) precisa.add(e);
     }
   }
-  const compoe = new Set(envsDeclaradas(src).todas);
+  // ⚠️ SÓ CONTA O QUE ESTÁ NA CHAMADA `comporEnvs(...)`, FORA DE COMENTÁRIO. Até 15/09/2026 bastava o
+  // nome `ENVS_X` aparecer em QUALQUER lugar do arquivo — e um comentário dizendo
+  // "(`ENVS_ADMIN_CARTEIRA`, composta abaixo)", escrito ANTES de compor, fez este auditor aprovar a
+  // rota do cron da conciliação sem a composição. Busca de palavra num texto que fala sobre o
+  // assunto que ela procura (CLAUDE.md, *conferência por busca de palavra*).
+  const codigo = semComentarios(src);
+  const argumentosCompor = [...codigo.matchAll(/comporEnvs\s*\(([^)]*)\)/g)].map((m) => m[1]).join(",");
+  const compoe = new Set(envsDeclaradas(codigo).todas);
   for (const f of alcancaveis(rota)) {
     const d = declaracoes.get(f);
     if (!d) continue;
     const nomes = [...lerArquivo(f).matchAll(/export const (ENVS_[A-Z_]+)/g)].map((m) => m[1]);
-    if (nomes.some((n) => new RegExp(`\\b${n}\\b`).test(src))) for (const e of d.todas) compoe.add(e);
+    if (nomes.some((n) => new RegExp(`\\b${n}\\b`).test(argumentosCompor))) for (const e of d.todas) compoe.add(e);
   }
 
   const faltam = [...precisa].filter((e) => !compoe.has(e)).sort();

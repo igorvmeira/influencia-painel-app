@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthAdmin, getDb, ENVS_FIREBASE_ADMIN } from "@/lib/firebaseAdmin";
 import { comporEnvs, conferirEnvs } from "@/lib/envs";
 import { getDadosDiarios } from "@/lib/data";
+import { emailsAdminCarteira, ENVS_ADMIN_CARTEIRA } from "@/lib/listaDeEmails";
 import {
   chaveMes, liberacaoFechamento, montarConteudoFoto, MSG_FECHAMENTO_RESTRITO, VALOR_DA_FOTO_NOVA,
 } from "@/lib/fotoFechamento";
@@ -27,28 +28,16 @@ import {
 //  · o botão só libera pela mesma regra que a tela mostra (`liberacaoFechamento`).
 
 /**
- * As envs que ESTA rota lê diretamente.
- * ⚠️ `FILA_EMAILS_PERMITIDOS` é OPCIONAL: vazia, a prévia continua abrindo para quem está logado e o
- * "fechar" recusa todo mundo com o texto de acesso restrito — a mesma dívida conhecida da
- * /conciliacao (ver app/api/sync-planilha). Quem disser "não consigo fechar o mês" começa por ela.
+ * As envs que esta rota alcança. A lista de quem administra a carteira mora em
+ * lib/listaDeEmails.ts (`ENVS_ADMIN_CARTEIRA`, OPCIONAL): vazia, a prévia continua abrindo para
+ * quem está logado e o "fechar" recusa todo mundo com o texto de acesso restrito — a mesma dívida
+ * conhecida da /conciliacao. Quem disser "não consigo fechar o mês" começa por ela.
  */
-const ENVS_ROTA = { obrigatorias: [], opcionais: ["FILA_EMAILS_PERMITIDOS"] } as const;
-const ENVS = comporEnvs(ENVS_ROTA, ENVS_FIREBASE_ADMIN);
+const ENVS = comporEnvs(ENVS_ADMIN_CARTEIRA, ENVS_FIREBASE_ADMIN);
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 60;
-
-/**
- * ⚠️ TERCEIRA CÓPIA desta leitura (as outras em app/api/sync-planilha e app/api/fila-contas).
- * Mesmo valor, mesmo conceito — mudar a forma de ler a lista obriga a mudar as três. Registrado
- * como pendência no README em vez de extraído agora, para não mexer em duas rotas de escrita da
- * carteira dentro da entrega da foto.
- */
-function emailsPermitidos(): string[] {
-  return (process.env.FILA_EMAILS_PERMITIDOS || "")
-    .split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
-}
 
 async function identificar(req: Request): Promise<{ email: string; podeGravar: boolean } | NextResponse> {
   const adminAuth = getAuthAdmin();
@@ -58,7 +47,8 @@ async function identificar(req: Request): Promise<{ email: string; podeGravar: b
   try {
     const dec = await adminAuth.verifyIdToken(token);
     const email = (dec.email || dec.uid).toLowerCase();
-    return { email, podeGravar: emailsPermitidos().includes(email) };
+    // A lista é a da carteira (lib/listaDeEmails.ts) — a mesma da /conciliacao e da /fila-contas.
+    return { email, podeGravar: emailsAdminCarteira().includes(email) };
   } catch {
     return NextResponse.json({ ok: false, erro: "não autenticado" }, { status: 401 });
   }

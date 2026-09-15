@@ -451,9 +451,11 @@ Duas pendências anotadas, nenhuma urgente:
   gravação v1, recusa 409 com prévia velha, recusa 400 sem motivo, v2 substituindo a v1 com a v1
   intacta — numa coleção de teste que FICOU no banco (`teste_fotosFechamento_1789486947166`, 3 docs).
   ⚠️ **Não exercitada ponta a ponta na tela:** exige login, e o primeiro mês fechável é setembro.
-  📌 **Pendências:** (1) abaixo da foto, cards, slope e decomposição seguem no cálculo de hoje, e a
-  Início não lê a foto; (2) a leitura de `FILA_EMAILS_PERMITIDOS` tem três cópias (sync-planilha,
-  fila-contas, fechamento) — mudar uma obriga as outras; (3) remedição da mudança por dia de atraso
+  📌 **Pendências:** (1) abaixo da foto, cards, slope e decomposição seguem no cálculo de hoje — ok
+  por decisão do Igor (15/09/2026) enquanto o bloco disser isso, e ele diz; a Início ler a foto fica
+  para depois; (2) ✅ a leitura de `FILA_EMAILS_PERMITIDOS`, copiada em três rotas, foi consolidada
+  em `lib/listaDeEmails.ts` (15/09/2026), e a /api/ia usa a mesma leitura com a env dela; a coleção
+  de teste da gravação foi apagada no mesmo dia; (3) remedição da mudança por dia de atraso
   contra a Meta em 16/09 (vigia em segundo plano), que confirma ou derruba a liberação no dia 1.
 - 📌 **Depois dela: a saída/troca com data.** O painel reescreve mês fechado toda
   vez que uma conta sai ou troca de gestor, porque `montarPainel` soma cada conta inteira no

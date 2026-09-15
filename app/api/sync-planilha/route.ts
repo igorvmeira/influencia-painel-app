@@ -10,12 +10,14 @@ import { ENVS_GOOGLE } from "@/lib/googleAuth";
 import { ENVS_PLANILHA } from "@/lib/planilhaGerencial";
 import { ENVS_FIREBASE_ADMIN } from "@/lib/firebaseAdmin";
 import { comporEnvs, conferirEnvs } from "@/lib/envs";
+import { emailsAdminCarteira, ENVS_ADMIN_CARTEIRA } from "@/lib/listaDeEmails";
 import type { EntradaGestor } from "@/lib/types";
 
 /**
  * As envs que ESTA rota lê diretamente.
  *
- * ⚠️ `FILA_EMAILS_PERMITIDOS` é OPCIONAL aqui de propósito, e a distinção importa: o
+ * ⚠️ `FILA_EMAILS_PERMITIDOS` saiu daqui em 15/09/2026: a leitura mora em lib/listaDeEmails.ts
+ * (`ENVS_ADMIN_CARTEIRA`, composta abaixo). Continua OPCIONAL, e a distinção importa: o
  * CRON entra por `CRON_SECRET` e funciona sem ela. Exigi-la faria uma env que só serve
  * à porta HUMANA derrubar a automação — conferência que reprova ambiente funcionando é
  * a primeira a ser desligada.
@@ -26,15 +28,14 @@ import type { EntradaGestor } from "@/lib/types";
  */
 const ENVS_ROTA = {
   obrigatorias: ["CRON_SECRET"],
-  opcionais: ["FILA_EMAILS_PERMITIDOS"],
 } as const;
 
 /**
- * Tudo o que esta rota alcança — a maior lista do projeto, 8 envs, e SEIS delas entram
- * por transitividade, em módulo que a rota importa sem saber que ele lê env nenhuma.
+ * Tudo o que esta rota alcança — a maior lista do projeto, e quase todas entram por
+ * transitividade, em módulo que a rota importa sem saber que ele lê env nenhuma.
  * COMPOSTO dos módulos, nunca à mão: ver o porquê em `lib/envs.ts`.
  */
-const ENVS = comporEnvs(ENVS_ROTA, ENVS_FIREBASE_ADMIN, ENVS_GOOGLE, ENVS_META, ENVS_PLANILHA);
+const ENVS = comporEnvs(ENVS_ROTA, ENVS_ADMIN_CARTEIRA, ENVS_FIREBASE_ADMIN, ENVS_GOOGLE, ENVS_META, ENVS_PLANILHA);
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -70,11 +71,6 @@ type Chamador =
   | { tipo: "pessoa"; email: string }
   | { tipo: "negado"; resposta: NextResponse };
 
-function emailsPermitidos(): string[] {
-  return (process.env.FILA_EMAILS_PERMITIDOS || "")
-    .split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
-}
-
 async function identificar(req: Request): Promise<Chamador> {
   const h = req.headers.get("authorization") || "";
   const bearer = h.startsWith("Bearer ") ? h.slice(7) : "";
@@ -92,7 +88,7 @@ async function identificar(req: Request): Promise<Chamador> {
     try {
       const dec = await adminAuth.verifyIdToken(bearer);
       const email = (dec.email || dec.uid).toLowerCase();
-      if (emailsPermitidos().includes(email)) return { tipo: "pessoa", email };
+      if (emailsAdminCarteira().includes(email)) return { tipo: "pessoa", email };
       // ⚠️ 403 com o MESMO texto que a tela usa para desenhar painel NEUTRO. Bloqueio de
       // permissão desenhado como pane faz a pessoa reportar bug — ver CLAUDE.md.
       return { tipo: "negado", resposta: NextResponse.json({ erro: MSG_RESTRITO }, { status: 403 }) };
