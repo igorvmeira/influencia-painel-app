@@ -33,7 +33,41 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    env:
+      # ⚠️ LEITURAS DE BOOLEANO NUM LUGAR SÓ, e NUNCA com `//`. O `a // b` do jq troca `false`
+      # pelo padrão, não só `null`: `.fechamento.massa // "ausente"` lia `massa: false` como
+      # "ausente" e derrubou a primeira execução real da regra de massa (15/09/2026). A mesma
+      # forma em `identidadeOk` fazia a identidade conjunto × conta NUNCA reprovar desde
+      # 17/08/2026, e a descoberta que falhava aparecia como "não rodou" desde 16/08/2026.
+      # O passo de autoteste abaixo confere estas três com casos plantados a cada execução.
+      JQ_IDENTIDADE: '.conferencia.identidadeOk | if . == null then "ausente" else tostring end'
+      JQ_DESCOBERTA: '.descoberta.ok | if . == null then "nao-rodou" else tostring end'
+      JQ_MASSA: 'if .fechamento == null then "ausente" else (.fechamento.massa | tostring) end'
     steps:
+      - name: Autoteste — as leituras do jq separam false de ausente
+        run: |
+          set -euo pipefail
+          confere() {
+            local nome="$1" json="$2" filtro="$3" esperado="$4" obtido
+            obtido=$(echo "$json" | jq -r "$filtro")
+            if [ "$obtido" != "$esperado" ]; then
+              echo "::error::Autoteste do jq — ${nome}: leu '${obtido}', esperado '${esperado}'. A cor do job depende desta leitura."
+              exit 1
+            fi
+          }
+          confere "identidade false"   '{"conferencia":{"identidadeOk":false}}' "$JQ_IDENTIDADE" "false"
+          confere "identidade true"    '{"conferencia":{"identidadeOk":true}}'  "$JQ_IDENTIDADE" "true"
+          confere "identidade ausente" '{"conferencia":{}}'                     "$JQ_IDENTIDADE" "ausente"
+          confere "massa false"        '{"fechamento":{"massa":false}}'         "$JQ_MASSA" "false"
+          confere "massa true"         '{"fechamento":{"massa":true}}'          "$JQ_MASSA" "true"
+          confere "sem fechamento"     '{"fechamento":null}'                    "$JQ_MASSA" "ausente"
+          confere "descoberta false"   '{"descoberta":{"ok":false}}'            "$JQ_DESCOBERTA" "false"
+          confere "descoberta ausente" '{"descoberta":null}'                    "$JQ_DESCOBERTA" "nao-rodou"
+          # A armadilha que motivou este passo: `//` troca false pelo padrão. Se um dia o jq
+          # deixar de trocar, este caso reprova e avisa que o comentário acima envelheceu.
+          confere "armadilha do //"    '{"x":false}' '.x // "padrao"' "padrao"
+          echo "Autoteste do jq: ok."
+
       - name: Rede de segurança — o sync de hoje já foi disparado?
         id: rede
         env:
@@ -144,7 +178,7 @@ jobs:
             # sobre a mesma janela, entao a soma fecha em qualquer dia — para sempre.
             # Se quebrar e bug (apelido contado duas vezes, paginacao truncada), nao
             # deriva sozinha com o tempo. Por isso DERRUBA O JOB.
-            IDENT=$(echo "$RESP" | jq -r '.conferencia.identidadeOk // "ausente"')
+            IDENT=$(echo "$RESP" | jq -r "$JQ_IDENTIDADE")
             if [ "$IDENT" = "false" ]; then
               echo "::error::A identidade conjunto vs conta QUEBROU — a quebra por conjunto nao fecha com o total. Nao troque a leitura."
               echo "$RESP" | jq '.conferencia'
@@ -189,7 +223,7 @@ jobs:
               # fila desatualizada só adia um cadastro que uma pessoa faria à mão.
               # Falhar o sync inteiro por causa dela treinaria a equipe a ignorar
               # o alerta vermelho — que é o que precisa continuar significando algo.
-              DESC_OK=$(echo "$RESP" | jq -r '.descoberta.ok // "nao-rodou"')
+              DESC_OK=$(echo "$RESP" | jq -r "$JQ_DESCOBERTA")
               if [ "$DESC_OK" = "true" ]; then
                 echo "Busca por contas novas: $(echo "$RESP" | jq -r '.descoberta.candidatas') candidata(s) na fila."
               elif [ "$DESC_OK" = "nao-rodou" ]; then
@@ -219,7 +253,7 @@ jobs:
           fi
 
           # Regra 4: falha em massa, pelo registro de gravação de cada conta (bloco final).
-          MASSA=$(echo "$RESP" | jq -r '.fechamento.massa // "ausente"')
+          MASSA=$(echo "$RESP" | jq -r "$JQ_MASSA")
           if [ "$MASSA" = "ausente" ]; then
             echo "::error::O fechamento da execução não veio no bloco final — sem ele o job não sabe se houve falha em massa."
             exit 1

@@ -89,7 +89,10 @@ jobs:
 
             # A identidade vale aqui tambem, e aqui ela e mais importante: e este bloco
             # que escreve o historico que a Etapa 2 vai ler.
-            IDENT=$(echo "$RESP" | jq -r '.conferencia.identidadeOk // "ausente"')
+            # ⚠️ NUNCA `identidadeOk // "ausente"`: o `//` do jq troca `false` pelo padrão, e a
+            # identidade quebrada virava "ausente" — este `exit 1` não disparava desde 17/08/2026.
+            # Mesma leitura (e o porquê) em sync-meta.yml, JQ_IDENTIDADE.
+            IDENT=$(echo "$RESP" | jq -r '.conferencia.identidadeOk | if . == null then "ausente" else tostring end')
             if [ "$IDENT" = "false" ]; then
               echo "::error::Identidade quebrou na posicao ${OFFSET}. Parando: historico errado e pior que historico faltando."
               echo "$RESP" | jq '.conferencia'

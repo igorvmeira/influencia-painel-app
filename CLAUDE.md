@@ -807,6 +807,28 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   ⚠️ **Vale para toda conferência de PRESENÇA**: booleano, `0` numérico legítimo, string
   vazia válida. Sempre que o valor de repouso do campo for indistinguível da ausência,
   a pergunta é "o campo existe?", nunca "quanto ele vale?".
+  🛑🛑 **E O `//` DO jq FAZ ESSA CONFUSÃO POR CONSTRUÇÃO — trocou `false` por "ausente" e
+  deixou uma conferência sem conseguir reprovar por 29 dias.** `a // b` devolve `b` quando `a`
+  é `null` **ou `false`**. Caso real (15/09/2026): o workflow do `sync-meta` lia
+  `.conferencia.identidadeOk // "ausente"` desde 17/08/2026 (commit `93ce4c1`). Identidade
+  quebrada vira `false`, o `//` trocava por "ausente", e o `if [ "$IDENT" = "false" ]` **nunca
+  disparava** — no sync diário e no backfill. A descoberta de contas novas tinha o mesmo
+  defeito desde 16/08: falha aparecia como "não rodou". Não se sabe se a identidade quebrou
+  nesse período: o alarme que diria isso era o que estava cego.
+  🔑 **Como apareceu:** a regra nova de falha em massa usou a mesma forma
+  (`.fechamento.massa // "ausente"`), e na primeira execução real o caso NORMAL — `massa:
+  false` — virou "fechamento ausente" e o job ficou vermelho. A conferência errou no caso
+  normal, que é o único jeito de alguém olhar; a identidade errava no caso excepcional, que é
+  por isso que ninguém viu em um mês.
+  ⚠️ **E o plantio não pegou, embora existisse:** 27 casos testavam `lib/falhasSync.ts` — o
+  módulo que decide —, e nenhum atravessava o `jq`, a camada que transforma a decisão na COR
+  do job. **O caso plantado precisa passar pela camada que produz o veredito final, não só
+  pela função que o calcula.** Agora o workflow tem um passo de autoteste que roda as três
+  leituras contra `true`, `false` e ausente em toda execução, e as leituras moram num lugar só
+  (`JQ_IDENTIDADE`, `JQ_DESCOBERTA`, `JQ_MASSA`).
+  🔧 **A régua: em jq, booleano se lê com `if . == null then "ausente" else tostring end`,
+  nunca com `//`.** `// false` só é inofensivo quando o padrão é o próprio `false` e ausência
+  pode ser lida como falso — e isso também precisa ser decidido, não herdado.
   ⚠️⚠️ **E VALE PARA A FERRAMENTA DE QUEM ESCREVE, NÃO SÓ PARA O CÓDIGO ESCRITO:**
   *script de edição que não confere o resultado depois de escrever não é conferência.*
   Ele imprime "ok" porque a âncora casou — e âncora casada prova que ACHOU o lugar, nunca
