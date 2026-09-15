@@ -1,7 +1,7 @@
 import { ContaMap, LinhaCliente, MetricaDiaria } from "./types";
 import { JanelaMes, coberturaMes, janelaMesFechado, mesesDisponiveis } from "./periodo";
 import { montarPainel } from "./painel";
-import { cplDe } from "./cpl";
+import { cplDe, compararVariacao } from "./cpl";
 
 // ===========================================================================
 // DESTAQUES CALCULADOS POR REGRA — Análise de Gestores
@@ -176,6 +176,30 @@ export function elegibilidadeDestaque(
     };
   }
   return { elegivel: true, motivo: null };
+}
+
+/**
+ * Quem leva o selo "melhor evolução" do mês na /gestores: o primeiro ELEGÍVEL da fila
+ * ordenada pela menor variação de CPL.
+ *
+ * ⚠️ MORA AQUI, e não no componente, para poder ser conferida com o código compilado contra
+ * o dado real — é a decisão que embasa bonificação, e decisão presa num `useMemo` só se
+ * confere abrindo a tela.
+ */
+export function escolherPremiado(
+  gestores: { nome: string; conversas: number; cplVar: number | null }[],
+  elegivel: (nome: string) => boolean
+): string | null {
+  // ⚠️ SÓ ENTRA NA FILA QUEM TEM VARIAÇÃO. Até 14/09/2026 o filtro era `conversas > 0`, e quem
+  // não tinha variação (sem CPL neste mês ou no anterior) ia para o FIM da fila mas continuava
+  // NELA: se todos os gestores com variação fossem inelegíveis, o selo iria para um gestor sem
+  // evolução — e a Início, que tira essas linhas do pódio, não daria selo a ninguém.
+  // `cplVar !== null` já exige conversão E gasto nos dois meses (lib/cpl.ts), então o filtro
+  // antigo fica contido neste. Conferido: selo de julho e agosto igual antes e depois.
+  const fila = gestores
+    .filter((g) => g.cplVar !== null)
+    .sort((a, b) => compararVariacao(a.cplVar, b.cplVar));
+  return fila.find((g) => elegivel(g.nome))?.nome ?? null;
 }
 
 /** Uma linha do ranking de evolução mensal de CPL, já com a elegibilidade resolvida. */

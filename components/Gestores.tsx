@@ -17,7 +17,7 @@ import { RETENCAO_DIAS } from "@/lib/agregadas";
 import { CONCENTRACAO_PCT } from "@/lib/destaques";
 import {
   calcularDestaques, ContribuicaoConta, Destaques,
-  serieCplDiaria, elegibilidadeDestaque, PISO_CONVERSOES_DESTAQUE, PISO_CONVERSOES_GESTOR,
+  serieCplDiaria, elegibilidadeDestaque, escolherPremiado, PISO_CONVERSOES_DESTAQUE, PISO_CONVERSOES_GESTOR,
 } from "@/lib/destaques";
 import { buscarCriativosMes, CriativoMes } from "@/lib/useCriativosMes";
 import MiniCardCriativo from "./MiniCardCriativo";
@@ -291,15 +291,11 @@ export default function Gestores() {
 
   // O selo vai para o melhor em evolução ENTRE OS ELEGÍVEIS. Se o 1º do ranking é
   // inelegível, ele é pulado (e mostra o aviso no card) e o selo desce para o próximo.
-  const premiado = useMemo(() => {
-    if (!painel) return null;
-    const ord = [...painel.gestores]
-      .filter((g) => g.conversas > 0)
-      // menor variação = melhor evolução. Sem variação (`null`: sem CPL num dos meses) vai
-      // para o FIM — antes era 0 e entrava no meio da fila como "estável".
-      .sort((a, b) => compararVariacao(a.cplVar, b.cplVar));
-    return ord.find((g) => porGestor.get(g.nome)?.elegivel)?.nome ?? null;
-  }, [painel, porGestor]);
+  // A regra da fila mora em lib/destaques.ts (`escolherPremiado`).
+  const premiado = useMemo(
+    () => (painel ? escolherPremiado(painel.gestores, (nome) => !!porGestor.get(nome)?.elegivel) : null),
+    [painel, porGestor]
+  );
 
   // Pontos do slope. TODOS os gestores entram, inclusive os de volume baixo — o piso
   // de conversões vale só para a elegibilidade do SELO, não para a exibição aqui.

@@ -310,14 +310,14 @@ Duas pendências anotadas, nenhuma urgente:
   com conferência antes×depois no mesmo dado: pódio da Início e decomposição da /gestores de
   julho e agosto idênticos. A régua que ela deixou está no CLAUDE.md ("proteção que funciona
   pelo dado, e não pelo código").
-- 📌 **Pendência (14/09/2026): o selo da /gestores pode ir para gestor SEM variação.** A fila
-  (`premiado` em `components/Gestores.tsx`) põe quem não tem variação no FIM, mas não o tira.
-  Se todos os gestores com variação forem inelegíveis, o selo vai para um sem evolução — e a
-  Início, que exclui essas linhas do pódio, não daria selo a ninguém: as duas telas
-  divergiriam. `elegibilidadeDestaque` olha volume e base, não a existência da variação.
-  Achado por caso plantado (gestor sintético com 150 conversões e gasto zero); **em julho e
-  agosto nenhum gestor ficou sem variação**, então hoje nada muda. Conserto provável: tirar da
-  fila quem tem `cplVar === null`. Não feito sem aprovação: é o código do selo.
+- ✅ **Resolvido (14/09/2026): o selo da /gestores podia ir para gestor SEM variação.** A fila
+  punha quem não tinha variação no FIM, mas não o tirava; se todos os gestores com variação
+  fossem inelegíveis, o selo iria para um sem evolução, e a Início não daria a ninguém. Agora
+  só entra na fila quem tem variação (`escolherPremiado` em `lib/destaques.ts`, extraída do
+  componente para poder ser conferida com o código compilado). **Conferido com o dado real,
+  antes e depois: agosto ISMAIL nas duas versões, julho sem selo nas duas** (nenhum gestor
+  elegível), e a Início concorda em agosto. Caso plantado — só o gestor sem variação é
+  elegível: antes ele levava o selo, agora ninguém leva.
 - 📌 **Decisão (14/09/2026): não medir criativo ao vivo com 5+ conversões e gasto zero.** Era o
   único caso em que o CPL 0 abria o ranking de criativos do Dashboard em 1º, em dourado, e
   medir custa uma chamada à Meta por conta.

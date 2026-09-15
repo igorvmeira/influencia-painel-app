@@ -590,10 +590,12 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   a forma de uma medição. Nenhum dos dois perguntou *"se o caso existisse, esta fonte teria
   como mostrá-lo?"*. É a revisão que falha exatamente quando a frase soa como dado — e duas
   pessoas concordando não somam conferência nenhuma se nenhuma das duas olhou o filtro.
-  ⚠️ **A régua: antes de usar uma fonte como prova de AUSÊNCIA, confira se o filtro dela
-  deixaria o caso entrar.** Se não deixaria, a fonte não diz nada — nem sim, nem não —, e a
-  frase certa é "daqui não dá para saber". É o `me/adaccounts` que não lista parceria de BM,
-  só que dentro do nosso próprio cache: o filtro é nosso, e por isso ninguém lembra dele.
+  ⚠️ **A régua, curta: antes de usar uma fonte como prova de que algo não existe, conferir se
+  ela deixaria esse algo entrar.** Vale para o cache (que descarta gasto zero), para a
+  listagem do `me/adaccounts` (que não lista parceria de BM — ver *LISTA VAZIA AMBÍGUA*) e
+  para QUALQUER conferência que trate ausência como resposta. Se a fonte não deixaria o caso
+  entrar, ela não diz nada — nem sim, nem não —, e a frase certa é "daqui não dá para saber".
+  No cache o risco é maior que na API: o filtro é nosso, e por isso ninguém lembra dele.
 - ⚠️ **ALARME QUE DISPARA TODO DIA VIRA RUÍDO QUE NINGUÉM LÊ.** Ao ligar uma verificação
   automática, separe o que **deriva** do que **quebra**:
   · comparação contra uma foto de referência **diverge sozinha** com o tempo (a base é
@@ -1003,7 +1005,11 @@ no dev = cache, não código.** Não saia procurando bug no que você acabou de 
   fica no FIM dela — mas continua NA fila. Se todos os gestores com variação forem
   inelegíveis, o selo iria para um gestor sem evolução, enquanto a Início (que exclui essas
   linhas) não daria selo a ninguém. Em julho e agosto nenhum gestor ficou sem variação: é a
-  mesma sorte com prazo, um andar abaixo. Pendência no `README.md`.
+  mesma sorte com prazo, um andar abaixo. **Consertado no mesmo dia** — `escolherPremiado`
+  só enfileira quem tem variação —, com o selo de julho e agosto conferido IGUAL antes e depois
+  no dado real (o selo de agosto estava em discussão por outra regra, e dois consertos mudando
+  o mesmo selo não teriam explicação), e o caso plantado passando de "leva o selo" para
+  "ninguém leva".
   🔑 **A régua: quando a justificativa de uma proteção é "não há caso", aponte a LINHA que
   barra o caso quando ele vier.** Se a resposta for "nenhuma, mas ele não existe", é pendência
   com prazo desconhecido — e vai para lugar VISÍVEL (README, esta seção), nunca só para um
